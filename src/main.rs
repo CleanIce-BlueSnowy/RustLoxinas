@@ -5,6 +5,7 @@ use crate::scanner::TokenScanner;
 mod tokens;
 mod scanner;
 mod expr;
+mod data;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
