@@ -458,6 +458,7 @@ impl TokenScanner {
             'n' => res = Ok('\n'),
             't' => res = Ok('\t'),
             '0' => res = Ok('\0'),
+            'r' => res = Ok('\r'),
             '\\' => res = Ok('\\'),
             '\'' => res = Ok('\''),
             '"' => res = Ok('"'),

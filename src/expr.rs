@@ -56,6 +56,7 @@ pub trait Visitor<RetType> {
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
+    #[allow(dead_code)]
     pub fn accept<RetType>(&self, visitor: &mut dyn Visitor<RetType>) -> RetType {
         match self {
             Expr::Binary{ left: _, operator: _, right: _ } => visitor.visit_binary_expr(self),
