@@ -32,6 +32,7 @@ impl TokenScanner {
             self.start = self.current;  // 设置新的令牌开头
             self.scan_token()?;
         }
+        self.tokens.push(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len()));
         return Ok(());
     }
     
@@ -109,6 +110,7 @@ impl TokenScanner {
                     self.add_token(TokenType::Operator(TokenOperator::Bang));
                 }
             }
+            '^' => self.add_token(TokenType::Operator(TokenOperator::Caret)),
             '"' => self.scan_string(false)?,
             _ if self.is_identifier_char(ch, true) => {  // 标识符、关键字、字符串前缀
                 while self.is_identifier_char(self.peek(), false) {

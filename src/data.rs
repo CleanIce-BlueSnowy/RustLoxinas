@@ -1,5 +1,4 @@
 /// 存储表达式解析和计算时的数据
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Data {
     Bool(bool),
@@ -9,7 +8,6 @@ pub enum Data {
 }
 
 /// 整型数据
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum DataInteger {
     Byte(u8),
@@ -25,7 +23,6 @@ pub enum DataInteger {
 }
 
 /// 浮点数据
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum DataFloat {
     Float(f32),

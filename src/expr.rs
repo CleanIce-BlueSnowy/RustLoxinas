@@ -4,7 +4,6 @@ use crate::tokens::Token;
 /// 表达式
 /// 
 /// 使用访问者模式
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Expr {
     /// 二元操作
@@ -35,14 +34,13 @@ pub enum Expr {
     },
 }
 
-/// 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式生成树
+/// 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式抽象语法树
 /// 
 /// `RetType` 是返回类型
 /// 
-/// **注意，每一个方法都应该检查 `expr` 的枚举值是否正确，但应该使用断言**
+/// **注意，每一个方法都应该检查 `expr` 的枚举值是否正确**
 /// 
-/// **因为理论上枚举值都是正确的，若不正确说明代码存在问题**
-#[allow(dead_code)]
+/// **但是理论上枚举值都是正确的，若不正确说明代码存在问题**
 pub trait Visitor<RetType> {
     /// 访问二元操作
     fn visit_binary_expr(&mut self, expr: &Expr) -> RetType;
@@ -56,7 +54,6 @@ pub trait Visitor<RetType> {
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
-    #[allow(dead_code)]
     pub fn accept<RetType>(&self, visitor: &mut dyn Visitor<RetType>) -> RetType {
         match self {
             Expr::Binary{ left: _, operator: _, right: _ } => visitor.visit_binary_expr(self),
