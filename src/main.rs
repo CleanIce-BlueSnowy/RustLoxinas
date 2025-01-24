@@ -2,6 +2,8 @@
 
 use std::{env, fs, io, path, process};
 use std::io::{Read, Write};
+use crate::ast_printer::AstPrinter;
+use crate::parser::Parser;
 use crate::scanner::TokenScanner;
 
 mod tokens;
@@ -9,6 +11,10 @@ mod scanner;
 mod expr;
 mod data;
 mod ast_printer;
+mod parser;
+mod parser_assistance;
+mod parser_expr;
+mod types;
 
 fn main() {
     #[cfg(debug_assertions)]
@@ -17,12 +23,12 @@ fn main() {
     }
     let args: Vec<String> = env::args().collect();
     println!("Loxinas 1.0.0 alpha [Developing]");
-    if args.len() == 1 {
+    if args.len() == 1 {  // 无控制台参数
         if let Err(err) = run_interact() {
             eprintln!("{err}");
             process::exit(64);
         }
-    } else if args.len() == 2 {
+    } else if args.len() == 2 {  // 运行文件
         if let Err(err) = run_file(&args[1]) {
             eprintln!("{err}");
             process::exit(68);
@@ -81,8 +87,17 @@ fn run_code(source: String) -> Result<(), String> {
     let mut scanner = TokenScanner::new(source);  // 词法分析
     scanner.scan_tokens()?;
     let (tokens, _source) = scanner.get_tokens_and_source();
-    for token in tokens {  // 开发中，先打印所有令牌
+    for token in &tokens {  // 开发中，先打印所有令牌
         println!("{token:?}");
+    }
+    let lines: Vec<&str> = _source.split('\n').collect();
+    let mut parser = Parser::new(tokens);  // 语法分析
+    match parser.parse() {
+        Ok(expr) => {
+            let mut printer = AstPrinter::new();
+            println!("{}", printer.print(&expr));  // 开发中，先打印语法树
+        }
+        Err(err) => print_error("Syntax Error", &lines, &err.message, err.token.line, err.token.start, err.token.end),  // 打印语法错误'a
     }
     return Ok(());
 }
@@ -90,4 +105,18 @@ fn run_code(source: String) -> Result<(), String> {
 /// 抛出程序错误
 fn throw_error(msg: String) -> Result<(), String> {
     Err(format!("Program Error: {msg}"))
+}
+
+/// 打印错误
+fn print_error(error_type: &str, lines: &Vec<&str>, message: &str, line: usize, start: usize, end: usize) {
+    println!("{}: line {} at {}-{}: {}", error_type, line, start, end, message);
+    println!("  |> {}", lines[line - 1]);
+    print!("  |> ");
+    for _i in 0..start {
+        print!(" ");
+    }
+    for _i in start..end {
+        print!("^");
+    }
+    println!();
 }

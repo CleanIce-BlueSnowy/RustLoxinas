@@ -1,5 +1,12 @@
 use std::num;
-use crate::tokens::*;
+use std::rc::Rc;
+
+use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
+use crate::tokens::TokenParen::*;
+use crate::tokens::TokenOperator::*;
+use crate::tokens::TokenFloat::*;
+use crate::tokens::TokenKeyword::*;
+use crate::tokens::TokenInteger::*;
 
 /// 词法扫描解析器
 #[derive(Debug)]
@@ -7,7 +14,7 @@ pub struct TokenScanner {
     /// 源代码
     source: String,
     /// 所有令牌
-    tokens: Vec<Token>,
+    tokens: Vec<Rc<Token>>,
     /// 某个令牌的起始位置
     start: usize,
     /// 下一个要扫描的字符位置
@@ -22,7 +29,7 @@ pub struct TokenScanner {
 
 impl TokenScanner {
     pub fn new(source: String) -> Self {
-        Self{ source, tokens: Vec::new(), start: 0, current: 0, line: 1, scanned_chars: 0, chars: Vec::new() }
+        Self { source, tokens: Vec::new(), start: 0, current: 0, line: 1, scanned_chars: 0, chars: Vec::new() }
     }
 
     /// 扫描所有令牌
@@ -32,14 +39,14 @@ impl TokenScanner {
             self.start = self.current;  // 设置新的令牌开头
             self.scan_token()?;
         }
-        self.tokens.push(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len()));
+        self.tokens.push(Rc::new(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len())));
         return Ok(());
     }
     
     /// 获取令牌和源码字符串
     /// # 警告
     /// 这个函数将会移动 `self`！
-    pub fn get_tokens_and_source(self) -> (Vec<Token>, String) {
+    pub fn get_tokens_and_source(self) -> (Vec<Rc<Token>>, String) {
         (self.tokens, self.source)
     }
 
@@ -51,14 +58,14 @@ impl TokenScanner {
                 self.line += 1;
                 self.scanned_chars = self.current;  // 更新已扫描的字符
             }
-            '(' => self.add_token(TokenType::Paren(TokenParen::LeftParen)),
-            ')' => self.add_token(TokenType::Paren(TokenParen::RightParen)),
-            '[' => self.add_token(TokenType::Paren(TokenParen::LeftSqrBracket)),
-            ']' => self.add_token(TokenType::Paren(TokenParen::RightSqrBracket)),
-            '{' => self.add_token(TokenType::Paren(TokenParen::LeftBrace)),
-            '}' => self.add_token(TokenType::Paren(TokenParen::RightBrace)),
-            '+' => self.add_token(TokenType::Operator(TokenOperator::Plus)),
-            '-' => self.add_token(TokenType::Operator(TokenOperator::Minus)),
+            '(' => self.add_token(TokenType::Paren(LeftParen)),
+            ')' => self.add_token(TokenType::Paren(RightParen)),
+            '[' => self.add_token(TokenType::Paren(LeftSqrBracket)),
+            ']' => self.add_token(TokenType::Paren(RightSqrBracket)),
+            '{' => self.add_token(TokenType::Paren(LeftBrace)),
+            '}' => self.add_token(TokenType::Paren(RightBrace)),
+            '+' => self.add_token(TokenType::Operator(Plus)),
+            '-' => self.add_token(TokenType::Operator(Minus)),
             '/' => {
                 if self.can_match('/') {
                     // 忽略注释后的内容
@@ -66,52 +73,53 @@ impl TokenScanner {
                         self.advance();
                     }
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Slash));
+                    self.add_token(TokenType::Operator(Slash));
                 }
             }
             '*' => {
                 if self.can_match('*') {
-                    self.add_token(TokenType::Operator(TokenOperator::Power));  // 幂运算符
+                    self.add_token(TokenType::Operator(Power));  // 幂运算符
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Star));
+                    self.add_token(TokenType::Operator(Star));
                 }
             }
-            '\\' => self.add_token(TokenType::Operator(TokenOperator::Backslash)),
+            '\\' => self.add_token(TokenType::Operator(Backslash)),
             '&' => self.add_token(TokenType::Operator(TokenOperator::And)),
-            '|' => self.add_token(TokenType::Operator(TokenOperator::Pipe)),
-            '~' => self.add_token(TokenType::Operator(TokenOperator::Tilde)),
-            ':' => self.add_token(TokenType::Operator(TokenOperator::Colon)),
-            ';' => self.add_token(TokenType::Operator(TokenOperator::Semicolon)),
+            '|' => self.add_token(TokenType::Operator(Pipe)),
+            '~' => self.add_token(TokenType::Operator(Tilde)),
+            ':' => self.add_token(TokenType::Operator(Colon)),
+            ';' => self.add_token(TokenType::Operator(Semicolon)),
             '=' => {
                 if self.can_match('=') {
-                    self.add_token(TokenType::Operator(TokenOperator::EqualEqual));
+                    self.add_token(TokenType::Operator(EqualEqual));
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Equal));
+                    self.add_token(TokenType::Operator(Equal));
                 }
             }
             '<' => {
                 if self.can_match('=') {
-                    self.add_token(TokenType::Operator(TokenOperator::LessEqual));
+                    self.add_token(TokenType::Operator(LessEqual));
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Less));
+                    self.add_token(TokenType::Operator(Less));
                 }
             }
             '>' => {
                 if self.can_match('=') {
-                    self.add_token(TokenType::Operator(TokenOperator::GreaterEqual));
+                    self.add_token(TokenType::Operator(GreaterEqual));
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Greater));
+                    self.add_token(TokenType::Operator(Greater));
                 }
             }
             '!' => {
                 if self.can_match('=') {
-                    self.add_token(TokenType::Operator(TokenOperator::BangEqual));
+                    self.add_token(TokenType::Operator(BangEqual));
                 } else {
-                    self.add_token(TokenType::Operator(TokenOperator::Bang));
+                    self.add_token(TokenType::Operator(Bang));
                 }
             }
-            '^' => self.add_token(TokenType::Operator(TokenOperator::Caret)),
+            '^' => self.add_token(TokenType::Operator(Caret)),
             '"' => self.scan_string(false)?,
+            '\'' => self.scan_char()?,
             _ if self.is_identifier_char(ch, true) => {  // 标识符、关键字、字符串前缀
                 while self.is_identifier_char(self.peek(), false) {
                     self.advance();
@@ -141,7 +149,7 @@ impl TokenScanner {
 
     /// 添加令牌并自动填写位置信息
     fn add_token(&mut self, token_type: TokenType) {
-        self.tokens.push(Token::new(token_type, self.line, self.start - self.scanned_chars, self.current - self.scanned_chars));
+        self.tokens.push(Rc::new(Token::new(token_type, self.line, self.start - self.scanned_chars, self.current - self.scanned_chars)));
     }
 
     /// 消耗字符
@@ -254,17 +262,17 @@ impl TokenScanner {
     /// 检查是否为关键字
     fn check_keyword(&self, word: &str) -> Option<TokenKeyword> {
         match word {
-            "if" => Some(TokenKeyword::If),
-            "else" => Some(TokenKeyword::Else),
-            "elif" => Some(TokenKeyword::Elif),
-            "for" => Some(TokenKeyword::For),
-            "while" => Some(TokenKeyword::While),
-            "func" => Some(TokenKeyword::Func),
-            "return" => Some(TokenKeyword::Return),
+            "if" => Some(If),
+            "else" => Some(Else),
+            "elif" => Some(Elif),
+            "for" => Some(For),
+            "while" => Some(While),
+            "func" => Some(Func),
+            "return" => Some(Return),
             "and" => Some(TokenKeyword::And),
-            "or" => Some(TokenKeyword::Or),
-            "not" => Some(TokenKeyword::Not),
-            "let" => Some(TokenKeyword::Let),
+            "or" => Some(Or),
+            "not" => Some(Not),
+            "let" => Some(Let),
             _ => None,
         }
     }
@@ -374,8 +382,8 @@ impl TokenScanner {
             /// 用于解析浮点数并捕获错误
             fn parse_float(to_parse: String, number_type: NumberType) -> Result<TokenFloat, num::ParseFloatError> {
                 match number_type {
-                    NumberType::Float => Ok(TokenFloat::Float(to_parse.parse::<f32>()?)),
-                    NumberType::Double => Ok(TokenFloat::Double(to_parse.parse::<f64>()?)),
+                    NumberType::Float => Ok(Float(to_parse.parse::<f32>()?)),
+                    NumberType::Double => Ok(Double(to_parse.parse::<f64>()?)),
                     NumberType::NoneForDebug => panic!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
                     _ => panic!("Logical Error! Invalid number type."),  // 其他值
                 }
@@ -393,16 +401,16 @@ impl TokenScanner {
             /// 用于解析整数并捕获错误
             fn parse_int(to_parse: String, number_type: NumberType) -> Result<TokenInteger, num::ParseIntError> {
                 match number_type {
-                    NumberType::Byte => Ok(TokenInteger::Byte(to_parse.parse::<u8>()?)),
-                    NumberType::SByte => Ok(TokenInteger::SByte(to_parse.parse::<i8>()?)),
-                    NumberType::Short => Ok(TokenInteger::Short(to_parse.parse::<i16>()?)),
-                    NumberType::UShort => Ok(TokenInteger::UShort(to_parse.parse::<u16>()?)),
-                    NumberType::Int => Ok(TokenInteger::Int(to_parse.parse::<i32>()?)),
-                    NumberType::UInt => Ok(TokenInteger::UInt(to_parse.parse::<u32>()?)),
-                    NumberType::Long => Ok(TokenInteger::Long(to_parse.parse::<i64>()?)),
-                    NumberType::ULong => Ok(TokenInteger::ULong(to_parse.parse::<u64>()?)),
-                    NumberType::ExtInt => Ok(TokenInteger::ExtInt(to_parse.parse::<i128>()?)),
-                    NumberType::UExtInt => Ok(TokenInteger::UExtInt(to_parse.parse::<u128>()?)),
+                    NumberType::Byte => Ok(Byte(to_parse.parse::<u8>()?)),
+                    NumberType::SByte => Ok(SByte(to_parse.parse::<i8>()?)),
+                    NumberType::Short => Ok(Short(to_parse.parse::<i16>()?)),
+                    NumberType::UShort => Ok(UShort(to_parse.parse::<u16>()?)),
+                    NumberType::Int => Ok(Int(to_parse.parse::<i32>()?)),
+                    NumberType::UInt => Ok(UInt(to_parse.parse::<u32>()?)),
+                    NumberType::Long => Ok(Long(to_parse.parse::<i64>()?)),
+                    NumberType::ULong => Ok(ULong(to_parse.parse::<u64>()?)),
+                    NumberType::ExtInt => Ok(ExtInt(to_parse.parse::<i128>()?)),
+                    NumberType::UExtInt => Ok(UExtInt(to_parse.parse::<u128>()?)),
                     NumberType::NoneForDebug => panic!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
                     _ => panic!("Logical Error! Invalid number type."),  // 其他值
                 }
@@ -447,10 +455,28 @@ impl TokenScanner {
         if ch == '"' {
             self.advance();  // 消耗引号
         } else {
-            self.throw_error("Unlimited string.")?;  // 未闭合的字符串
+            self.throw_error("Unterminated string.")?;  // 未闭合的字符串
         }
         self.add_token(TokenType::String(res));
         return Ok(());
+    }
+    
+    /// 扫描字符
+    fn scan_char(&mut self) -> Result<(), String> {
+        if self.can_match('\'') {  // 空字符
+            self.throw_error("Empty character.")?;
+        }
+        let mut ch = self.advance();  // 获取字符
+        if ch == '\\' {
+            let esc = self.advance();
+            ch = self.escape_char(esc)?;  // 转义
+        }
+        return if self.can_match('\'') {  // 结束引号
+            self.add_token(TokenType::Char(ch));
+            Ok(())
+        } else {
+            self.throw_error("Unterminated character.")
+        }
     }
 
     /// 转义字符串

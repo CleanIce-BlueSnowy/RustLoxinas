@@ -5,16 +5,16 @@ pub struct Token {
     /// 令牌类型
     pub token_type: TokenType,
     /// 令牌所在行
-    line: usize,
+    pub line: usize,
     /// 令牌起始索引
-    start_idx: usize,
+    pub start: usize,
     /// 令牌终止索引
-    end_idx: usize,
+    pub end: usize,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, line: usize, start_idx: usize, end_idx: usize) -> Self {
-        Self{ token_type, line, start_idx, end_idx }
+    pub fn new(token_type: TokenType, line: usize, start: usize, end: usize) -> Self {
+        Self { token_type, line, start, end }
     }
 }
 
@@ -28,6 +28,7 @@ pub enum TokenType {
     Integer(TokenInteger),
     Float(TokenFloat),
     String(String),
+    Char(char),
     EOF,
 }
 
@@ -82,6 +83,8 @@ pub enum TokenKeyword {
     Or,
     Not,
     Let,
+    False,
+    True,
 }
 
 /// 整型令牌

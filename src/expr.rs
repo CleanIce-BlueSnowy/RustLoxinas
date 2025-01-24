@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::data::Data;
 use crate::tokens::Token;
 
@@ -11,7 +12,7 @@ pub enum Expr {
         /// 左操作数
         left: Box<Expr>,
         /// 操作符
-        operator: Token,
+        operator: Rc<Token>,
         /// 右操作数
         right: Box<Expr>,
     },
@@ -28,7 +29,7 @@ pub enum Expr {
     /// 一元操作
     Unary {
         /// 操作符
-        operator: Token,
+        operator: Rc<Token>,
         /// 操作数
         right: Box<Expr>,
     },
@@ -43,23 +44,23 @@ pub enum Expr {
 /// **但是理论上枚举值都是正确的，若不正确说明代码存在问题**
 pub trait Visitor<RetType> {
     /// 访问二元操作
-    fn visit_binary_expr(&mut self, expr: &Expr) -> RetType;
+    fn visit_binary_expr(&mut self, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
     /// 访问分组
-    fn visit_grouping_expr(&mut self, expr: &Expr) -> RetType;
+    fn visit_grouping_expr(&mut self, expr: &Box<Expr>) -> RetType;
     /// 访问字面量
-    fn visit_literal_expr(&mut self, expr: &Expr) -> RetType;
+    fn visit_literal_expr(&mut self, value: &Data) -> RetType;
     /// 访问一元操作
-    fn visit_unary_expr(&mut self, expr: &Expr) -> RetType;
+    fn visit_unary_expr(&mut self, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
 }
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
     pub fn accept<RetType>(&self, visitor: &mut dyn Visitor<RetType>) -> RetType {
         match self {
-            Expr::Binary{ left: _, operator: _, right: _ } => visitor.visit_binary_expr(self),
-            Expr::Grouping{ expression: _ } => visitor.visit_grouping_expr(self),
-            Expr::Literal{ value: _ } => visitor.visit_literal_expr(self),
-            Expr::Unary{ operator: _, right: _ } => visitor.visit_unary_expr(self),
+            Expr::Binary{ left, operator, right } => visitor.visit_binary_expr(&left, &operator, &right),
+            Expr::Grouping{ expression } => visitor.visit_grouping_expr(&expression),
+            Expr::Literal{ value } => visitor.visit_literal_expr(&value),
+            Expr::Unary{ operator, right } => visitor.visit_unary_expr(&operator, &right),
         }
     }
 }

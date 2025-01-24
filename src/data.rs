@@ -5,6 +5,7 @@ pub enum Data {
     String(String),
     Integer(DataInteger),
     Float(DataFloat),
+    Char(char),
 }
 
 /// 整型数据
