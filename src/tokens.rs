@@ -65,7 +65,6 @@ pub enum TokenOperator {
     LessEqual,  // <=
     GreaterEqual,  // >=
     Bang,  // !
-    BangEqual,  // !=
     Caret,  // ^
 }
 

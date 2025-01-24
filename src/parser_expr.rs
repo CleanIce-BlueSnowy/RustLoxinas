@@ -8,17 +8,17 @@ use crate::tokens::TokenInteger::*;
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenFloat::*;
-use crate::tokens::{TokenFloat, TokenType};
+use crate::tokens::{TokenFloat, TokenOperator, TokenType};
 
 impl Parser {
     pub fn expression(&mut self) -> Result<Expr, SyntaxError> {
         self.equality()
     }
-    
+
     /// 判等表达式
     fn equality(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.comparison()?;
-        while parser_can_match!(self, Operator(BangEqual | EqualEqual)) {
+        while parser_can_match!(self, Operator(NotEqual | EqualEqual)) {
             let operator = self.previous();
             let right = self.comparison()?;
             expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
@@ -72,7 +72,7 @@ impl Parser {
 
     /// 单元运算符表达式
     fn unary(&mut self) -> Result<Expr, SyntaxError> {
-        if parser_can_match!(self, Operator(Minus) | Keyword(Not)) {
+        if parser_can_match!(self, Operator(Minus | Tilde | TokenOperator::And | Pipe | Caret) | Keyword(Not)) {
             let operator = self.previous();
             let right = self.unary()?;
             Ok(Expr::Unary { operator, right: Box::new(right) })
@@ -128,6 +128,15 @@ impl Parser {
                 value: Data::Char(
                     match &self.previous().token_type {
                         Char(ch) => *ch,
+                        _ => panic!("Invalid token"),
+                    }
+                )
+            })
+        } else if parser_can_match!(self, String(_)) {
+            Ok(Expr::Literal {
+                value: Data::String(
+                    match &self.previous().token_type {
+                        String(str) => str.clone(),
                         _ => panic!("Invalid token"),
                     }
                 )

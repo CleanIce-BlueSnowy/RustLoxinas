@@ -112,7 +112,7 @@ impl TokenScanner {
             }
             '!' => {
                 if self.can_match('=') {
-                    self.add_token(TokenType::Operator(BangEqual));
+                    self.add_token(TokenType::Operator(NotEqual));
                 } else {
                     self.add_token(TokenType::Operator(Bang));
                 }
@@ -234,8 +234,8 @@ impl TokenScanner {
     /// ```
     fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> Result<(), String> {
         let mut res = String::new();
-        res.push_str(&format!("Lexical Error: line {} at {}-{}: {}", self.line, start + 1, end, msg));
-        res.push_str("\n  |> ");
+        res.push_str(&format!("Lexical Error: line {} at {}-{}: {}\n", self.line, start + 1, end, msg));
+        res.push_str("  |> ");
         let line = self.find_line();
         for &ch in line {
             res.push(ch);

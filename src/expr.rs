@@ -42,7 +42,7 @@ pub enum Expr {
 /// **注意，每一个方法都应该检查 `expr` 的枚举值是否正确**
 /// 
 /// **但是理论上枚举值都是正确的，若不正确说明代码存在问题**
-pub trait Visitor<RetType> {
+pub trait ExprVisitor<RetType> {
     /// 访问二元操作
     fn visit_binary_expr(&mut self, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
     /// 访问分组
@@ -55,7 +55,7 @@ pub trait Visitor<RetType> {
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
-    pub fn accept<RetType>(&self, visitor: &mut dyn Visitor<RetType>) -> RetType {
+    pub fn accept<RetType>(&self, visitor: &mut dyn ExprVisitor<RetType>) -> RetType {
         match self {
             Expr::Binary{ left, operator, right } => visitor.visit_binary_expr(&left, &operator, &right),
             Expr::Grouping{ expression } => visitor.visit_grouping_expr(&expression),

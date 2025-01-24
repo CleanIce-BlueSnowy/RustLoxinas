@@ -4,6 +4,7 @@ use std::{env, fs, io, path, process};
 use std::io::{Read, Write};
 use crate::ast_printer::AstPrinter;
 use crate::parser::Parser;
+use crate::resolver::Resolver;
 use crate::scanner::TokenScanner;
 
 mod tokens;
@@ -15,6 +16,10 @@ mod parser;
 mod parser_assistance;
 mod parser_expr;
 mod types;
+mod object;
+mod resolver;
+mod resolver_expr;
+mod ast_printer_expr;
 
 fn main() {
     #[cfg(debug_assertions)]
@@ -87,18 +92,28 @@ fn run_code(source: String) -> Result<(), String> {
     let mut scanner = TokenScanner::new(source);  // 词法分析
     scanner.scan_tokens()?;
     let (tokens, _source) = scanner.get_tokens_and_source();
-    for token in &tokens {  // 开发中，先打印所有令牌
+    println!("== All Tokens ==");  // 开发中，先打印所有令牌
+    for token in &tokens {
         println!("{token:?}");
     }
     let lines: Vec<&str> = _source.split('\n').collect();
     let mut parser = Parser::new(tokens);  // 语法分析
+    let expr;
     match parser.parse() {
-        Ok(expr) => {
-            let mut printer = AstPrinter::new();
-            println!("{}", printer.print(&expr));  // 开发中，先打印语法树
-        }
-        Err(err) => print_error("Syntax Error", &lines, &err.message, err.token.line, err.token.start, err.token.end),  // 打印语法错误'a
+        Ok(temp) => expr = temp,
+        Err(err) => return Err(print_error("Syntax Error", &lines, &err.message, err.token.line, err.token.start, err.token.end)),  // 返回语法错误
     }
+    let mut printer = AstPrinter::new();
+    println!("== AST ==");  // 开发中，先打印语法树
+    println!("{}", printer.print(&expr));
+    let mut resolver = Resolver::new();  // 语义分析
+    let res;
+    match resolver.resolve_expr(&expr) {
+        Ok(temp) => res = temp,
+        Err(err) => return Err(print_error("Compile Error", &lines, &err.message, err.token.line, err.token.start, err.token.end)),  // 返回编译错误
+    }
+    println!("== Expr Result ==");  // 开发中，先打印分析结果
+    println!("{}", res.expr_type);
     return Ok(());
 }
 
@@ -107,16 +122,16 @@ fn throw_error(msg: String) -> Result<(), String> {
     Err(format!("Program Error: {msg}"))
 }
 
-/// 打印错误
-fn print_error(error_type: &str, lines: &Vec<&str>, message: &str, line: usize, start: usize, end: usize) {
-    println!("{}: line {} at {}-{}: {}", error_type, line, start, end, message);
-    println!("  |> {}", lines[line - 1]);
-    print!("  |> ");
+/// 打印错误（返回字符串）
+fn print_error(error_type: &str, lines: &Vec<&str>, message: &str, line: usize, start: usize, end: usize) -> String {
+    let mut res = format!("{}: line {} at {}-{}: {}\n", error_type, line, start, end, message);
+    res.push_str(&format!("  |> {}\n", lines[line - 1]));
+    res.push_str("  |> ");
     for _i in 0..start {
-        print!(" ");
+        res.push(' ');
     }
     for _i in start..end {
-        print!("^");
+        res.push('^');
     }
-    println!();
+    return res;
 }
