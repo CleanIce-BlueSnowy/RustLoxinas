@@ -11,6 +11,7 @@ use crate::tokens::TokenFloat::*;
 use crate::tokens::{TokenFloat, TokenOperator, TokenType};
 
 impl Parser {
+    /// 解析表达式
     pub fn expression(&mut self) -> Result<Expr, SyntaxError> {
         self.equality()
     }
