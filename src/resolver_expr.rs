@@ -5,6 +5,7 @@ use crate::expr::{Expr, ExprVisitor};
 use crate::object::LoxinasClass;
 use crate::resolver::{CompileError, Resolver, ResolverRes};
 use crate::tokens::{Token, TokenKeyword, TokenType};
+use crate::tokens::TokenOperator::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, NotEqual};
 use crate::types::{ValueFloatType, ValueType};
 use crate::types::ValueType::*;
 
@@ -12,14 +13,16 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
     fn visit_binary_expr(&mut self, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         let left_res: ResolverRes = left.accept(self)?;
         let right_res: ResolverRes = right.accept(self)?;
-        
+
         // 类型检查
         match (left_res.expr_type, right_res.expr_type) {
             // 两个字符，可以使用 `+` 将其合并为字符串，可以比较
             (Char, Char) => {
                 use crate::tokens::TokenOperator::*;
-                if let TokenType::Operator(Plus | EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
+                if let TokenType::Operator(Plus) = &operator.token_type {
                     Ok(ResolverRes::new(Object(LoxinasClass::LoxinasString)))
+                } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
+                    Ok(ResolverRes::new(Bool))
                 } else {
                     Err(CompileError::new(operator.clone(), format!("Cannot ues operator '{}' between chars.", Self::operator_to_string(operator))))
                 }
@@ -31,68 +34,73 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 if let TokenType::Keyword(And | Or | Not) = &operator.token_type {
                     Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between integers.", Self::operator_to_string(operator))))
                 } else {
-                    match (left_type, right_type) {
-                        (SByte, SByte) => Ok(ResolverRes::new(Integer(SByte))),
+                    use crate::tokens::TokenOperator::*;
+                    if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
+                        Ok(ResolverRes::new(Bool))
+                    } else {
+                        match (left_type, right_type) {
+                            (SByte, SByte) => Ok(ResolverRes::new(Integer(SByte))),
 
-                        (SByte, Short) |
-                        (Short, Short) |
-                        (Short, SByte) => Ok(ResolverRes::new(Integer(Short))),
+                            (SByte, Short) |
+                            (Short, Short) |
+                            (Short, SByte) => Ok(ResolverRes::new(Integer(Short))),
 
-                        (SByte, Int) |
-                        (Short, Int) |
-                        (Int, Int) |
-                        (Int, SByte) |
-                        (Int, Short) => Ok(ResolverRes::new(Integer(Int))),
+                            (SByte, Int) |
+                            (Short, Int) |
+                            (Int, Int) |
+                            (Int, SByte) |
+                            (Int, Short) => Ok(ResolverRes::new(Integer(Int))),
 
-                        (SByte, Long) |
-                        (Short, Long) |
-                        (Int, Long) |
-                        (Long, Long) |
-                        (Long, Int) |
-                        (Long, Short) |
-                        (Long, SByte) => Ok(ResolverRes::new(Integer(Long))),
+                            (SByte, Long) |
+                            (Short, Long) |
+                            (Int, Long) |
+                            (Long, Long) |
+                            (Long, Int) |
+                            (Long, Short) |
+                            (Long, SByte) => Ok(ResolverRes::new(Integer(Long))),
 
-                        (Byte, ExtInt) |
-                        (Short, ExtInt) |
-                        (Int, ExtInt) |
-                        (Long, ExtInt) |
-                        (ExtInt, ExtInt) |
-                        (ExtInt, Byte) |
-                        (ExtInt, Short) |
-                        (ExtInt, Int) |
-                        (ExtInt, Long) => Ok(ResolverRes::new(Integer(ExtInt))),
+                            (Byte, ExtInt) |
+                            (Short, ExtInt) |
+                            (Int, ExtInt) |
+                            (Long, ExtInt) |
+                            (ExtInt, ExtInt) |
+                            (ExtInt, Byte) |
+                            (ExtInt, Short) |
+                            (ExtInt, Int) |
+                            (ExtInt, Long) => Ok(ResolverRes::new(Integer(ExtInt))),
 
-                        (Byte, Byte) => Ok(ResolverRes::new(Integer(Byte))),
+                            (Byte, Byte) => Ok(ResolverRes::new(Integer(Byte))),
 
-                        (Byte, UShort) |
-                        (UShort, UShort) |
-                        (UShort, Byte) => Ok(ResolverRes::new(Integer(UShort))),
+                            (Byte, UShort) |
+                            (UShort, UShort) |
+                            (UShort, Byte) => Ok(ResolverRes::new(Integer(UShort))),
 
-                        (Byte, UInt) |
-                        (UShort, UInt) |
-                        (UInt, UInt) |
-                        (UInt, Byte) |
-                        (UInt, UShort) => Ok(ResolverRes::new(Integer(UInt))),
+                            (Byte, UInt) |
+                            (UShort, UInt) |
+                            (UInt, UInt) |
+                            (UInt, Byte) |
+                            (UInt, UShort) => Ok(ResolverRes::new(Integer(UInt))),
 
-                        (Byte, ULong) |
-                        (UShort, ULong) |
-                        (UInt, ULong) |
-                        (ULong, ULong) |
-                        (ULong, UInt) |
-                        (ULong, UShort) |
-                        (ULong, Byte) => Ok(ResolverRes::new(Integer(ULong))),
+                            (Byte, ULong) |
+                            (UShort, ULong) |
+                            (UInt, ULong) |
+                            (ULong, ULong) |
+                            (ULong, UInt) |
+                            (ULong, UShort) |
+                            (ULong, Byte) => Ok(ResolverRes::new(Integer(ULong))),
 
-                        (Byte, UExtInt) |
-                        (UShort, UExtInt) |
-                        (UInt, UExtInt) |
-                        (ULong, UExtInt) |
-                        (UExtInt, UExtInt) |
-                        (UExtInt, Byte) |
-                        (UExtInt, UShort) |
-                        (UExtInt, UInt) |
-                        (UExtInt, ULong) => Ok(ResolverRes::new(Integer(UExtInt))),
+                            (Byte, UExtInt) |
+                            (UShort, UExtInt) |
+                            (UInt, UExtInt) |
+                            (ULong, UExtInt) |
+                            (UExtInt, UExtInt) |
+                            (UExtInt, Byte) |
+                            (UExtInt, UShort) |
+                            (UExtInt, UInt) |
+                            (UExtInt, ULong) => Ok(ResolverRes::new(Integer(UExtInt))),
 
-                        _ => Err(CompileError::new(operator.clone(), "Cannot operate on two integers with different signs.".to_string())),
+                            _ => Err(CompileError::new(operator.clone(), "Cannot operate on two integers with different signs.".to_string())),
+                        }
                     }
                 }
             }
@@ -100,8 +108,10 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
             (Integer(_), Float(float)) |
             (Float(float), Integer(_)) => {
                 use crate::tokens::TokenKeyword::*;
-                if let TokenType::Keyword(And | Or | Not) = &operator.token_type {
+                if let TokenType::Keyword(And | Or) = &operator.token_type {
                     Err(CompileError::new(operator.clone(), "Cannot use operator '{}' between numbers.".to_string()))
+                } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
+                    Ok(ResolverRes::new(Bool))
                 } else {
                     Ok(ResolverRes::new(Float(float)))
                 }
@@ -112,6 +122,8 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 use crate::tokens::TokenKeyword::*;
                 if let TokenType::Keyword(And | Or) = &operator.token_type {
                     Err(CompileError::new(operator.clone(), "Cannot use operator '{}' between floating-point numbers.".to_string()))
+                } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
+                    Ok(ResolverRes::new(Bool))
                 } else {
                     Ok(ResolverRes::new(ValueType::Float(
                         match (left_type, right_type) {
@@ -151,7 +163,9 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                     match &operator.token_type {
                         Operator(ope) => {
                             use crate::tokens::TokenOperator::*;
-                            if let Plus | EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual = ope {
+                            if let Plus = ope {
+                                Ok(ResolverRes::new(Object(LoxinasClass::LoxinasString)))
+                            } else if let EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual = ope {
                                 Ok(ResolverRes::new(Bool))
                             } else {
                                 Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between strings.", Self::operator_to_string(operator))))
@@ -169,7 +183,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
             }
         }
     }
-    
+
     fn visit_grouping_expr(&mut self, expr: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         expr.accept(self)
     }

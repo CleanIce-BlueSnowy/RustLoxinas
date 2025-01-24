@@ -59,6 +59,9 @@ fn run_interact() -> Result<(), String> {
             Err(err) => throw_error(format!("STDIN Reading Error!\n  Error Message: {err}"))?,
             _ => {}
         }
+        if line.is_empty() {
+            continue;
+        }
         if let Err(err) = run_code(line.trim().to_string()) { // 交互模式的错误不应该继续回溯，而是输出后继续交互
             println!("{err}");
             continue;
