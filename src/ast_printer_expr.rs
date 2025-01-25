@@ -2,19 +2,21 @@ use std::rc::Rc;
 use crate::ast_printer::AstPrinter;
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::{Expr, ExprVisitor};
+use crate::position::Position;
 use crate::tokens::Token;
 
+#[cfg(debug_assertions)]
 impl ExprVisitor<String> for AstPrinter {
-    fn visit_binary_expr(&mut self, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> String {
+    fn visit_binary_expr(&mut self, _pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> String {
         let name = self.operator_to_string(&operator.token_type);
         return self.parenthesize(&name, &[left, right]);
     }
 
-    fn visit_grouping_expr(&mut self, expr: &Box<Expr>) -> String {
+    fn visit_grouping_expr(&mut self, _pos: &Position, expr: &Box<Expr>) -> String {
         return self.parenthesize("group", &[expr]);
     }
 
-    fn visit_literal_expr(&mut self, value: &Data) -> String {
+    fn visit_literal_expr(&mut self, _pos: &Position, value: &Data) -> String {
         return match value {  // 将数据转换为对应的字符串，并带上 Loxinas 代码对应的数据后缀，字符串需要处理
             Data::Bool(res) => res.to_string(),
             Data::String(res) => {  // 处理字符串
@@ -69,7 +71,7 @@ impl ExprVisitor<String> for AstPrinter {
         }
     }
 
-    fn visit_unary_expr(&mut self, operator: &Rc<Token>, right: &Box<Expr>) -> String {
+    fn visit_unary_expr(&mut self, _pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> String {
         let name = self.operator_to_string(&operator.token_type);
         return self.parenthesize(&name, &[right]);
     }

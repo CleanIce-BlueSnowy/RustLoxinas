@@ -1,9 +1,11 @@
 use std::rc::Rc;
 use crate::expr::Expr;
+use crate::position::Position;
 use crate::tokens::Token;
 use crate::types::ValueType;
 
 /// 语义分析器
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Resolver {
 
 }
@@ -64,6 +66,7 @@ impl Resolver {
 }
 
 /// 语义分析结果
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ResolverRes {
     /// 表达式得到的结果类型
     pub expr_type: ValueType,
@@ -76,15 +79,16 @@ impl ResolverRes {
 }
 
 /// 编译错误
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct CompileError {
-    /// 出错位置的令牌
-    pub token: Rc<Token>,
+    /// 出错位置
+    pub pos: Position,
     /// 错误信息
     pub message: String,
 }
 
 impl CompileError {
-    pub fn new(token: Rc<Token>, message: String) -> Self {
-        Self { token, message }
+    pub fn new(pos: &Position, message: String) -> Self {
+        Self { pos: pos.clone(), message }
     }
 }

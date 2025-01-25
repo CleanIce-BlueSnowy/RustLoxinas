@@ -24,6 +24,19 @@ macro_rules! parser_check {
     }
 }
 
+/// 若令牌匹配，则消耗令牌；若不匹配，则报错
+#[macro_export]
+macro_rules! parser_consume {
+    ( $self:expr, $token_type:pat, $pos:expr, $message:expr ) => {
+        if parser_check!($self, $token_type) {
+            $self.advance();
+            Ok(())
+        } else {
+            Err(SyntaxError::new($pos, $message))
+        }
+    }
+}
+
 impl Parser {
     /// 是否已到结尾
     pub fn is_at_end(&self) -> bool {

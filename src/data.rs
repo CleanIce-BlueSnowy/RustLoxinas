@@ -1,5 +1,5 @@
 /// 存储表达式解析和计算时的数据
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Data {
     Bool(bool),
     String(String),
@@ -9,7 +9,7 @@ pub enum Data {
 }
 
 /// 整型数据
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum DataInteger {
     Byte(u8),
     SByte(i8),
@@ -24,7 +24,7 @@ pub enum DataInteger {
 }
 
 /// 浮点数据
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum DataFloat {
     Float(f32),
     Double(f64),

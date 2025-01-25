@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::{Expr, ExprVisitor};
 use crate::object::LoxinasClass;
+use crate::position::Position;
 use crate::resolver::{CompileError, Resolver, ResolverRes};
 use crate::tokens::{Token, TokenKeyword, TokenType};
 use crate::tokens::TokenOperator::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, NotEqual};
@@ -10,7 +11,7 @@ use crate::types::{ValueFloatType, ValueType};
 use crate::types::ValueType::*;
 
 impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
-    fn visit_binary_expr(&mut self, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+    fn visit_binary_expr(&mut self, pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         let left_res: ResolverRes = left.accept(self)?;
         let right_res: ResolverRes = right.accept(self)?;
 
@@ -24,7 +25,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
                 } else {
-                    Err(CompileError::new(operator.clone(), format!("Cannot ues operator '{}' between chars.", Self::operator_to_string(operator))))
+                    Err(CompileError::new(pos, format!("Cannot ues operator '{}' between chars.", Self::operator_to_string(operator))))
                 }
             }
             // 两个整数，运算时需要整型提升，操作符不能是布尔运算符
@@ -32,7 +33,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 use crate::types::ValueIntegerType::*;
                 use crate::tokens::TokenKeyword::*;
                 if let TokenType::Keyword(And | Or | Not) = &operator.token_type {
-                    Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between integers.", Self::operator_to_string(operator))))
+                    Err(CompileError::new(pos, format!("Cannot use operator '{}' between integers.", Self::operator_to_string(operator))))
                 } else {
                     use crate::tokens::TokenOperator::*;
                     if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
@@ -99,7 +100,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                             (UExtInt, UInt) |
                             (UExtInt, ULong) => Ok(ResolverRes::new(Integer(UExtInt))),
 
-                            _ => Err(CompileError::new(operator.clone(), "Cannot operate on two integers with different signs.".to_string())),
+                            _ => Err(CompileError::new(pos, "Cannot operate on two integers with different signs.".to_string())),
                         }
                     }
                 }
@@ -109,7 +110,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
             (Float(float), Integer(_)) => {
                 use crate::tokens::TokenKeyword::*;
                 if let TokenType::Keyword(And | Or) = &operator.token_type {
-                    Err(CompileError::new(operator.clone(), "Cannot use operator '{}' between numbers.".to_string()))
+                    Err(CompileError::new(pos, "Cannot use operator '{}' between numbers.".to_string()))
                 } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
                 } else {
@@ -121,7 +122,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 use crate::types::ValueFloatType::*;
                 use crate::tokens::TokenKeyword::*;
                 if let TokenType::Keyword(And | Or) = &operator.token_type {
-                    Err(CompileError::new(operator.clone(), "Cannot use operator '{}' between floating-point numbers.".to_string()))
+                    Err(CompileError::new(pos, "Cannot use operator '{}' between floating-point numbers.".to_string()))
                 } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
                 } else {
@@ -142,7 +143,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                         if let EqualEqual | NotEqual = ope {
                             Ok(ResolverRes::new(Bool))
                         } else {
-                            Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between bools.", Self::operator_to_string(operator))))
+                            Err(CompileError::new(pos, format!("Cannot use operator '{}' between bools.", Self::operator_to_string(operator))))
                         }
                     }
                     Keyword(ope) => {
@@ -150,7 +151,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                         if let And | Or = ope {
                             Ok(ResolverRes::new(Bool))
                         } else {
-                            Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between bools.", Self::operator_to_string(operator))))
+                            Err(CompileError::new(pos, format!("Cannot use operator '{}' between bools.", Self::operator_to_string(operator))))
                         }
                     }
                     _ => panic!("Invalid operator")
@@ -168,27 +169,27 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                             } else if let EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual = ope {
                                 Ok(ResolverRes::new(Bool))
                             } else {
-                                Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between strings.", Self::operator_to_string(operator))))
+                                Err(CompileError::new(pos, format!("Cannot use operator '{}' between strings.", Self::operator_to_string(operator))))
                             }
                         }
-                        _ => Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between strings.", Self::operator_to_string(operator))))
+                        _ => Err(CompileError::new(pos, format!("Cannot use operator '{}' between strings.", Self::operator_to_string(operator))))
                     }
                 } else {
-                    Err(CompileError::new(operator.clone(), "Cannot operate on two objects.".to_string()))
+                    Err(CompileError::new(pos, "Cannot operate on two objects.".to_string()))
                 }
             }
             // 其余组合均无效
             (left_type, right_type) => {
-                Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' between '{}' and '{}'", Self::operator_to_string(operator), left_type, right_type)))
+                Err(CompileError::new(pos, format!("Cannot use operator '{}' between '{}' and '{}'", Self::operator_to_string(operator), left_type, right_type)))
             }
         }
     }
 
-    fn visit_grouping_expr(&mut self, expr: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+    fn visit_grouping_expr(&mut self, _pos: &Position, expr: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         expr.accept(self)
     }
 
-    fn visit_literal_expr(&mut self, value: &Data) -> Result<ResolverRes, CompileError> {
+    fn visit_literal_expr(&mut self, _pos: &Position, value: &Data) -> Result<ResolverRes, CompileError> {
         // 直接返回值的类型即可
         Ok(ResolverRes::new(
             match value {
@@ -224,13 +225,13 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
         ))
     }
 
-    fn visit_unary_expr(&mut self, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+    fn visit_unary_expr(&mut self, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         let expr_res: ResolverRes = right.accept(self)?;
         match expr_res.expr_type {
             // 整数，结果为原类型，不允许布尔运算符
             Integer(integer) => {
                 if let TokenType::Keyword(TokenKeyword::Not) = &operator.token_type {
-                    Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' on an integer.", Self::operator_to_string(operator))))
+                    Err(CompileError::new(pos, format!("Cannot use operator '{}' on an integer.", Self::operator_to_string(operator))))
                 } else {
                     Ok(ResolverRes::new(Integer(integer)))
                 }
@@ -238,7 +239,7 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
             // 浮点数，结果为原类型，不允许布尔运算符
             Float(float) => {
                 if let TokenType::Keyword(TokenKeyword::Not) = &operator.token_type {
-                    Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' on a floating-point number.", Self::operator_to_string(operator))))
+                    Err(CompileError::new(pos, format!("Cannot use operator '{}' on a floating-point number.", Self::operator_to_string(operator))))
                 } else {
                     Ok(ResolverRes::new(Float(float)))
                 }
@@ -248,11 +249,11 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                 if let TokenType::Keyword(TokenKeyword::Not) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
                 } else {
-                    Err(CompileError::new(operator.clone(), format!("Cannot use operator '{}' on a bool.", Self::operator_to_string(operator))))
+                    Err(CompileError::new(pos, format!("Cannot use operator '{}' on a bool.", Self::operator_to_string(operator))))
                 }
             }
             // 其他类型均无效
-            expr_type => Err(CompileError::new(operator.clone(), format!("Cannot use '{}' on a '{}'", Self::operator_to_string(operator), expr_type)))
+            expr_type => Err(CompileError::new(pos, format!("Cannot use '{}' on a '{}'", Self::operator_to_string(operator), expr_type)))
         }
     }
 }

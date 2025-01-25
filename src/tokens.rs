@@ -1,6 +1,5 @@
 /// 令牌
-#[allow(dead_code)]
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Token {
     /// 令牌类型
     pub token_type: TokenType,
@@ -18,8 +17,7 @@ impl Token {
     }
 }
 
-/// 通用令牌类型
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenType {
     Paren(TokenParen),
     Operator(TokenOperator),
@@ -33,7 +31,7 @@ pub enum TokenType {
 }
 
 /// 括号令牌
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenParen {
     LeftParen,  // (
     RightParen,  // )
@@ -44,7 +42,7 @@ pub enum TokenParen {
 }
 
 /// 运算符令牌
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenOperator {
     Plus,  // +
     Minus,  // -
@@ -69,7 +67,7 @@ pub enum TokenOperator {
 }
 
 /// 关键字令牌
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenKeyword {
     If,
     Else,
@@ -87,7 +85,7 @@ pub enum TokenKeyword {
 }
 
 /// 整型令牌
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenInteger {
     Byte(u8),
     SByte(i8),
@@ -102,7 +100,7 @@ pub enum TokenInteger {
 }
 
 /// 浮点型令牌
-#[derive(Debug)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenFloat {
     Float(f32),
     Double(f64),

@@ -1,14 +1,15 @@
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::Expr;
 use crate::parser::{Parser, SyntaxError};
-use crate::parser_can_match;
+use crate::{expr_get_pos, parser_can_match, parser_consume};
 use crate::parser_check;
+use crate::position::Position;
 use crate::tokens::TokenType::*;
 use crate::tokens::TokenInteger::*;
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenFloat::*;
-use crate::tokens::{TokenFloat, TokenOperator, TokenType};
+use crate::tokens::{TokenFloat, TokenOperator, TokenParen, TokenType};
 
 impl Parser {
     /// 解析表达式
@@ -22,7 +23,14 @@ impl Parser {
         while parser_can_match!(self, Operator(NotEqual | EqualEqual)) {
             let operator = self.previous();
             let right = self.comparison()?;
-            expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right)
+            };
         }
         return Ok(expr);
     }
@@ -33,7 +41,14 @@ impl Parser {
         while parser_can_match!(self, Operator(Greater | GreaterEqual | Less | LessEqual)) {
             let operator = self.previous();
             let right = self.term()?;
-            expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right)
+            };
         }
         return Ok(expr);
     }
@@ -44,7 +59,14 @@ impl Parser {
         while parser_can_match!(self, Operator(Plus | Minus)) {
             let operator = self.previous();
             let right = self.factor()?;
-            expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right)
+            };
         }
         return Ok(expr);
     }
@@ -55,7 +77,14 @@ impl Parser {
         while parser_can_match!(self, Operator(Star | Slash)) {
             let operator = self.previous();
             let right = self.power()?;
-            expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right)
+            };
         }
         return Ok(expr);
     }
@@ -66,7 +95,14 @@ impl Parser {
         while parser_can_match!(self, Operator(Power)) {
             let operator = self.previous();
             let right = self.unary()?;
-            expr = Expr::Binary { left: Box::new(expr), operator, right: Box::new(right) };
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right)
+            };
         }
         return Ok(expr);
     }
@@ -76,7 +112,12 @@ impl Parser {
         if parser_can_match!(self, Operator(Minus | Tilde | TokenOperator::And | Pipe | Caret) | Keyword(Not)) {
             let operator = self.previous();
             let right = self.unary()?;
-            Ok(Expr::Unary { operator, right: Box::new(right) })
+            let pos = expr_get_pos!(&right);
+            Ok(Expr::Unary {
+                pos: Position::new(operator.line, operator.start, pos.end_line, pos.end_idx),
+                operator,
+                right: Box::new(right)
+            })
         } else {
             self.primary()
         }
@@ -84,12 +125,15 @@ impl Parser {
 
     /// 基本表达式
     fn primary(&mut self) -> Result<Expr, SyntaxError> {
+        let token = self.peek();
+        let pos = Position::new(token.line, token.start, token.line, token.end);
         if parser_can_match!(self, Keyword(False)) {
-            Ok(Expr::Literal { value: Data::Bool(false) })
+            Ok(Expr::Literal { pos, value: Data::Bool(false) })
         } else if parser_can_match!(self, Keyword(True)) {
-            Ok(Expr::Literal { value: Data::Bool(true) })
+            Ok(Expr::Literal { pos, value: Data::Bool(true) })
         } else if parser_can_match!(self, Integer(_)) {
             Ok(Expr::Literal {
+                pos,
                 value: Data::Integer(
                     match &self.previous().token_type {
                         Integer(integer) => {
@@ -112,6 +156,7 @@ impl Parser {
             })
         } else if parser_can_match!(self, TokenType::Float(_)) {
             Ok(Expr::Literal {
+                pos,
                 value: Data::Float(
                     match &self.previous().token_type {
                         TokenType::Float(float) => {
@@ -126,6 +171,7 @@ impl Parser {
             })
         } else if parser_can_match!(self, Char(_)) {
             Ok(Expr::Literal {
+                pos,
                 value: Data::Char(
                     match &self.previous().token_type {
                         Char(ch) => *ch,
@@ -135,6 +181,7 @@ impl Parser {
             })
         } else if parser_can_match!(self, String(_)) {
             Ok(Expr::Literal {
+                pos,
                 value: Data::String(
                     match &self.previous().token_type {
                         String(str) => str.clone(),
@@ -142,8 +189,22 @@ impl Parser {
                     }
                 )
             })
+        } else if parser_can_match!(self, Paren(TokenParen::LeftParen)) {
+            let expr = self.expression()?;
+            let end_token = self.peek();
+            parser_consume!(
+                self, 
+                Paren(TokenParen::RightParen),
+                &Position::new(pos.start_line, pos.start_idx, end_token.line, end_token.end),
+                "Expect ')' after expression.".to_string()
+            )?;
+            let final_token = self.previous();
+            Ok(Expr::Grouping {
+                pos: Position::new(pos.start_line, pos.start_idx, final_token.line, final_token.end),
+                expression: Box::new(expr)
+            })
         } else {
-            Err(SyntaxError { token: self.peek(), message: "Invalid expression.".to_string() })
+            Err(SyntaxError { pos, message: "Invalid expression.".to_string() })
         }
     }
 }

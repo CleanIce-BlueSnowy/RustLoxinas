@@ -1,6 +1,6 @@
 use std::num;
 use std::rc::Rc;
-
+use crate::position::Position;
 use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
 use crate::tokens::TokenParen::*;
 use crate::tokens::TokenOperator::*;
@@ -9,10 +9,10 @@ use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenInteger::*;
 
 /// 词法扫描解析器
-#[derive(Debug)]
-pub struct TokenScanner {
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct TokenScanner<'a> {
     /// 源代码
-    source: String,
+    source: &'a str,
     /// 所有令牌
     tokens: Vec<Rc<Token>>,
     /// 某个令牌的起始位置
@@ -27,31 +27,47 @@ pub struct TokenScanner {
     chars: Vec<char>,
 }
 
-impl TokenScanner {
-    pub fn new(source: String) -> Self {
+/// 词法错误
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct LexicalError {
+    pub pos: Position,
+    pub message: String,
+}
+
+impl LexicalError {
+    pub fn new(pos: &Position, message: String) -> Self {
+        Self { pos: pos.clone(), message }
+    }
+}
+
+impl<'a> TokenScanner<'a> {
+    pub fn new(source: &'a str) -> Self {
         Self { source, tokens: Vec::new(), start: 0, current: 0, line: 1, scanned_chars: 0, chars: Vec::new() }
     }
 
     /// 扫描所有令牌
-    pub fn scan_tokens(&mut self) -> Result<(), String> {
+    pub fn scan_tokens(&mut self) -> Result<(), LexicalError> {
         self.chars = self.source.chars().collect();  // 获取字符
+
         while !self.is_at_end() {
             self.start = self.current;  // 设置新的令牌开头
             self.scan_token()?;
         }
+
+        // 结尾令牌，方便语法分析
         self.tokens.push(Rc::new(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len())));
         return Ok(());
     }
-    
+
     /// 获取令牌和源码字符串
     /// # 警告
     /// 这个函数将会移动 `self`！
-    pub fn get_tokens_and_source(self) -> (Vec<Rc<Token>>, String) {
-        (self.tokens, self.source)
+    pub fn get_tokens_and_source(self) -> Vec<Rc<Token>> {
+        self.tokens
     }
 
     /// 扫描单个令牌
-    fn scan_token(&mut self) -> Result<(), String> {
+    fn scan_token(&mut self) -> Result<(), LexicalError> {
         let ch = self.advance();  // 消耗字符
         match ch {
             '\n' => {
@@ -124,6 +140,7 @@ impl TokenScanner {
                 while self.is_identifier_char(self.peek(), false) {
                     self.advance();
                 }
+
                 if self.peek() == '"' {  // 识别为字符串前缀
                     self.advance();  // 消耗引号
                     self.scan_string(true)?;
@@ -190,64 +207,21 @@ impl TokenScanner {
         if self.is_at_end() { '\0' } else { self.chars[self.current] }
     }
 
-    /// 获取整行。采用往前和往后搜索的方式
-    fn find_line(&self) -> &[char] {
-        let mut start = self.current - 1;  // 行起始索引
-        while start > 0 && self.chars[start] != '\n' {
-            start -= 1;
-        }
-        if self.chars[start] == '\n' {  // 上一行的行末换行符
-            start += 1;
-        }
-        let mut end = self.current - 1;  // 行终止索引
-        while end < self.chars.len() && self.chars[end] != '\n' {
-            end += 1;
-        }
-        return &self.chars[start..end];
+    /// 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
+    ///
+    /// 自动调用 `throw_error_at()` 并填写位置信息
+    fn throw_error(&self, msg: &str) -> Result<(), LexicalError> {
+        self.throw_error_at(msg, self.start, self.current - 1)
     }
 
     /// 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    /// 
-    /// 自动调用 `throw_error_at()` 并填写位置信息
     ///
-    /// 错误格式：
-    ///
-    /// ```
-    /// Lexical Error: line x at x-x: xxx
-    ///   |> this is the code and here lead to an error.
-    ///   |>                      ^^^^
-    /// ```
-    fn throw_error(&self, msg: &str) -> Result<(), String> {
-        self.throw_error_at(msg, self.start, self.current)
-    }
-    
-    /// 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    /// 
     /// 需要手动传入位置信息
-    /// 
-    /// 错误格式：
-    ///
-    /// ```
-    /// Lexical Error: line x at x-x: xxx
-    ///   |> this is the code and here lead to an error.
-    ///   |>                      ^^^^
-    /// ```
-    fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> Result<(), String> {
-        let mut res = String::new();
-        res.push_str(&format!("Lexical Error: line {} at {}-{}: {}\n", self.line, start + 1, end, msg));
-        res.push_str("  |> ");
-        let line = self.find_line();
-        for &ch in line {
-            res.push(ch);
-        }
-        res.push_str("\n  |> ");
-        for _i in 0..start {  // 填充空白符
-            res.push(' ');
-        }
-        for _i in start..end {
-            res.push('^');
-        }
-        return Err(res);
+    fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> Result<(), LexicalError> {
+        Err(LexicalError::new(
+            &Position::new(self.line, start, self.line, end),
+            msg.to_string(),
+        ))
     }
 
     /// 获取整个令牌
@@ -278,12 +252,14 @@ impl TokenScanner {
     }
 
     /// 扫描数字
-    fn scan_number(&mut self) -> Result<(), String> {
+    fn scan_number(&mut self) -> Result<(), LexicalError> {
         let mut has_dot = false;  // 是否含有 `.`（是否为浮点数）
         let mut ch = self.chars[self.current - 1];  // 获取当前字符
+
         if ch == '.' {
             has_dot = true;
         }
+
         ch = self.peek();
         while ch == '.' || ch.is_numeric() {  // 符合条件
             self.advance();  // 消耗
@@ -296,11 +272,14 @@ impl TokenScanner {
             }
             ch = self.peek();  // 下一个
         }
+
         let end = self.current;  // 标记数字结尾。此后的都是数字标记
+
         /// 所有数字类型
         enum NumberType {
             /// 避免编译器产生未初始化的错误。实际情况中，不应该是此值
             NoneForDebug,
+
             Byte,
             SByte,
             Short,
@@ -314,9 +293,12 @@ impl TokenScanner {
             Float,
             Double
         }
+
         let mut number_type = NumberType::NoneForDebug;
+
         if ch.is_alphabetic() {  // 确实存在数字标记。注意，`ch` 已经是下一个字符了（循环末尾的 `self.peek()`）
             self.advance();  // 消耗
+
             if has_dot {  // 浮点数
                 match ch {
                     'd' => number_type = NumberType::Double,
@@ -364,21 +346,29 @@ impl TokenScanner {
         } else {  // 提供默认类型
             number_type = if has_dot { NumberType::Double } else { NumberType::Int };
         }
+
         if self.peek().is_alphanumeric() {  // 还有更多字符
             self.throw_error_at(&format!("Unexpected character `{}`.", self.peek()), self.current, self.current + 1)?;
         }
+
         if has_dot {  // 解析浮点数
             let literal = &self.chars[self.start..end];
             let mut to_parse = String::new();
+
+            // 补充前置省略 0
             if literal[0] == '.' {
-                to_parse.push('0');  // 补充前置省略 0
+                to_parse.push('0');
             }
+
             for &ch in literal {
                 to_parse.push(ch);
             }
-            if literal[literal.len() - 1] == '.' {  // 补充后置省略 0
+
+            // 补充后置省略 0
+            if literal[literal.len() - 1] == '.' {
                 to_parse.push('0');
             }
+
             /// 用于解析浮点数并捕获错误
             fn parse_float(to_parse: String, number_type: NumberType) -> Result<TokenFloat, num::ParseFloatError> {
                 match number_type {
@@ -388,6 +378,7 @@ impl TokenScanner {
                     _ => panic!("Logical Error! Invalid number type."),  // 其他值
                 }
             }
+
             match parse_float(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Float(res)),
                 Err(err) => panic!("Logical Error! Unexpected error: {}", err),  // 浮点数转换错误只可能是解析器内部问题
@@ -395,9 +386,11 @@ impl TokenScanner {
         } else {
             let literal = &self.chars[self.start..end];
             let mut to_parse = String::new();
+
             for &ch in literal {
                 to_parse.push(ch);
             }
+
             /// 用于解析整数并捕获错误
             fn parse_int(to_parse: String, number_type: NumberType) -> Result<TokenInteger, num::ParseIntError> {
                 match number_type {
@@ -415,6 +408,7 @@ impl TokenScanner {
                     _ => panic!("Logical Error! Invalid number type."),  // 其他值
                 }
             }
+
             match parse_int(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Integer(res)),
                 Err(err) => {
@@ -429,8 +423,9 @@ impl TokenScanner {
     }
 
     /// 扫描字符串
-    fn scan_string(&mut self, has_pref: bool) -> Result<(), String> {
+    fn scan_string(&mut self, has_pref: bool) -> Result<(), LexicalError> {
         let mut raw_string = false;  // 原始字符串
+
         if has_pref {  // 含有前缀
             let pref = &self.chars[self.start..(self.current - 1)];  // 获取字符串前缀
             for &ch in pref {
@@ -440,6 +435,7 @@ impl TokenScanner {
                 }
             }
         }
+
         let mut res = String::new();
         let mut ch = self.peek();
         while ch != '"' && ch != '\n' && ch != '\0' {  // 注意边界处理
@@ -452,25 +448,29 @@ impl TokenScanner {
             }
             ch = self.peek();
         }
+
         if ch == '"' {
             self.advance();  // 消耗引号
         } else {
             self.throw_error("Unterminated string.")?;  // 未闭合的字符串
         }
+
         self.add_token(TokenType::String(res));
         return Ok(());
     }
-    
+
     /// 扫描字符
-    fn scan_char(&mut self) -> Result<(), String> {
+    fn scan_char(&mut self) -> Result<(), LexicalError> {
         if self.can_match('\'') {  // 空字符
             self.throw_error("Empty character.")?;
         }
+
         let mut ch = self.advance();  // 获取字符
         if ch == '\\' {
             let esc = self.advance();
             ch = self.escape_char(esc)?;  // 转义
         }
+
         return if self.can_match('\'') {  // 结束引号
             self.add_token(TokenType::Char(ch));
             Ok(())
@@ -480,7 +480,7 @@ impl TokenScanner {
     }
 
     /// 转义字符串
-    fn escape_char(&self, ch: char) -> Result<char, String> {
+    fn escape_char(&self, ch: char) -> Result<char, LexicalError> {
         let mut res = Ok('\0');
         match ch {
             'n' => res = Ok('\n'),
