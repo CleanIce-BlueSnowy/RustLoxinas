@@ -1,3 +1,5 @@
+//! 词法解析扫描模块
+
 use std::num;
 use std::rc::Rc;
 use crate::position::Position;
@@ -59,9 +61,10 @@ impl<'a> TokenScanner<'a> {
         return Ok(());
     }
 
-    /// 获取令牌和源码字符串
-    /// # 警告
-    /// 这个函数将会移动 `self`！
+    /** 获取令牌和源码字符串
+    # 警告
+    这个函数将会移动 `self`！
+     */
     pub fn get_tokens_and_source(self) -> Vec<Rc<Token>> {
         self.tokens
     }
@@ -134,6 +137,7 @@ impl<'a> TokenScanner<'a> {
                 }
             }
             '^' => self.add_token(TokenType::Operator(Caret)),
+            '%' => self.add_token(TokenType::Operator(Mod)),
             '"' => self.scan_string(false)?,
             '\'' => self.scan_char()?,
             _ if self.is_identifier_char(ch, true) => {  // 标识符、关键字、字符串前缀
@@ -207,16 +211,18 @@ impl<'a> TokenScanner<'a> {
         if self.is_at_end() { '\0' } else { self.chars[self.current] }
     }
 
-    /// 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    ///
-    /// 自动调用 `throw_error_at()` 并填写位置信息
+    /** 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
+    
+    自动调用 `throw_error_at()` 并填写位置信息
+     */
     fn throw_error(&self, msg: &str) -> Result<(), LexicalError> {
-        self.throw_error_at(msg, self.start, self.current - 1)
+        self.throw_error_at(msg, self.start, self.current)
     }
 
-    /// 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    ///
-    /// 需要手动传入位置信息
+    /** 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
+    
+    需要手动传入位置信息
+     */
     fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> Result<(), LexicalError> {
         Err(LexicalError::new(
             &Position::new(self.line, start, self.line, end),
@@ -247,6 +253,8 @@ impl<'a> TokenScanner<'a> {
             "or" => Some(Or),
             "not" => Some(Not),
             "let" => Some(Let),
+            "true" => Some(True),
+            "false" => Some(False),
             _ => None,
         }
     }

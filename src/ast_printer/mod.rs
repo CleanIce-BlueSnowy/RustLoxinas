@@ -1,5 +1,9 @@
+//! 语法树打印模块
+
 use crate::expr::Expr;
 use crate::tokens::{TokenKeyword, TokenOperator, TokenType};
+
+mod ast_printer_expr;
 
 /// 打印表达式的抽象语法树，实现 Visitor<String> 特征
 #[cfg(debug_assertions)]
@@ -46,12 +50,14 @@ impl AstPrinter {
     /// 为表达式添加括号
     pub fn parenthesize(&mut self, name: &str, exprs: &[&Box<Expr>]) -> String {
         let mut res = String::new();
-        res.push('(');
+        res.push_str("( ");
         res.push_str(name);
+        res.push('\n');
         for expr in exprs {
-            res.push(' ');
             let str: String = expr.accept(self);
-            res.push_str(&str);
+            for line in str.split('\n') {
+                res.push_str(&format!("    {}\n", line));
+            }
         }
         res.push(')');
         return res;

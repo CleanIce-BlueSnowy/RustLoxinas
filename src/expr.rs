@@ -1,11 +1,14 @@
+//! 表达式模块
+
 use std::rc::Rc;
 use crate::data::Data;
 use crate::position::Position;
 use crate::tokens::Token;
 
-/// 表达式
-/// 
-/// 使用访问者模式
+/** 表达式
+
+使用访问者模式
+ */
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Expr {
     /// 二元操作
@@ -44,32 +47,29 @@ pub enum Expr {
     },
 }
 
-/// 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式抽象语法树
-/// 
-/// `RetType` 是返回类型
-/// 
-/// **注意，每一个方法都应该检查 `expr` 的枚举值是否正确**
-/// 
-/// **但是理论上枚举值都是正确的，若不正确说明代码存在问题**
+/** 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式抽象语法树
+
+`RetType` 是返回类型
+ */
 pub trait ExprVisitor<RetType> {
     /// 访问二元操作
-    fn visit_binary_expr(&mut self, pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
+    fn visit_binary_expr(&mut self, this: &Expr, pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
     /// 访问分组
-    fn visit_grouping_expr(&mut self, pos: &Position, expr: &Box<Expr>) -> RetType;
+    fn visit_grouping_expr(&mut self, this: &Expr, pos: &Position, expr: &Box<Expr>) -> RetType;
     /// 访问字面量
-    fn visit_literal_expr(&mut self, pos: &Position, value: &Data) -> RetType;
+    fn visit_literal_expr(&mut self, this: &Expr, pos: &Position, value: &Data) -> RetType;
     /// 访问一元操作
-    fn visit_unary_expr(&mut self, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
+    fn visit_unary_expr(&mut self, this: &Expr, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
 }
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
     pub fn accept<RetType>(&self, visitor: &mut dyn ExprVisitor<RetType>) -> RetType {
         match self {
-            Expr::Binary { pos, left, operator, right } => visitor.visit_binary_expr(&pos, &left, &operator, &right),
-            Expr::Grouping { pos, expression } => visitor.visit_grouping_expr(&pos, &expression),
-            Expr::Literal { pos, value } => visitor.visit_literal_expr(&pos, &value),
-            Expr::Unary { pos, operator, right } => visitor.visit_unary_expr(&pos, &operator, &right),
+            Expr::Binary { pos, left, operator, right } => visitor.visit_binary_expr(self, &pos, &left, &operator, &right),
+            Expr::Grouping { pos, expression } => visitor.visit_grouping_expr(self, &pos, &expression),
+            Expr::Literal { pos, value } => visitor.visit_literal_expr(self, &pos, &value),
+            Expr::Unary { pos, operator, right } => visitor.visit_unary_expr(self, &pos, &operator, &right),
         }
     }
 }

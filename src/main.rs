@@ -1,99 +1,158 @@
+//! Loxinas 编译器、反汇编器、虚拟机的 Rust 语言实现
+
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
-use std::{env, fs, io, path, process};
-use std::io::{Read, Write};
+#[cfg(debug_assertions)]
 use crate::ast_printer::AstPrinter;
+
+use std::{env, process};
+use std::fs::File;
+use std::io::{Read, Write};
+use crate::compiler::Compiler;
+use crate::disassembler::disassemble_file;
 use crate::parser::Parser;
 use crate::position::Position;
 use crate::resolver::Resolver;
 use crate::scanner::TokenScanner;
+use crate::vm::VM;
+
+#[cfg(debug_assertions)]
+mod ast_printer;
 
 mod tokens;
 mod scanner;
 mod expr;
 mod data;
-mod ast_printer;
 mod parser;
-mod parser_assistance;
-mod parser_expr;
 mod types;
 mod object;
 mod resolver;
-mod resolver_expr;
-mod ast_printer_expr;
 mod instr;
 mod position;
+mod compiler;
+mod disassembler;
+mod byte_handler;
+mod vm;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("Loxinas 1.0.0 alpha [Developing]");
-    if args.len() == 1 {  // 无控制台参数
-        if let Err(err) = run_interact() {
-            eprintln!("{err}");
-            process::exit(64);
+    if args.len() < 2 {
+        println!("Loxinas 1.0.0 alpha [Developing]");
+        println!("Usage: loxinas <operation> [other args]");
+        println!("[help: Type 'loxinas help' to get more help information]");
+        return;
+    }
+    let operation: &str = &args[1];
+    match operation {
+        "help" => unimplemented!("Help information is not implemented!"),
+        "compile" => {  // 编译
+            println!("Loxinas 1.0.0 alpha [Developing]");
+            if args.len() < 3 {
+                println!("Usage: loxinas compile <source file> [other args]");
+                println!("[help: Type 'loxinas help compile' to get more help information]");
+                return;
+            }
+            let source_path: &str = &args[2];
+            let mut output_path: Option<&str> = None;
+            let mut i = 3usize;
+            while i < args.len() {
+                let arg: &str = &args[i];
+                match arg {
+                    "-o" | "--output" => {  // 输出文件
+                        if i + 1 >= args.len() {
+                            eprintln!("Expect output file path after '-o'.");
+                            process::exit(2);
+                        }
+                        i += 1;
+                        output_path = Some(&args[i]);
+                    }
+                    _ => {
+                        eprintln!("Unknown arg: '{}'", arg);
+                        process::exit(1);
+                    }
+                }
+                i += 1;
+            }
+            // 启动编译
+            println!("Compiling...");
+            if let Err(err) = compile_file(source_path, output_path) {
+                eprintln!("{}", err);
+                process::exit(64);
+            }
+            println!("Compile Finished!");
         }
-    } else if args.len() == 2 {  // 运行文件
-        if let Err(err) = run_file(&args[1]) {
-            eprintln!("{err}");
-            process::exit(68);
+        "disassemble" => {  // 反汇编
+            println!("Loxinas 1.0.0 alpha [Developing]");
+            if args.len() < 3 {
+                println!("Usage: loxinas disassemble <source file> [other args]");
+                println!("[help: Type 'loxinas help disassemble' to get more help information]");
+                return;
+            }
+            let source_path: &str = &args[2];
+            // 启动反汇编
+            println!("Disassembling...");
+            if let Err(err) = disassemble_file(source_path) {
+                eprintln!("{}", err);
+                process::exit(64);
+            }
+            println!("Disassemble Finished!");
         }
-    } else {
-        println!("Usage: loxinas [file]");
+        "run" => {  // 执行
+            if args.len() < 3 {
+                println!("Usage: loxinas run <byte code file> [other args]");
+                println!("[help: Type 'loxinas help run' to get more help information]");
+                return;
+            }
+            let file_path: &str = &args[2];
+            // 启动虚拟机运行
+            if let Err(err) = run_file(file_path) {
+                eprintln!("{}", err);
+                process::exit(70);
+            }
+        }
+        _ => {
+            eprintln!("Unknown operation: '{}'", operation);
+            process::exit(1);
+        }
     }
 }
 
-/// 交互模式
-fn run_interact() -> Result<(), String> {
-    println!("Interactive Mode [Type EOF (Ctrl + Z or Ctrl + D) to exit]");
-    let input = io::stdin();
-    let mut line = String::new();
-    loop {
-        line.clear();
-        print!("> ");
-        if let Err(err) = io::stdout().flush() {  // 立即刷新
-            throw_error(format!("STDOUT Flushing Error!\n  Error Message: {err}"))?
-        }
-        match input.read_line(&mut line) {
-            Ok(read) if read == 0 => break,  // 控制台 EOF
-            Err(err) => throw_error(format!("STDIN Reading Error!\n  Error Message: {err}"))?,
-            _ => {}
-        }
-        if line.is_empty() {
-            continue;
-        }
-        if let Err(err) = run_code(line.trim().to_string()) { // 交互模式的错误不应该继续回溯，而是输出后继续交互
-            println!("{err}");
-            continue;
-        }
-    }
-    return Ok(());
-}
-
-/// 运行文件
-fn run_file(file_name: &str) -> Result<(), String> {
-    if !path::Path::new(file_name).exists() {
-        throw_error(format!("File '{file_name}' does not exist."))?;
-    }
-    
+/// 编译文件
+fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
+    // 读取源文件
     let mut file;
-    match fs::File::open(file_name) {
-        Ok(res) => file = res,
-        Err(err) => {
-            throw_error(format!("Cannot open file '{file_name}': {err}"))?;
-            panic!("Function throw_error() didn't throw an error.");  // 为了避免编译器报错 `file` 可能未初始化
-        }
+    match File::open(path) {
+        Ok(temp) => file = temp,
+        Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
+    }
+    let mut source = String::new();
+    if let Err(err) = file.read_to_string(&mut source) {
+        return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
     }
     
-    let mut code = String::new();
-    if let Err(err) = file.read_to_string(&mut code) {  // 一次性读取所有源代码
-        throw_error(format!("FILE READING ERROR: {err}"))?;
+    // 编译
+    let (_const_pool, chunk) = compile_code(source)?;
+    
+    // 写入目标文件
+    let output_file_path = if let Some(output_path) = output_path {  // 用户提供了输出文件
+        output_path
+    } else {  // 默认输出文件
+        &(path.to_string() + ".loxc")
+    };
+    let mut file;
+    match File::create(output_file_path) {
+        Ok(temp) => file = temp,
+        Err(err) => return Err(format!("Cannot open output file '{}'! Error message: {}", output_file_path, err)),
     }
-    run_code(code)?;
+    if let Err(err) = file.write_all(&chunk) {  // 写入字节码
+        return Err(format!("Cannot write output file '{}'! Error message: {}", output_file_path, err));
+    }
     
     return Ok(());
 }
 
-fn run_code(source: String) -> Result<(), String> {
+/// 编译代码
+fn compile_code(source: String) -> Result<(Vec<u8>, Vec<u8>), String> {
     let lines: Vec<&str> = source.split('\n').collect();
     
     let mut scanner = TokenScanner::new(&source);  // 词法分析
@@ -116,18 +175,25 @@ fn run_code(source: String) -> Result<(), String> {
         Ok(temp) => expr = temp,
         Err(err) => return Err(print_error("Syntax Error", &lines, &err.message, &err.pos)),  // 返回语法错误
     }
-    let mut printer = AstPrinter::new();
     
     #[cfg(debug_assertions)]
     {
+        let mut printer = AstPrinter::new();
         println!("== AST ==");  // 开发中，先打印语法树
         println!("{}", printer.print(&expr));
     }
     
     let mut resolver = Resolver::new();  // 语义分析
+    
+    #[cfg(debug_assertions)]
     let res;
+    
     match resolver.resolve_expr(&expr) {
-        Ok(temp) => res = temp,
+        Ok(_temp) => {
+            #[cfg(debug_assertions)]
+            { res = _temp; }
+            ()
+        }
         Err(err) => return Err(print_error("Compile Error", &lines, &err.message, &err.pos)),  // 返回编译错误
     }
     
@@ -137,44 +203,74 @@ fn run_code(source: String) -> Result<(), String> {
         println!("{:?}", res.expr_type);
     }
     
+    let mut compiler = Compiler::new(resolver.expr_res_type);
+    compiler.compile_expression(&expr);
+    
+    return Ok((compiler.const_pool, compiler.chunk));
+}
+
+/// 执行文件
+fn run_file(path: &str) -> Result<(), String> {
+    let mut file;
+    match File::open(path) {
+        Ok(temp) => file = temp,
+        Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
+    }
+    let mut buffer: Vec<u8> = Vec::new();
+    if let Err(err) = file.read_to_end(&mut buffer) {
+        return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
+    }
+    
+    // 运行代码
+    run_code(&buffer)?;
+    
     return Ok(());
 }
 
-/// 抛出程序错误
-fn throw_error(msg: String) -> Result<(), String> {
-    Err(format!("Program Error: {msg}"))
+/// 执行字节码
+fn run_code(code: &[u8]) -> Result<(), String> {
+    // 创建虚拟机
+    let mut vm = VM::new(code);
+    
+    // 执行
+    if let Err(err) = vm.run() {
+        return Err(print_runtime_error(&err.message));
+    }
+    
+    return Ok(());
 }
 
-/// 打印错误（返回字符串）
-/// 
-/// 接受错误类型、代码行、错误位置
-/// 
-/// 错误格式（单行）：
-/// 
-/// ```
-/// <Error Type>: line ? at ?-?: <Error Message>
-///   |> This is the code and here leads an error
-///                           ^^^^
-/// ```
-/// 
-/// 错误格式（两行）：
-/// ```
-/// <Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
-///   |> This is the first line and here begins the error
-///                                 ^^^^^^^^^^^^^^^^^^^^^
-///   |> This is the last line and here ends the error
-///      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/// ```
-/// 
-/// 错误格式（多行）：
-/// ```
-/// <Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
-///   |> This is the first line and here begins the error
-///                                 ^^^^^^^^^^^^^^^^^^^^^
-///   |> ...
-///   |> This is the last line and here ends the error
-///      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/// ```
+/** 打印错误（返回字符串）
+
+接受错误类型、代码行、错误位置
+
+错误格式（单行）：
+
+```
+<Error Type>: line ? at ?-?: <Error Message>
+  |> This is the code and here leads an error
+                          ^^^^
+```
+
+错误格式（两行）：
+```
+<Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
+  |> This is the first line and here begins the error
+                                ^^^^^^^^^^^^^^^^^^^^^
+  |> This is the last line and here ends the error
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+错误格式（多行）：
+```
+<Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
+  |> This is the first line and here begins the error
+                                ^^^^^^^^^^^^^^^^^^^^^
+  |> ...
+  |> This is the last line and here ends the error
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+ */
 fn print_error(error_type: &str, lines: &Vec<&str>, message: &str, pos: &Position) -> String {
     let mut res = if pos.start_line == pos.end_line {  // 根据是否在同一行给出不同的输出格式
         format!("{}: line {} at {}-{}: {}\n", error_type, pos.start_line, pos.start_idx + 1, pos.end_idx, message)
@@ -214,4 +310,18 @@ fn print_error(error_type: &str, lines: &Vec<&str>, message: &str, pos: &Positio
     }
     
     return res;
+}
+
+/** 打印运行时错误
+
+功能不完全，因为字节码符号表尚未完成
+
+错误格式：
+
+```
+Runtime Error: <Error Message>
+```
+ */
+fn print_runtime_error(msg: &str) -> String {
+    format!("Runtime Error: {}", msg)
 }

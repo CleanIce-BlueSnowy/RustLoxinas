@@ -1,3 +1,5 @@
+//! 语义分析——表达式分析模块
+
 use std::rc::Rc;
 
 use crate::data::{Data, DataFloat, DataInteger};
@@ -5,16 +7,19 @@ use crate::expr::{Expr, ExprVisitor};
 use crate::object::LoxinasClass;
 use crate::position::Position;
 use crate::resolver::{CompileError, Resolver, ResolverRes};
-use crate::tokens::{Token, TokenKeyword, TokenType};
-use crate::tokens::TokenOperator::{EqualEqual, Greater, GreaterEqual, Less, LessEqual, NotEqual};
+use crate::tokens::{Token, TokenKeyword, TokenOperator, TokenType};
 use crate::types::{ValueFloatType, ValueType};
 use crate::types::ValueType::*;
 
 impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
-    fn visit_binary_expr(&mut self, pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+    fn visit_binary_expr(&mut self, _this: &Expr, pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         let left_res: ResolverRes = left.accept(self)?;
         let right_res: ResolverRes = right.accept(self)?;
-
+        let left_ptr: *const Expr = left.as_ref() as *const Expr;
+        let right_ptr: *const Expr = right.as_ref() as *const Expr;
+        self.expr_res_type.insert(left_ptr, left_res.expr_type.clone());
+        self.expr_res_type.insert(right_ptr, right_res.expr_type.clone());
+        
         // 类型检查
         match (left_res.expr_type, right_res.expr_type) {
             // 两个字符，可以使用 `+` 将其合并为字符串，可以比较
@@ -105,14 +110,17 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
                     }
                 }
             }
-            // 两个数字，其中一个是浮点数，结果提升为浮点数，操作符不能是布尔运算符
+            // 两个数字，其中一个是浮点数，结果提升为浮点数，操作符不能是布尔运算符和取模运算符
             (Integer(_), Float(float)) |
             (Float(float), Integer(_)) => {
                 use crate::tokens::TokenKeyword::*;
-                if let TokenType::Keyword(And | Or) = &operator.token_type {
+                use crate::tokens::TokenOperator::*;
+                if let TokenType::Keyword(TokenKeyword::And | Or) = &operator.token_type {
                     Err(CompileError::new(pos, "Cannot use operator '{}' between numbers.".to_string()))
                 } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
+                } else if let TokenType::Operator(Mod) = &operator.token_type {
+                    Err(CompileError::new(pos, "Cannot use operator '%' on a floating-point number.".to_string()))
                 } else {
                     Ok(ResolverRes::new(Float(float)))
                 }
@@ -121,10 +129,13 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
             (Float(left_type), Float(right_type)) => {
                 use crate::types::ValueFloatType::*;
                 use crate::tokens::TokenKeyword::*;
-                if let TokenType::Keyword(And | Or) = &operator.token_type {
+                use crate::tokens::TokenOperator::*;
+                if let TokenType::Keyword(TokenKeyword::And | Or) = &operator.token_type {
                     Err(CompileError::new(pos, "Cannot use operator '{}' between floating-point numbers.".to_string()))
                 } else if let TokenType::Operator(EqualEqual | NotEqual | Less | LessEqual | Greater | GreaterEqual) = &operator.token_type {
                     Ok(ResolverRes::new(Bool))
+                } else if let TokenType::Operator(Mod) = &operator.token_type {
+                    Err(CompileError::new(pos, "Cannot use operator '%' between floating-point numbers.".to_string()))
                 } else {
                     Ok(ResolverRes::new(ValueType::Float(
                         match (left_type, right_type) {
@@ -185,11 +196,14 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
         }
     }
 
-    fn visit_grouping_expr(&mut self, _pos: &Position, expr: &Box<Expr>) -> Result<ResolverRes, CompileError> {
-        expr.accept(self)
+    fn visit_grouping_expr(&mut self, _this: &Expr, _pos: &Position, expr: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+        let expr_res: ResolverRes = expr.accept(self)?;
+        let expr_ptr = expr.as_ref() as *const Expr;
+        self.expr_res_type.insert(expr_ptr, expr_res.expr_type.clone());
+        return Ok(expr_res);
     }
 
-    fn visit_literal_expr(&mut self, _pos: &Position, value: &Data) -> Result<ResolverRes, CompileError> {
+    fn visit_literal_expr(&mut self, _this: &Expr, _pos: &Position, value: &Data) -> Result<ResolverRes, CompileError> {
         // 直接返回值的类型即可
         Ok(ResolverRes::new(
             match value {
@@ -225,14 +239,22 @@ impl ExprVisitor<Result<ResolverRes, CompileError>> for Resolver {
         ))
     }
 
-    fn visit_unary_expr(&mut self, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
+    fn visit_unary_expr(&mut self, _this: &Expr, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> Result<ResolverRes, CompileError> {
         let expr_res: ResolverRes = right.accept(self)?;
+        let expr_ptr: *const Expr = right.as_ref() as *const Expr;
+        self.expr_res_type.insert(expr_ptr, expr_res.expr_type.clone());
         match expr_res.expr_type {
-            // 整数，结果为原类型，不允许布尔运算符
+            // 整数，结果为原类型，不允许布尔运算符，无符号整数不允许相反数（补码）
             Integer(integer) => {
                 if let TokenType::Keyword(TokenKeyword::Not) = &operator.token_type {
                     Err(CompileError::new(pos, format!("Cannot use operator '{}' on an integer.", Self::operator_to_string(operator))))
                 } else {
+                    use crate::types::ValueIntegerType::*;
+                    if let Byte | UShort | UInt | ULong | UExtInt = integer {
+                        if let TokenType::Operator(TokenOperator::Minus) = operator.token_type {
+                            return Err(CompileError::new(pos, "Cannot use operator '-' on an unsigned integer.".to_string()));
+                        }
+                    }
                     Ok(ResolverRes::new(Integer(integer)))
                 }
             }

@@ -1,3 +1,5 @@
+//! 令牌模块
+
 /// 令牌
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Token {
@@ -64,6 +66,7 @@ pub enum TokenOperator {
     GreaterEqual,  // >=
     Bang,  // !
     Caret,  // ^
+    Mod,  // %
 }
 
 /// 关键字令牌

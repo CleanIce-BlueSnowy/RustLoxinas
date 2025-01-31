@@ -1,8 +1,11 @@
+//! 数据类型分析模块
+
 use std::fmt::Display;
 use crate::object::LoxinasClass;
 
 /// 语义分析使用的数据类型
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone)]
 pub enum ValueType {
     /// 整数类型
     Integer(ValueIntegerType),
@@ -18,6 +21,7 @@ pub enum ValueType {
 
 /// 整数类型
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone)]
 pub enum ValueIntegerType {
     Byte,
     SByte,
@@ -33,6 +37,7 @@ pub enum ValueIntegerType {
 
 /// 浮点类型
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone)]
 pub enum ValueFloatType {
     Float,
     Double,

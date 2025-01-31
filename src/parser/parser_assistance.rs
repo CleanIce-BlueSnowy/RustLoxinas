@@ -1,3 +1,5 @@
+//! 语法分析——辅助功能模块
+
 use std::rc::Rc;
 
 use crate::parser::Parser;

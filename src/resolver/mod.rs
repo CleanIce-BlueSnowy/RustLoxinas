@@ -1,23 +1,32 @@
+//! 语义分析模块
+
+use std::collections::HashMap;
 use std::rc::Rc;
+
 use crate::expr::Expr;
 use crate::position::Position;
 use crate::tokens::Token;
 use crate::types::ValueType;
 
+mod resolver_expr;
+
 /// 语义分析器
 #[cfg_attr(debug_assertions, derive(Debug))]
-pub struct Resolver {
-
+pub struct Resolver{
+    pub expr_res_type: HashMap<*const Expr, ValueType>,
 }
 
 impl Resolver {
     pub fn new() -> Self {
-        Self {}
+        Self { expr_res_type: HashMap::new() }
     }
     
     /// 分析表达式
     pub fn resolve_expr(&mut self, expr: &Expr) -> Result<ResolverRes, CompileError> {
-        expr.accept(self)
+        let res: ResolverRes = expr.accept(self)?;
+        let ptr: *const Expr = expr as *const Expr;
+        self.expr_res_type.insert(ptr, res.expr_type.clone());
+        return Ok(res);
     }
 
     /// 操作符转字符串，方便报错
@@ -48,6 +57,7 @@ impl Resolver {
                         GreaterEqual => ">=",
                         Bang => "!",
                         Caret => "^",
+                        Mod => "%",
                     }
                 }
                 TokenType::Keyword(operator) => {

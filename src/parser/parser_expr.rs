@@ -1,3 +1,5 @@
+//! 语法解析——表达式解析模块
+
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::Expr;
 use crate::parser::{Parser, SyntaxError};
@@ -29,7 +31,7 @@ impl Parser {
                 pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
                 left: Box::new(expr),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             };
         }
         return Ok(expr);
@@ -47,7 +49,7 @@ impl Parser {
                 pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
                 left: Box::new(expr),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             };
         }
         return Ok(expr);
@@ -65,7 +67,7 @@ impl Parser {
                 pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
                 left: Box::new(expr),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             };
         }
         return Ok(expr);
@@ -74,7 +76,7 @@ impl Parser {
     /// 乘除表达式
     fn factor(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.power()?;
-        while parser_can_match!(self, Operator(Star | Slash)) {
+        while parser_can_match!(self, Operator(Star | Slash | Mod)) {
             let operator = self.previous();
             let right = self.power()?;
             let pos_left = expr_get_pos!(&expr);
@@ -83,7 +85,7 @@ impl Parser {
                 pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
                 left: Box::new(expr),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             };
         }
         return Ok(expr);
@@ -101,7 +103,7 @@ impl Parser {
                 pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
                 left: Box::new(expr),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             };
         }
         return Ok(expr);
@@ -116,7 +118,7 @@ impl Parser {
             Ok(Expr::Unary {
                 pos: Position::new(operator.line, operator.start, pos.end_line, pos.end_idx),
                 operator,
-                right: Box::new(right)
+                right: Box::new(right),
             })
         } else {
             self.primary()
@@ -152,7 +154,7 @@ impl Parser {
                         }
                         _ => panic!("Invalid token"),
                     }
-                )
+                ),
             })
         } else if parser_can_match!(self, TokenType::Float(_)) {
             Ok(Expr::Literal {
@@ -167,7 +169,7 @@ impl Parser {
                         }
                         _ => panic!("Invalid token"),
                     }
-                )
+                ),
             })
         } else if parser_can_match!(self, Char(_)) {
             Ok(Expr::Literal {
@@ -177,7 +179,7 @@ impl Parser {
                         Char(ch) => *ch,
                         _ => panic!("Invalid token"),
                     }
-                )
+                ),
             })
         } else if parser_can_match!(self, String(_)) {
             Ok(Expr::Literal {
@@ -187,7 +189,7 @@ impl Parser {
                         String(str) => str.clone(),
                         _ => panic!("Invalid token"),
                     }
-                )
+                ),
             })
         } else if parser_can_match!(self, Paren(TokenParen::LeftParen)) {
             let expr = self.expression()?;
@@ -201,7 +203,7 @@ impl Parser {
             let final_token = self.previous();
             Ok(Expr::Grouping {
                 pos: Position::new(pos.start_line, pos.start_idx, final_token.line, final_token.end),
-                expression: Box::new(expr)
+                expression: Box::new(expr),
             })
         } else {
             Err(SyntaxError { pos, message: "Invalid expression.".to_string() })

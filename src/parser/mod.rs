@@ -1,8 +1,13 @@
+//! 语法分析模块
+
 use std::rc::Rc;
 
 use crate::expr::Expr;
 use crate::position::Position;
 use crate::tokens::Token;
+
+mod parser_assistance;
+mod parser_expr;
 
 /// 语法分析器，生成 AST
 #[cfg_attr(debug_assertions, derive(Debug))]

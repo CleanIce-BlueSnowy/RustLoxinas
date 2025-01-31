@@ -1,3 +1,5 @@
+//! 位置信息模块
+
 /// 用于记录位置信息
 #[derive(Debug, Clone)]
 pub struct Position {
