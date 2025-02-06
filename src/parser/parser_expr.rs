@@ -1,17 +1,18 @@
 //! 语法解析——表达式解析模块
 
+use crate::{expr_get_pos, parser_can_match, parser_consume};
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::Expr;
 use crate::parser::{Parser, SyntaxError};
-use crate::{expr_get_pos, parser_can_match, parser_consume};
 use crate::parser_check;
 use crate::position::Position;
-use crate::tokens::TokenType::*;
+use crate::tokens::{TokenFloat, TokenOperator, TokenParen, TokenType};
+use crate::tokens::TokenFloat::*;
 use crate::tokens::TokenInteger::*;
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
-use crate::tokens::TokenFloat::*;
-use crate::tokens::{TokenFloat, TokenOperator, TokenParen, TokenType};
+use crate::tokens::TokenType::*;
+use crate::types::TypeTag;
 
 impl Parser {
     /// 解析表达式
@@ -39,8 +40,26 @@ impl Parser {
     
     /// 比较表达式
     fn comparison(&mut self) -> Result<Expr, SyntaxError> {
-        let mut expr = self.term()?;
+        let mut expr = self.binary_bit()?;
         while parser_can_match!(self, Operator(Greater | GreaterEqual | Less | LessEqual)) {
+            let operator = self.previous();
+            let right = self.binary_bit()?;
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+        return Ok(expr);
+    }
+    
+    /// 二元位操作
+    fn binary_bit(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.term()?;
+        while parser_can_match!(self, Operator(Pipe | TokenOperator::And | Caret)) {
             let operator = self.previous();
             let right = self.term()?;
             let pos_left = expr_get_pos!(&expr);
@@ -111,7 +130,7 @@ impl Parser {
 
     /// 单元运算符表达式
     fn unary(&mut self) -> Result<Expr, SyntaxError> {
-        if parser_can_match!(self, Operator(Minus | Tilde | TokenOperator::And | Pipe | Caret) | Keyword(Not)) {
+        if parser_can_match!(self, Operator(Minus | Tilde) | Keyword(Not)) {
             let operator = self.previous();
             let right = self.unary()?;
             let pos = expr_get_pos!(&right);
@@ -121,8 +140,26 @@ impl Parser {
                 right: Box::new(right),
             })
         } else {
-            self.primary()
+            self.as_cast()
         }
+    }
+
+    /// 类型转换表达式
+    fn as_cast(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.primary()?;
+        let mut tag: Option<TypeTag> = None;
+        while parser_can_match!(self, Keyword(As)) {
+            tag = Some(self.parse_type_tag()?);
+        }
+        if let Some(tag) = tag {
+            let pos = expr_get_pos!(&expr);
+            expr = Expr::As {
+                pos: Position::new(pos.start_line, pos.start_idx, tag.pos.end_line, tag.pos.end_idx),
+                expression: Box::new(expr),
+                target: tag,
+            };
+        }
+        return Ok(expr);
     }
 
     /// 基本表达式

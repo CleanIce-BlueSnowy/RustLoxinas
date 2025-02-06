@@ -65,7 +65,7 @@ impl<'a> TokenScanner<'a> {
     # 警告
     这个函数将会移动 `self`！
      */
-    pub fn get_tokens_and_source(self) -> Vec<Rc<Token>> {
+    pub fn get_tokens(self) -> Vec<Rc<Token>> {
         self.tokens
     }
 
@@ -106,7 +106,13 @@ impl<'a> TokenScanner<'a> {
             '&' => self.add_token(TokenType::Operator(TokenOperator::And)),
             '|' => self.add_token(TokenType::Operator(Pipe)),
             '~' => self.add_token(TokenType::Operator(Tilde)),
-            ':' => self.add_token(TokenType::Operator(Colon)),
+            ':' => {
+                if self.can_match(':') {
+                    self.add_token(TokenType::Operator(DoubleColon));
+                } else {
+                    self.add_token(TokenType::Operator(Colon));
+                }
+            }
             ';' => self.add_token(TokenType::Operator(Semicolon)),
             '=' => {
                 if self.can_match('=') {
@@ -255,6 +261,7 @@ impl<'a> TokenScanner<'a> {
             "let" => Some(Let),
             "true" => Some(True),
             "false" => Some(False),
+            "as" => Some(As),
             _ => None,
         }
     }

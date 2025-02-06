@@ -154,6 +154,88 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpFDivDouble => Ok(simple("FDiv", "Double", chunk, offset)),
         OpFNegFloat => Ok(simple("FNeg", "Float", chunk, offset)),
         OpFNegDouble => Ok(simple("FNeg", "Double", chunk, offset)),
+        OpBitNotByte => Ok(simple("BitNot", "Byte", chunk, offset)),
+        OpBitNotWord => Ok(simple("BitNot", "Word", chunk, offset)),
+        OpBitNotDword => Ok(simple("BitNot", "Dword", chunk, offset)),
+        OpBitNotQword => Ok(simple("BitNot", "Qword", chunk, offset)),
+        OpBitNotExtInt => Ok(simple("BitNot", "ExtInt", chunk, offset)),
+        OpBitAndByte => Ok(simple("BitAnd", "Byte", chunk, offset)),
+        OpBitAndWord => Ok(simple("BitAnd", "Word", chunk, offset)),
+        OpBitAndDword => Ok(simple("BitAnd", "Dword", chunk, offset)),
+        OpBitAndQword => Ok(simple("BitAnd", "Qword", chunk, offset)),
+        OpBitAndExtInt => Ok(simple("BitAnd", "ExtInt", chunk, offset)),
+        OpBitOrByte => Ok(simple("BitOr", "Byte", chunk, offset)),
+        OpBitOrWord => Ok(simple("BitOr", "Word", chunk, offset)),
+        OpBitOrDword => Ok(simple("BitOr", "Dword", chunk, offset)),
+        OpBitOrQword => Ok(simple("BitOr", "Qword", chunk, offset)),
+        OpBitOrExtInt => Ok(simple("BitOr", "ExtInt", chunk, offset)),
+        OpBitXorByte => Ok(simple("BitXor", "Byte", chunk, offset)),
+        OpBitXorWord => Ok(simple("BitXor", "Word", chunk, offset)),
+        OpBitXorDword => Ok(simple("BitXor", "Dword", chunk, offset)),
+        OpBitXorQword => Ok(simple("BitXor", "Qword", chunk, offset)),
+        OpBitXorExtInt => Ok(simple("BitXor", "ExtInt", chunk, offset)),
+        OpICmpEqualByte => Ok(simple("ICmpEqual", "Byte", chunk, offset)),
+        OpICmpEqualWord => Ok(simple("ICmpEqual", "Word", chunk, offset)),
+        OpICmpEqualDword => Ok(simple("ICmpEqual", "Dword", chunk, offset)),
+        OpICmpEqualQword => Ok(simple("ICmpEqual", "Qword", chunk, offset)),
+        OpICmpEqualExtInt => Ok(simple("ICmpEqual", "ExtInt", chunk, offset)),
+        OpICmpNotEqualByte => Ok(simple("ICmpNotEqual", "Byte", chunk, offset)),
+        OpICmpNotEqualWord => Ok(simple("ICmpNotEqual", "Word", chunk, offset)),
+        OpICmpNotEqualDword => Ok(simple("ICmpNotEqual", "Dword", chunk, offset)),
+        OpICmpNotEqualQword => Ok(simple("ICmpNotEqual", "Qword", chunk, offset)),
+        OpICmpNotEqualExtInt => Ok(simple("ICmpNotEqual", "ExtInt", chunk, offset)),
+        OpICmpLessSByte => Ok(simple("ICmpLess", "Signed Byte", chunk, offset)),
+        OpICmpLessSWord => Ok(simple("ICmpLess", "Signed Word", chunk, offset)),
+        OpICmpLessSDword => Ok(simple("ICmpLess", "Signed Dword", chunk, offset)),
+        OpICmpLessSQword => Ok(simple("ICmpLess", "Signed Qword", chunk, offset)),
+        OpICmpLessSExtInt => Ok(simple("ICmpLess", "Signed ExtInt", chunk, offset)),
+        OpICmpLessUByte => Ok(simple("ICmpLess", "Unsigned Byte", chunk, offset)),
+        OpICmpLessUWord => Ok(simple("ICmpLess", "Unsigned Word", chunk, offset)),
+        OpICmpLessUDword => Ok(simple("ICmpLess", "Unsigned Dword", chunk, offset)),
+        OpICmpLessUQword => Ok(simple("ICmpLess", "Unsigned Qword", chunk, offset)),
+        OpICmpLessUExtInt => Ok(simple("ICmpLess", "Unsigned ExtInt", chunk, offset)),
+        OpICmpLessEqualSByte => Ok(simple("ICmpLessEqual", "Signed Byte", chunk, offset)),
+        OpICmpLessEqualSWord => Ok(simple("ICmpLessEqual", "Signed Word", chunk, offset)),
+        OpICmpLessEqualSDword => Ok(simple("ICmpLessEqual", "Signed Dword", chunk, offset)),
+        OpICmpLessEqualSQword => Ok(simple("ICmpLessEqual", "Signed Qword", chunk, offset)),
+        OpICmpLessEqualSExtInt => Ok(simple("ICmpLessEqual", "Signed ExtInt", chunk, offset)),
+        OpICmpLessEqualUByte => Ok(simple("ICmpLessEqual", "Unsigned Byte", chunk, offset)),
+        OpICmpLessEqualUWord => Ok(simple("ICmpLessEqual", "Unsigned Word", chunk, offset)),
+        OpICmpLessEqualUDword => Ok(simple("ICmpLessEqual", "Unsigned Dword", chunk, offset)),
+        OpICmpLessEqualUQword => Ok(simple("ICmpLessEqual", "Unsigned Qword", chunk, offset)),
+        OpICmpLessEqualUExtInt => Ok(simple("ICmpLessEqual", "Unsigned ExtInt", chunk, offset)),
+        OpICmpGreaterSByte => Ok(simple("ICmpGreater", "Signed Byte", chunk, offset)),
+        OpICmpGreaterSWord => Ok(simple("ICmpGreater", "Signed Word", chunk, offset)),
+        OpICmpGreaterSDword => Ok(simple("ICmpGreater", "Signed Dword", chunk, offset)),
+        OpICmpGreaterSQword => Ok(simple("ICmpGreater", "Signed Qword", chunk, offset)),
+        OpICmpGreaterSExtInt => Ok(simple("ICmpGreater", "Signed ExtInt", chunk, offset)),
+        OpICmpGreaterUByte => Ok(simple("ICmpGreater", "Unsigned Byte", chunk, offset)),
+        OpICmpGreaterUWord => Ok(simple("ICmpGreater", "Unsigned Word", chunk, offset)),
+        OpICmpGreaterUDword => Ok(simple("ICmpGreater", "Unsigned Dword", chunk, offset)),
+        OpICmpGreaterUQword => Ok(simple("ICmpGreater", "Unsigned Qword", chunk, offset)),
+        OpICmpGreaterUExtInt => Ok(simple("ICmpGreater", "Unsigned ExtInt", chunk, offset)),
+        OpICmpGreaterEqualSByte => Ok(simple("ICmpGreaterEqual", "Signed Byte", chunk, offset)),
+        OpICmpGreaterEqualSWord => Ok(simple("ICmpGreaterEqual", "Signed Word", chunk, offset)),
+        OpICmpGreaterEqualSDword => Ok(simple("ICmpGreaterEqual", "Signed Dword", chunk, offset)),
+        OpICmpGreaterEqualSQword => Ok(simple("ICmpGreaterEqual", "Signed Qword", chunk, offset)),
+        OpICmpGreaterEqualSExtInt => Ok(simple("ICmpGreaterEqual", "Signed ExtInt", chunk, offset)),
+        OpICmpGreaterEqualUByte => Ok(simple("ICmpGreaterEqual", "Unsigned Byte", chunk, offset)),
+        OpICmpGreaterEqualUWord => Ok(simple("ICmpGreaterEqual", "Unsigned Word", chunk, offset)),
+        OpICmpGreaterEqualUDword => Ok(simple("ICmpGreaterEqual", "Unsigned Dword", chunk, offset)),
+        OpICmpGreaterEqualUQword => Ok(simple("ICmpGreaterEqual", "Unsigned Qword", chunk, offset)),
+        OpICmpGreaterEqualUExtInt => Ok(simple("ICmpGreaterEqual", "Unsigned ExtInt", chunk, offset)),
+        OpFCmpEqualFloat => Ok(simple("FCmpEqual", "Float", chunk, offset)),
+        OpFCmpEqualDouble => Ok(simple("FCmpEqual", "Double", chunk, offset)),
+        OpFCmpNotEqualFloat => Ok(simple("FCmpNotEqual", "Float", chunk, offset)),
+        OpFCmpNotEqualDouble => Ok(simple("FCmpNotEqual", "Double", chunk, offset)),
+        OpFCmpLessFloat => Ok(simple("FCmpLess", "Float", chunk, offset)),
+        OpFCmpLessDouble => Ok(simple("FCmpLess", "Double", chunk, offset)),
+        OpFCmpLessEqualFloat => Ok(simple("FCmpLessEqual", "Float", chunk, offset)),
+        OpFCmpLessEqualDouble => Ok(simple("FCmpLessEqual", "Double", chunk, offset)),
+        OpFCmpGreaterFloat => Ok(simple("FCmpGreater", "Float", chunk, offset)),
+        OpFCmpGreaterDouble => Ok(simple("FCmpGreater", "Double", chunk, offset)),
+        OpFCmpGreaterEqualFloat => Ok(simple("FCmpGreaterEqual", "Float", chunk, offset)),
+        OpFCmpGreaterEqualDouble => Ok(simple("FCmpGreaterEqual", "Double", chunk, offset)),
     }
 }
 
@@ -169,8 +251,7 @@ fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     if let Ok((res_byte, res_offset)) = read_byte(chunk, offset) {
         let byte = u8::from_le_bytes(res_byte);
         let u_num = byte;
-        let s_num = byte as i8;
-        Ok((format!("{:<20} [{:^25}] {:02X} ({} or {})", instr, info, byte, u_num, s_num), res_offset))
+        Ok((format!("{:<20} [{:^25}] {:02X} ({})", instr, info, byte, u_num), res_offset))
     } else {
         Err("Not enough bytes to read: need 1 byte.".to_string())
     }
@@ -182,8 +263,7 @@ fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     if let Ok((res_word, res_offset)) = read_word(chunk, offset) {
         let word = u16::from_le_bytes(res_word);
         let u_num = word;
-        let s_num = word as i16;
-        Ok((format!("{:<20} [{:^25}] {:04X} ({} or {})", instr, info, word, u_num, s_num), res_offset))
+        Ok((format!("{:<20} [{:^25}] {:04X} ({})", instr, info, word, u_num), res_offset))
     } else {
         Err("Not enough bytes to read: need 2 bytes.".to_string())
     }
@@ -195,9 +275,8 @@ fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     if let Ok((res_dword, res_offset)) = read_dword(chunk, offset) {
         let dword = u32::from_le_bytes(res_dword);
         let u_num = dword;
-        let s_num = dword as i32;
         let float = f32::from_le_bytes(res_dword);
-        Ok((format!("{:<20} [{:^25}] {:08X} ({} or {} or {:e})", instr, info, dword, u_num, s_num, float), res_offset))
+        Ok((format!("{:<20} [{:^25}] {:08X} ({} or {:e})", instr, info, dword, u_num, float), res_offset))
     } else {
         Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
@@ -209,9 +288,8 @@ fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     if let Ok((res_qword, res_offset)) = read_qword(chunk, offset) {
         let qword = u64::from_le_bytes(res_qword);
         let u_num = qword;
-        let s_num = qword as i64;
         let double = f64::from_le_bytes(res_qword);
-        Ok((format!("{:<20} [{:^25}] {:016X} ({} or {} or {:e})", instr, info, qword, u_num, s_num, double), res_offset))
+        Ok((format!("{:<20} [{:^25}] {:016X} ({} or {:e})", instr, info, qword, u_num, double), res_offset))
     } else {
         Err("Not enough bytes to read: need 8 bytes.".to_string())
     }
@@ -223,8 +301,7 @@ fn const_extend(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<
     if let Ok((res_extend, res_offset)) = read_extend(chunk, offset) {
         let extend = u128::from_le_bytes(res_extend);
         let u_num = extend;
-        let s_num = extend as i128;
-        Ok((format!("{:<20} [{:^25}] {:032X} ({} or {})", instr, info, extend, u_num, s_num), res_offset))
+        Ok((format!("{:<20} [{:^25}] {:032X} ({})", instr, info, extend, u_num), res_offset))
     } else {
         Err("Not enough bytes to read: need 16 bytes.".to_string())
     }

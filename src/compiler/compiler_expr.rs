@@ -8,37 +8,30 @@ use crate::expr::{Expr, ExprVisitor};
 use crate::instr::Instruction::*;
 use crate::position::Position;
 use crate::tokens::Token;
+use crate::types::TypeTag;
 
 impl ExprVisitor<()> for Compiler {
     fn visit_binary_expr(&mut self, this: &Expr, _pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) {
+        // 获取指针
         let left_ptr = left.as_ref() as *const Expr;
         let right_ptr = right.as_ref() as *const Expr;
         let this_ptr = this as *const Expr;
-        let this_type;
-        let temp_type = self.expr_res_type.get(&this_ptr);
-        if let Some(temp) = temp_type {
-            this_type = temp.clone();
-        } else {
-            panic!("Unknown expr: {:?}", this_ptr);
-        }
-        let left_type_temp = self.expr_res_type.get(&left_ptr);
-        let right_type_temp = self.expr_res_type.get(&right_ptr);
-        let left_type;
-        let right_type;
-        if let (Some(left_temp), Some(right_temp)) = (left_type_temp, right_type_temp) {
-            left_type = left_temp.clone();
-            right_type = right_temp.clone();
-        } else {
-            panic!("Unknown expr: {:?} or {:?}", left_ptr, right_ptr);
-        }
+        
+        // 获取类型
+        let this_type = self.expr_ope_type.get(&this_ptr).unwrap().clone();
+        let left_type = self.expr_res_type.get(&left_ptr).unwrap().clone();
+        let right_type = self.expr_res_type.get(&right_ptr).unwrap().clone();
+        
         use crate::types::ValueType::*;
         match (&left_type, &right_type) {
             (Integer(_), Integer(_)) => {
                 use crate::tokens::TokenType::*;
+                // 计算并进行类型转换
                 left.accept(self);
                 self.convert_types(&left_type, &this_type);
                 right.accept(self);
                 self.convert_types(&right_type, &this_type);
+                
                 match &operator.token_type {
                     Operator(ope) => {
                         use crate::tokens::TokenOperator::*;
@@ -48,6 +41,15 @@ impl ExprVisitor<()> for Compiler {
                             Star => self.integer_code(&this_type, OpIMulByte, OpIMulWord, OpIMulDword, OpIMulQword, OpIMulExtInt),
                             Slash => self.sign_integer_code(&this_type, OpIDivSByte, OpIDivUByte, OpIDivSWord, OpIDivUWord, OpIDivSDword, OpIDivUDword, OpIDivSQword, OpIDivUQword, OpIDivSExtInt, OpIDivUExtInt),
                             Mod => self.sign_integer_code(&this_type, OpIModSByte, OpIModUByte, OpIModSWord, OpIModUWord, OpIModSDword, OpIModUDword, OpIModSQword, OpIModUQword, OpIModSExtInt, OpIModUExtInt),
+                            And => self.integer_code(&this_type, OpBitAndByte, OpBitAndWord, OpBitAndDword, OpBitAndQword, OpBitAndExtInt),
+                            Pipe => self.integer_code(&this_type, OpBitOrByte, OpBitOrWord, OpBitOrDword, OpBitOrQword, OpBitOrExtInt),
+                            Caret => self.integer_code(&this_type, OpBitXorByte, OpBitXorWord, OpBitXorDword, OpBitXorQword, OpBitXorExtInt),
+                            EqualEqual => self.integer_code(&this_type, OpICmpEqualByte, OpICmpEqualWord, OpICmpEqualDword, OpICmpEqualQword, OpICmpEqualExtInt),
+                            NotEqual => self.integer_code(&this_type, OpICmpNotEqualByte, OpICmpNotEqualWord, OpICmpNotEqualDword, OpICmpNotEqualQword, OpICmpNotEqualExtInt),
+                            Less => self.sign_integer_code(&this_type, OpICmpLessSByte, OpICmpLessUByte, OpICmpLessSWord, OpICmpLessUWord, OpICmpLessSDword, OpICmpLessUDword, OpICmpLessSQword, OpICmpLessUQword, OpICmpLessSExtInt, OpICmpLessUExtInt),
+                            LessEqual => self.sign_integer_code(&this_type, OpICmpLessEqualSByte, OpICmpLessEqualUByte, OpICmpLessEqualSWord, OpICmpLessEqualUWord, OpICmpLessEqualSDword, OpICmpLessEqualUDword, OpICmpLessEqualSQword, OpICmpLessEqualUQword, OpICmpLessEqualSExtInt, OpICmpLessEqualUExtInt),
+                            Greater => self.sign_integer_code(&this_type, OpICmpGreaterSByte, OpICmpGreaterUByte, OpICmpGreaterSWord, OpICmpGreaterUWord, OpICmpGreaterSDword, OpICmpGreaterUDword, OpICmpGreaterSQword, OpICmpGreaterUQword, OpICmpGreaterSExtInt, OpICmpGreaterUExtInt),
+                            GreaterEqual => self.sign_integer_code(&this_type, OpICmpGreaterEqualSByte, OpICmpGreaterEqualUByte, OpICmpGreaterEqualSWord, OpICmpGreaterEqualUWord, OpICmpGreaterEqualSDword, OpICmpGreaterEqualUDword, OpICmpGreaterEqualSQword, OpICmpGreaterEqualUQword, OpICmpGreaterEqualSExtInt, OpICmpGreaterEqualUExtInt),
                             _ => unimplemented!("Unsupported operation"),
                         }
                     }
@@ -56,10 +58,12 @@ impl ExprVisitor<()> for Compiler {
             }
             (Float(_), Float(_)) | (Integer(_), Float(_)) | (Float(_), Integer(_)) => {
                 use crate::tokens::TokenType::*;
+                // 计算并进行类型转换
                 left.accept(self);
                 self.convert_types(&left_type, &this_type);
                 right.accept(self);
                 self.convert_types(&right_type, &this_type);
+                
                 match &operator.token_type {
                     Operator(ope) => {
                         use crate::tokens::TokenOperator::*;
@@ -68,6 +72,12 @@ impl ExprVisitor<()> for Compiler {
                             Minus => self.float_code(&this_type, OpFSubFloat, OpFSubDouble),
                             Star => self.float_code(&this_type, OpFMulFloat, OpFMulDouble),
                             Slash => self.float_code(&this_type, OpFDivFloat, OpFDivDouble),
+                            EqualEqual => self.float_code(&this_type, OpFCmpEqualFloat, OpFCmpEqualDouble),
+                            NotEqual => self.float_code(&this_type, OpFCmpNotEqualFloat, OpFCmpNotEqualDouble),
+                            Less => self.float_code(&this_type, OpFCmpLessFloat, OpFCmpLessDouble),
+                            LessEqual => self.float_code(&this_type, OpFCmpLessEqualFloat, OpFCmpLessEqualDouble),
+                            Greater => self.float_code(&this_type, OpFCmpGreaterFloat, OpFCmpGreaterDouble),
+                            GreaterEqual => self.float_code(&this_type, OpFCmpGreaterEqualFloat, OpFCmpGreaterEqualDouble),
                             _ => unimplemented!("Unsupported operation"),
                         }
                     }
@@ -148,14 +158,12 @@ impl ExprVisitor<()> for Compiler {
     }
 
     fn visit_unary_expr(&mut self, _this: &Expr, _pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) {
+        // 获取指针
         let expr_ptr = right.as_ref() as *const Expr;
-        let expr_type_temp = self.expr_res_type.get(&expr_ptr);
-        let expr_type;
-        if let Some(temp) = expr_type_temp {
-            expr_type = temp.clone();
-        } else {
-            panic!("Unexpected expr: {:?}", expr_ptr);
-        }
+        
+        // 获取类型
+        let expr_type = self.expr_ope_type.get(&expr_ptr).unwrap().clone();
+        
         use crate::types::ValueType::*;
         match expr_type {
             Integer(_) | Float(_) => {
@@ -164,11 +172,24 @@ impl ExprVisitor<()> for Compiler {
                 if let Operator(Minus) = &operator.token_type {
                     right.accept(self);
                     self.neg_ope_code(&expr_type);
+                } else if let Operator(Tilde) = &operator.token_type {
+                    right.accept(self);
+                    self.integer_code(&expr_type, OpBitNotByte, OpBitNotWord, OpBitNotDword, OpBitNotQword, OpBitNotExtInt);
                 } else {
                     unimplemented!("Unsupported operation");
                 }
             }
             _ => unimplemented!("Unsupported operation"),
         }
+    }
+
+    fn visit_as_expr(&mut self, this: &Expr, _pos: &Position, expr: &Box<Expr>, _target: &TypeTag) {
+        // 直接计算并转换
+        expr.accept(self);
+        
+        let this_ptr = this as *const Expr;
+        let ope_type = self.expr_ope_type.get(&this_ptr).unwrap().clone();
+        let res_type = self.expr_res_type.get(&this_ptr).unwrap().clone();
+        self.convert_types(&ope_type, &res_type);
     }
 }

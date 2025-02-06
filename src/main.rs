@@ -33,6 +33,7 @@ mod compiler;
 mod disassembler;
 mod byte_handler;
 mod vm;
+mod assistance;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -159,7 +160,7 @@ fn compile_code(source: String) -> Result<(Vec<u8>, Vec<u8>), String> {
     if let Err(err) = scanner.scan_tokens() {
         return Err(print_error("Lexical Error", &lines, &err.message, &err.pos))
     }
-    let tokens = scanner.get_tokens_and_source();
+    let tokens = scanner.get_tokens();
     
     #[cfg(debug_assertions)]
     {
@@ -200,10 +201,10 @@ fn compile_code(source: String) -> Result<(Vec<u8>, Vec<u8>), String> {
     #[cfg(debug_assertions)]
     {
         println!("== Expr Result ==");  // 开发中，先打印分析结果
-        println!("{:?}", res.expr_type);
+        println!("{:?}", res.res_type);
     }
     
-    let mut compiler = Compiler::new(resolver.expr_res_type);
+    let mut compiler = Compiler::new(resolver.expr_ope_type, resolver.expr_res_type);
     compiler.compile_expression(&expr);
     
     return Ok((compiler.const_pool, compiler.chunk));

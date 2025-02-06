@@ -1,9 +1,11 @@
 //! 表达式模块
 
 use std::rc::Rc;
+
 use crate::data::Data;
 use crate::position::Position;
 use crate::tokens::Token;
+use crate::types::TypeTag;
 
 /** 表达式
 
@@ -45,6 +47,15 @@ pub enum Expr {
         /// 操作数
         right: Box<Expr>,
     },
+    /// 类型转换操作
+    As {
+        /// 位置信息
+        pos: Position,
+        /// 操作数
+        expression: Box<Expr>,
+        /// 目标类型
+        target: TypeTag,
+    }
 }
 
 /** 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式抽象语法树
@@ -60,16 +71,19 @@ pub trait ExprVisitor<RetType> {
     fn visit_literal_expr(&mut self, this: &Expr, pos: &Position, value: &Data) -> RetType;
     /// 访问一元操作
     fn visit_unary_expr(&mut self, this: &Expr, pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> RetType;
+    /// 访问类型转换操作
+    fn visit_as_expr(&mut self, this: &Expr, pos: &Position, expr: &Box<Expr>, target: &TypeTag) -> RetType;
 }
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
     pub fn accept<RetType>(&self, visitor: &mut dyn ExprVisitor<RetType>) -> RetType {
         match self {
-            Expr::Binary { pos, left, operator, right } => visitor.visit_binary_expr(self, &pos, &left, &operator, &right),
-            Expr::Grouping { pos, expression } => visitor.visit_grouping_expr(self, &pos, &expression),
-            Expr::Literal { pos, value } => visitor.visit_literal_expr(self, &pos, &value),
-            Expr::Unary { pos, operator, right } => visitor.visit_unary_expr(self, &pos, &operator, &right),
+            Expr::Binary { pos, left, operator, right } => visitor.visit_binary_expr(self, pos, left, operator, right),
+            Expr::Grouping { pos, expression } => visitor.visit_grouping_expr(self, pos, expression),
+            Expr::Literal { pos, value } => visitor.visit_literal_expr(self, pos, value),
+            Expr::Unary { pos, operator, right } => visitor.visit_unary_expr(self, pos, operator, right),
+            Expr::As { pos, expression, target } => visitor.visit_as_expr(self, pos, expression, target),
         }
     }
 }
@@ -82,6 +96,7 @@ macro_rules! expr_get_pos {
             Expr::Grouping { pos, expression: _ } => pos.clone(),
             Expr::Literal { pos, value: _ } => pos.clone(),
             Expr::Unary { pos, operator: _, right: _ } => pos.clone(),
+            Expr::As { pos, expression: _, target: _ } => pos.clone(),
         }
     }
 }

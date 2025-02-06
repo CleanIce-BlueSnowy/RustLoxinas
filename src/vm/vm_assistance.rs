@@ -27,6 +27,17 @@ impl<'a> VM<'a> {
     pub fn push_extend(&mut self, extend: [u8; 16]) {
         self.vm_stack.extend_from_slice(&extend);
     }
+    
+    #[inline]
+    pub fn push_bool(&mut self, value: bool) {
+        self.vm_stack.push(
+            if value {
+                0x01
+            } else {
+                0x00
+            }
+        );
+    }
 
     #[inline]
     pub fn peek_byte(&self) -> [u8; 1] {
@@ -65,6 +76,12 @@ impl<'a> VM<'a> {
             self.vm_stack[top - 3], self.vm_stack[top - 2], self.vm_stack[top - 1], self.vm_stack[top]
         ];
     }
+    
+    #[inline]
+    pub fn peek_bool(&self) -> bool {
+        let top = self.vm_stack.len() - 1;
+        return self.vm_stack[top] != 0;
+    }
 
     #[inline]
     pub fn pop_byte(&mut self) -> [u8; 1] {
@@ -98,6 +115,13 @@ impl<'a> VM<'a> {
     pub fn pop_extend(&mut self) -> [u8; 16] {
         let res = self.peek_extend();
         self.vm_stack.truncate(self.vm_stack.len() - 16);
+        return res;
+    }
+    
+    #[inline]
+    pub fn pop_bool(&mut self) -> bool {
+        let res = self.peek_bool();
+        self.vm_stack.truncate(self.vm_stack.len() - 1);
         return res;
     }
 }

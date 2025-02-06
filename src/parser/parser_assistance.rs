@@ -2,8 +2,10 @@
 
 use std::rc::Rc;
 
-use crate::parser::Parser;
+use crate::parser::{Parser, SyntaxError};
+use crate::position::Position;
 use crate::tokens::{Token, TokenType};
+use crate::types::TypeTag;
 
 /// 若下一个令牌能匹配模式，则消耗该令牌，并返回是否匹配
 #[macro_export]
@@ -61,5 +63,38 @@ impl Parser {
             self.current += 1;
         }
         return self.previous();
+    }
+
+    pub fn parse_type_tag(&mut self) -> Result<TypeTag, SyntaxError> {
+        use crate::tokens::TokenType::*;
+        use crate::tokens::TokenOperator::*;
+        let next_token = self.advance().clone();
+        return if let Identifier(name) = &next_token.token_type {
+            let mut tag = TypeTag::new();
+            tag.pos.start_line = next_token.line;
+            tag.pos.start_idx = next_token.start;
+            tag.pos.end_line = next_token.line;
+            tag.pos.end_idx = next_token.end;
+            tag.chain.push_back(name.clone());
+            while parser_can_match!(self, Operator(DoubleColon)) {
+                let token = self.advance().clone();
+                if let Identifier(name) = &token.token_type {
+                    tag.pos.end_line = token.line;
+                    tag.pos.end_idx = token.end;
+                    tag.chain.push_back(name.clone());
+                } else {
+                    return Err(SyntaxError::new(
+                        &Position::new(token.line, token.start, token.line, token.end),
+                        "Expect type name".to_string()
+                    ));
+                }
+            }
+            Ok(tag)
+        } else {
+            Err(SyntaxError::new(
+                &Position::new(next_token.line, next_token.start, next_token.line, next_token.end),
+                "Expect type name".to_string()
+            ))
+        }
     }
 }

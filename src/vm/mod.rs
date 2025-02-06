@@ -150,73 +150,73 @@ impl<'a> VM<'a> {
             OpIAddByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
-                let res = num1 + num2;
+                let res = num1.wrapping_add(num2);
                 self.push_byte(res.to_le_bytes());
             }
             OpIAddWord => {
                 let num2 = u16::from_le_bytes(self.pop_word());
                 let num1 = u16::from_le_bytes(self.pop_word());
-                let res = num1 + num2;
+                let res = num1.wrapping_add(num2);
                 self.push_word(res.to_le_bytes());
             }
             OpIAddDword => {
                 let num2 = u32::from_le_bytes(self.pop_dword());
                 let num1 = u32::from_le_bytes(self.pop_dword());
-                let res = num1 + num2;
+                let res = num1.wrapping_add(num2);
                 self.push_dword(res.to_le_bytes());
             }
             OpIAddQword => {
                 let num2 = u64::from_le_bytes(self.pop_qword());
                 let num1 = u64::from_le_bytes(self.pop_qword());
-                let res = num1 + num2;
+                let res = num1.wrapping_add(num2);
                 self.push_qword(res.to_le_bytes());
             }
             OpISubByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
-                let res = num1 - num2;
+                let res = num1.wrapping_sub(num2);
                 self.push_byte(res.to_le_bytes());
             }
             OpISubWord => {
                 let num2 = u16::from_le_bytes(self.pop_word());
                 let num1 = u16::from_le_bytes(self.pop_word());
-                let res = num1 - num2;
+                let res = num1.wrapping_sub(num2);
                 self.push_word(res.to_le_bytes());
             }
             OpISubDword => {
                 let num2 = u32::from_le_bytes(self.pop_dword());
                 let num1 = u32::from_le_bytes(self.pop_dword());
-                let res = num1 - num2;
+                let res = num1.wrapping_sub(num2);
                 self.push_dword(res.to_le_bytes());
             }
             OpISubQword => {
                 let num2 = u64::from_le_bytes(self.pop_qword());
                 let num1 = u64::from_le_bytes(self.pop_qword());
-                let res = num1 - num2;
+                let res = num1.wrapping_sub(num2);
                 self.push_qword(res.to_le_bytes());
             }
             OpIMulByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
-                let res = num1 * num2;
+                let res = num1.wrapping_mul(num2);
                 self.push_byte(res.to_le_bytes());
             }
             OpIMulWord => {
                 let num2 = u16::from_le_bytes(self.pop_word());
                 let num1 = u16::from_le_bytes(self.pop_word());
-                let res = num1 * num2;
+                let res = num1.wrapping_mul(num2);
                 self.push_word(res.to_le_bytes());
             }
             OpIMulDword => {
                 let num2 = u32::from_le_bytes(self.pop_dword());
                 let num1 = u32::from_le_bytes(self.pop_dword());
-                let res = num1 * num2;
+                let res = num1.wrapping_mul(num2);
                 self.push_dword(res.to_le_bytes());
             }
             OpIMulQword => {
                 let num2 = u64::from_le_bytes(self.pop_qword());
                 let num1 = u64::from_le_bytes(self.pop_qword());
-                let res = num1 * num2;
+                let res = num1.wrapping_mul(num2);
                 self.push_qword(res.to_le_bytes());
             }
             OpIDivSByte => {
@@ -225,7 +225,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_byte(res.to_le_bytes());
             }
             OpIDivSWord => {
@@ -234,7 +234,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_word(res.to_le_bytes());
             }
             OpIDivSDword => {
@@ -243,7 +243,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_dword(res.to_le_bytes());
             }
             OpIDivSQword => {
@@ -252,7 +252,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_qword(res.to_le_bytes());
             }
             OpIDivUByte => {
@@ -261,7 +261,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_byte(res.to_le_bytes());
             }
             OpIDivUWord => {
@@ -270,7 +270,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_word(res.to_le_bytes());
             }
             OpIDivUDword => {
@@ -279,7 +279,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_dword(res.to_le_bytes());
             }
             OpIDivUQword => {
@@ -288,7 +288,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_qword(res.to_le_bytes());
             }
             OpIModSByte => {
@@ -400,19 +400,19 @@ impl<'a> VM<'a> {
             OpIAddExtInt => {
                 let num2 = u128::from_le_bytes(self.pop_extend());
                 let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1 + num2;
+                let res = num1.wrapping_add(num2);
                 self.push_extend(res.to_le_bytes());
             }
             OpISubExtInt => {
                 let num2 = u128::from_le_bytes(self.pop_extend());
                 let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1 - num2;
+                let res = num1.wrapping_sub(num2);
                 self.push_extend(res.to_le_bytes());
             }
             OpIMulExtInt => {
                 let num2 = u128::from_le_bytes(self.pop_extend());
                 let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1 * num2;
+                let res = num1.wrapping_mul(num2);
                 self.push_extend(res.to_le_bytes());
             }
             OpIDivSExtInt => {
@@ -421,7 +421,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_extend(res.to_le_bytes());
             }
             OpIDivUExtInt => {
@@ -430,7 +430,7 @@ impl<'a> VM<'a> {
                 if num2 == 0 {
                     return Err(RuntimeError::new("Division by zero.".to_string()));
                 }
-                let res = num1 / num2;
+                let res = num1.wrapping_div(num2);
                 self.push_extend(res.to_le_bytes());
             }
             OpIModSExtInt => {
@@ -649,6 +649,431 @@ impl<'a> VM<'a> {
                 let num = f64::from_le_bytes(self.pop_qword());
                 let res = -num;
                 self.push_qword(res.to_le_bytes());
+            }
+            OpBitNotByte => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let res = !num;
+                self.push_byte(res.to_le_bytes());
+            }
+            OpBitNotWord => {
+                let num = u16::from_le_bytes(self.pop_word());
+                let res = !num;
+                self.push_word(res.to_le_bytes());
+            }
+            OpBitNotDword => {
+                let num = u32::from_le_bytes(self.pop_dword());
+                let res = !num;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpBitNotQword => {
+                let num = u64::from_le_bytes(self.pop_qword());
+                let res = !num;
+                self.push_qword(res.to_le_bytes());
+            }
+            OpBitNotExtInt => {
+                let num = u128::from_le_bytes(self.pop_extend());
+                let res = !num;
+                self.push_extend(res.to_le_bytes());
+            }
+            OpBitAndByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                let res = num1 & num2;
+                self.push_byte(res.to_le_bytes());
+            }
+            OpBitAndWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                let res = num1 & num2;
+                self.push_word(res.to_le_bytes());
+            }
+            OpBitAndDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                let res = num1 & num2;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpBitAndQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                let res = num1 & num2;
+                self.push_qword(res.to_le_bytes());
+            }
+            OpBitAndExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                let res = num1 & num2;
+                self.push_extend(res.to_le_bytes());
+            }
+            OpBitOrByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                let res = num1 | num2;
+                self.push_byte(res.to_le_bytes());
+            }
+            OpBitOrWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                let res = num1 | num2;
+                self.push_word(res.to_le_bytes());
+            }
+            OpBitOrDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                let res = num1 | num2;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpBitOrQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                let res = num1 | num2;
+                self.push_qword(res.to_le_bytes());
+            }
+            OpBitOrExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                let res = num1 | num2;
+                self.push_extend(res.to_le_bytes());
+            }
+            OpBitXorByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                let res = num1 ^ num2;
+                self.push_byte(res.to_le_bytes());
+            }
+            OpBitXorWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                let res = num1 ^ num2;
+                self.push_word(res.to_le_bytes());
+            }
+            OpBitXorDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                let res = num1 ^ num2;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpBitXorQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                let res = num1 ^ num2;
+                self.push_qword(res.to_le_bytes());
+            }
+            OpBitXorExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                let res = num1 ^ num2;
+                self.push_extend(res.to_le_bytes());
+            }
+            OpICmpEqualByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 == num2);
+            }
+            OpICmpEqualWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 == num2);
+            }
+            OpICmpEqualDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 == num2);
+            }
+            OpICmpEqualQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 == num2);
+            }
+            OpICmpEqualExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 == num2);
+            }
+            OpICmpNotEqualByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 != num2);
+            }
+            OpICmpNotEqualWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 != num2);
+            }
+            OpICmpNotEqualDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 != num2);
+            }
+            OpICmpNotEqualQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 != num2);
+            }
+            OpICmpNotEqualExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 != num2);
+            }
+            OpICmpLessSByte => {
+                let num2 = i8::from_le_bytes(self.pop_byte());
+                let num1 = i8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessSWord => {
+                let num2 = i16::from_le_bytes(self.pop_word());
+                let num1 = i16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessSDword => {
+                let num2 = i32::from_le_bytes(self.pop_dword());
+                let num1 = i32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessSQword => {
+                let num2 = i64::from_le_bytes(self.pop_qword());
+                let num1 = i64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessSExtInt => {
+                let num2 = i128::from_le_bytes(self.pop_extend());
+                let num1 = i128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessUByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessUWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessUDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessUQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessUExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 < num2);
+            }
+            OpICmpLessEqualSByte => {
+                let num2 = i8::from_le_bytes(self.pop_byte());
+                let num1 = i8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualSWord => {
+                let num2 = i16::from_le_bytes(self.pop_word());
+                let num1 = i16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualSDword => {
+                let num2 = i32::from_le_bytes(self.pop_dword());
+                let num1 = i32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualSQword => {
+                let num2 = i64::from_le_bytes(self.pop_qword());
+                let num1 = i64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualSExtInt => {
+                let num2 = i128::from_le_bytes(self.pop_extend());
+                let num1 = i128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualUByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualUWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualUDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualUQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpLessEqualUExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 <= num2);
+            }
+            OpICmpGreaterSByte => {
+                let num2 = i8::from_le_bytes(self.pop_byte());
+                let num1 = i8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterSWord => {
+                let num2 = i16::from_le_bytes(self.pop_word());
+                let num1 = i16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterSDword => {
+                let num2 = i32::from_le_bytes(self.pop_dword());
+                let num1 = i32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterSQword => {
+                let num2 = i64::from_le_bytes(self.pop_qword());
+                let num1 = i64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterSExtInt => {
+                let num2 = i128::from_le_bytes(self.pop_extend());
+                let num1 = i128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterUByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterUWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterUDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterUQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterUExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 > num2);
+            }
+            OpICmpGreaterEqualSByte => {
+                let num2 = i8::from_le_bytes(self.pop_byte());
+                let num1 = i8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualSWord => {
+                let num2 = i16::from_le_bytes(self.pop_word());
+                let num1 = i16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualSDword => {
+                let num2 = i32::from_le_bytes(self.pop_dword());
+                let num1 = i32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualSQword => {
+                let num2 = i64::from_le_bytes(self.pop_qword());
+                let num1 = i64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualSExtInt => {
+                let num2 = i128::from_le_bytes(self.pop_extend());
+                let num1 = i128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualUByte => {
+                let num2 = u8::from_le_bytes(self.pop_byte());
+                let num1 = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualUWord => {
+                let num2 = u16::from_le_bytes(self.pop_word());
+                let num1 = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualUDword => {
+                let num2 = u32::from_le_bytes(self.pop_dword());
+                let num1 = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualUQword => {
+                let num2 = u64::from_le_bytes(self.pop_qword());
+                let num1 = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 >= num2);
+            }
+            OpICmpGreaterEqualUExtInt => {
+                let num2 = u128::from_le_bytes(self.pop_extend());
+                let num1 = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num1 >= num2);
+            }
+            OpFCmpEqualFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 == num2);
+            }
+            OpFCmpEqualDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 == num2);
+            }
+            OpFCmpNotEqualFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 != num2);
+            }
+            OpFCmpNotEqualDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 != num2);
+            }
+            OpFCmpLessFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 < num2);
+            }
+            OpFCmpLessDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 < num2);
+            }
+            OpFCmpLessEqualFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 <= num2);
+            }
+            OpFCmpLessEqualDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 <= num2);
+            }
+            OpFCmpGreaterFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 > num2);
+            }
+            OpFCmpGreaterDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 > num2);
+            }
+            OpFCmpGreaterEqualFloat => {
+                let num2 = f32::from_le_bytes(self.pop_dword());
+                let num1 = f32::from_le_bytes(self.pop_dword());
+                self.push_bool(num1 >= num2);
+            }
+            OpFCmpGreaterEqualDouble => {
+                let num2 = f64::from_le_bytes(self.pop_qword());
+                let num1 = f64::from_le_bytes(self.pop_qword());
+                self.push_bool(num1 >= num2);
             }
         }
 

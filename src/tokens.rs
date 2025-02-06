@@ -67,6 +67,7 @@ pub enum TokenOperator {
     Bang,  // !
     Caret,  // ^
     Mod,  // %
+    DoubleColon,  // ::
 }
 
 /// 关键字令牌
@@ -85,6 +86,7 @@ pub enum TokenKeyword {
     Let,
     False,
     True,
+    As,
 }
 
 /// 整型令牌

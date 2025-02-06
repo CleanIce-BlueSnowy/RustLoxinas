@@ -195,4 +195,168 @@ pub enum Instruction {
     OpFNegFloat,
     /// 双精度相反数
     OpFNegDouble,
+    /// 字节位取反
+    OpBitNotByte,
+    /// 单字位取反
+    OpBitNotWord,
+    /// 双字位取反
+    OpBitNotDword,
+    /// 四字位取反
+    OpBitNotQword,
+    /// 扩展整数位取反
+    OpBitNotExtInt,
+    /// 字节位与
+    OpBitAndByte,
+    /// 单字位与
+    OpBitAndWord,
+    /// 双字位与
+    OpBitAndDword,
+    /// 四字位与
+    OpBitAndQword,
+    /// 扩展整数位与
+    OpBitAndExtInt,
+    /// 字节位或
+    OpBitOrByte,
+    /// 单字位或
+    OpBitOrWord,
+    /// 双字位或
+    OpBitOrDword,
+    /// 四字位或
+    OpBitOrQword,
+    /// 扩展整数位或
+    OpBitOrExtInt,
+    /// 字节位异或
+    OpBitXorByte,
+    /// 单字位异或
+    OpBitXorWord,
+    /// 双字位异或
+    OpBitXorDword,
+    /// 四字位异或
+    OpBitXorQword,
+    /// 扩展整数位异或
+    OpBitXorExtInt,
+    /// 字节比较等于
+    OpICmpEqualByte,
+    /// 单字比较等于
+    OpICmpEqualWord,
+    /// 双字比较等于
+    OpICmpEqualDword,
+    /// 四字比较等于
+    OpICmpEqualQword,
+    /// 扩展整数比较等于
+    OpICmpEqualExtInt,
+    /// 字节比较不等于
+    OpICmpNotEqualByte,
+    /// 单字比较不等于
+    OpICmpNotEqualWord,
+    /// 双字比较不等于
+    OpICmpNotEqualDword,
+    /// 四字比较不等于
+    OpICmpNotEqualQword,
+    /// 扩展整数比较不等于
+    OpICmpNotEqualExtInt,
+    /// 有符号字节比较小于
+    OpICmpLessSByte,
+    /// 有符号单字比较小于
+    OpICmpLessSWord,
+    /// 有符号双字比较小于
+    OpICmpLessSDword,
+    /// 有符号四字比较小于
+    OpICmpLessSQword,
+    /// 有符号扩展整数比较小于
+    OpICmpLessSExtInt,
+    /// 无符号字节比较小于
+    OpICmpLessUByte,
+    /// 无符号单字比较小于
+    OpICmpLessUWord,
+    /// 无符号双字比较小于
+    OpICmpLessUDword,
+    /// 无符号四字比较小于
+    OpICmpLessUQword,
+    /// 无符号扩展整数比较小于
+    OpICmpLessUExtInt,
+    /// 有符号字节比较小于等于
+    OpICmpLessEqualSByte,
+    /// 有符号单字比较小于等于
+    OpICmpLessEqualSWord,
+    /// 有符号双字比较小于等于
+    OpICmpLessEqualSDword,
+    /// 有符号四字比较小于等于
+    OpICmpLessEqualSQword,
+    /// 有符号扩展整数比较小于等于
+    OpICmpLessEqualSExtInt,
+    /// 无符号字节比较小于等于
+    OpICmpLessEqualUByte,
+    /// 无符号单字比较小于等于
+    OpICmpLessEqualUWord,
+    /// 无符号双字比较小于等于
+    OpICmpLessEqualUDword,
+    /// 无符号四字比较小于等于
+    OpICmpLessEqualUQword,
+    /// 无符号扩展整数比较小于等于
+    OpICmpLessEqualUExtInt,
+    /// 有符号字节比较大于
+    OpICmpGreaterSByte,
+    /// 有符号单字比较大于
+    OpICmpGreaterSWord,
+    /// 有符号双字比较大于
+    OpICmpGreaterSDword,
+    /// 有符号四字比较大于
+    OpICmpGreaterSQword,
+    /// 有符号扩展整数比较大于
+    OpICmpGreaterSExtInt,
+    /// 无符号字节比较大于
+    OpICmpGreaterUByte,
+    /// 无符号单字比较大于
+    OpICmpGreaterUWord,
+    /// 无符号双字比较大于
+    OpICmpGreaterUDword,
+    /// 无符号四字比较大于
+    OpICmpGreaterUQword,
+    /// 无符号扩展整数比较大于
+    OpICmpGreaterUExtInt,
+    /// 有符号字节比较大于等于
+    OpICmpGreaterEqualSByte,
+    /// 有符号单字比较大于等于
+    OpICmpGreaterEqualSWord,
+    /// 有符号双字比较大于等于
+    OpICmpGreaterEqualSDword,
+    /// 有符号四字比较大于等于
+    OpICmpGreaterEqualSQword,
+    /// 有符号扩展整数比较大于等于
+    OpICmpGreaterEqualSExtInt,
+    /// 无符号字节比较大于等于
+    OpICmpGreaterEqualUByte,
+    /// 无符号单字比较大于等于
+    OpICmpGreaterEqualUWord,
+    /// 无符号双字比较大于等于
+    OpICmpGreaterEqualUDword,
+    /// 无符号四字比较大于等于
+    OpICmpGreaterEqualUQword,
+    /// 无符号扩展整数比较大于等于
+    OpICmpGreaterEqualUExtInt,
+    /// 单精度比较等于
+    OpFCmpEqualFloat,
+    /// 双精度比较等于
+    OpFCmpEqualDouble,
+    /// 单精度比较不等于
+    OpFCmpNotEqualFloat,
+    /// 双精度比较不等于
+    OpFCmpNotEqualDouble,
+    /// 单精度比较小于
+    OpFCmpLessFloat,
+    /// 双精度比较小于
+    OpFCmpLessDouble,
+    /// 单精度比较小于等于
+    OpFCmpLessEqualFloat,
+    /// 双精度比较小于等于
+    OpFCmpLessEqualDouble,
+    /// 单精度比较大于
+    OpFCmpGreaterFloat,
+    /// 双精度比较大于
+    OpFCmpGreaterDouble,
+    /// 单精度比较大于等于
+    OpFCmpGreaterEqualFloat,
+    /// 双精度比较大于等于
+    OpFCmpGreaterEqualDouble
 }

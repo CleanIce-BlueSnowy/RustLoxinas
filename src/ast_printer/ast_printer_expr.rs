@@ -1,11 +1,13 @@
 //! 语法树打印——表达式打印模块
 
 use std::rc::Rc;
+
 use crate::ast_printer::AstPrinter;
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::{Expr, ExprVisitor};
 use crate::position::Position;
 use crate::tokens::Token;
+use crate::types::TypeTag;
 
 #[cfg(debug_assertions)]
 impl ExprVisitor<String> for AstPrinter {
@@ -80,5 +82,23 @@ impl ExprVisitor<String> for AstPrinter {
         let name = self.operator_to_string(&operator.token_type);
         let ptr: *const Expr = this as *const Expr;
         return format!("{:?} {}", ptr, self.parenthesize(&name, &[right]));
+    }
+
+    fn visit_as_expr(&mut self, this: &Expr, _pos: &Position, expr: &Box<Expr>, target: &TypeTag) -> String {
+        let mut name = "as => ".to_string();
+        let mut first_type = true;
+        for type_name in &target.chain {
+            name.push_str(
+                if first_type {
+                    first_type = false;
+                    ""
+                } else {
+                    "::"
+                }
+            );
+            name.push_str(&type_name);
+        }
+        let ptr: *const Expr = this as *const Expr;
+        return format!("{:?} {}", ptr, self.parenthesize(&name, &[expr]));
     }
 }

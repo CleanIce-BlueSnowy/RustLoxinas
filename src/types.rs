@@ -1,9 +1,12 @@
-//! 数据类型分析模块
+//! 数据类型模块
 
+use std::collections::LinkedList;
 use std::fmt::Display;
-use crate::object::LoxinasClass;
 
-/// 语义分析使用的数据类型
+use crate::object::LoxinasClass;
+use crate::position::Position;
+
+/// 数据类型
 #[cfg_attr(debug_assertions, derive(Debug))]
 #[derive(Clone)]
 pub enum ValueType {
@@ -17,6 +20,10 @@ pub enum ValueType {
     Bool,
     /// 引用类型（对象）
     Object(LoxinasClass),
+}
+
+unsafe impl Sync for ValueType {
+    
 }
 
 /// 整数类型
@@ -71,8 +78,23 @@ impl Display for ValueType {
             }
             Char => "char",
             Bool => "bool",
-            Object(_) => "object",
+            Object(object) => object.get_name(),
         }.to_string();
         return write!(formatter, "{}", str);
+    }
+}
+
+/// 类型标签
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct TypeTag {
+    /// 位置信息
+    pub pos: Position,
+    /// 类型链
+    pub chain: LinkedList<String>,
+}
+
+impl TypeTag {
+    pub fn new() -> Self {
+        Self { pos: Position::new(0, 0, 0, 0), chain: LinkedList::new() }
     }
 }
