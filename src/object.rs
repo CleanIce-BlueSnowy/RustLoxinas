@@ -14,16 +14,19 @@ pub enum LoxinasClass {
     UserDefined(Rc<UserClass>),
 }
 
-lazy_static!{
-    static ref OBJECT_CONTAIN_TYPES: HashMap<String, ValueType> = hashmap!{};
+lazy_static! {
+    /// `Object` 类型的包含类型列表
+    static ref OBJECT_CONTAIN_TYPES: HashMap<String, ValueType> = hashmap!();
+    /// `String` 类型的包含类型列表
     static ref STRING_CONTAIN_TYPES: HashMap<String, ValueType> = {
-        let mut map = hashmap!{};
+        let mut map = hashmap!();
         map.extend(OBJECT_CONTAIN_TYPES.clone());
         map
     };
 }
 
 impl LoxinasClass {
+    /// 获取包含类型
     pub fn get_contain_types(&self) -> &HashMap<String, ValueType> {
         match self {
             LoxinasClass::Object => &*OBJECT_CONTAIN_TYPES,
@@ -32,6 +35,7 @@ impl LoxinasClass {
         }
     }
     
+    /// 获取名称
     pub fn get_name(&self) -> &str {
         match self {
             LoxinasClass::Object => "Object",
@@ -41,6 +45,7 @@ impl LoxinasClass {
     }
 }
 
+/// 用户定义类
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct UserClass {
     pub name: String,

@@ -1,10 +1,10 @@
 //! 语法分析——辅助功能模块
 
 use std::rc::Rc;
-
-use crate::parser::{Parser, SyntaxError};
+use crate::errors::error_types::SyntaxError;
+use crate::parser::Parser;
 use crate::position::Position;
-use crate::tokens::{Token, TokenType};
+use crate::tokens::{Token, TokenOperator, TokenType};
 use crate::types::TypeTag;
 
 /// 若下一个令牌能匹配模式，则消耗该令牌，并返回是否匹配
@@ -43,21 +43,25 @@ macro_rules! parser_consume {
 
 impl Parser {
     /// 是否已到结尾
+    #[inline]
     pub fn is_at_end(&self) -> bool {
         return matches!(self.peek().token_type, TokenType::EOF);
     }
 
     /// 下一个令牌，不消耗
+    #[inline]
     pub fn peek(&self) -> Rc<Token> {
         return Rc::clone(&self.tokens[self.current]);
     }
 
     /// 当前令牌
+    #[inline]
     pub fn previous(&self) -> Rc<Token> {
         return Rc::clone(&self.tokens[self.current - 1]);
     }
 
     /// 消耗令牌并返回下一个令牌
+    #[inline]
     pub fn advance(&mut self) -> Rc<Token> {
         if !self.is_at_end() {
             self.current += 1;
@@ -65,6 +69,7 @@ impl Parser {
         return self.previous();
     }
 
+    /// 解析类型标识符
     pub fn parse_type_tag(&mut self) -> Result<TypeTag, SyntaxError> {
         use crate::tokens::TokenType::*;
         use crate::tokens::TokenOperator::*;
@@ -95,6 +100,22 @@ impl Parser {
                 &Position::new(next_token.line, next_token.start, next_token.line, next_token.end),
                 "Expect type name".to_string()
             ))
+        }
+    }
+    
+    /// 同步错误
+    pub fn synchronize(&mut self) {
+        self.advance();
+        while !self.is_at_end() {
+            if let TokenType::Operator(TokenOperator::Semicolon) = &self.previous().token_type {
+                return;
+            } else if let TokenType::Keyword(keyword) = &self.peek().token_type {
+                use crate::tokens::TokenKeyword::*;
+                if let If | Elif | Else | For | While | Let = keyword {
+                    return;
+                }
+            }
+            self.advance();
         }
     }
 }

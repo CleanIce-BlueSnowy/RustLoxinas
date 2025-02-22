@@ -1,13 +1,13 @@
 //! 语法分析模块
 
 use std::rc::Rc;
-
-use crate::expr::Expr;
-use crate::position::Position;
+use crate::errors::error_types::SyntaxError;
+use crate::stmt::Stmt;
 use crate::tokens::Token;
 
 mod parser_assistance;
 mod parser_expr;
+mod parser_stmt;
 
 /// 语法分析器，生成 AST
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -25,22 +25,24 @@ impl Parser {
     }
 
     /// 解析
-    pub fn parse(&mut self) -> Result<Expr, SyntaxError> {
-        self.expression()
+    #[inline]
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<SyntaxError>> {
+        let mut errors: Vec<SyntaxError> = vec![];
+        let mut statements: Vec<Stmt> = vec![];
+        while !self.is_at_end() {
+            match self.statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(err) => {
+                    errors.push(err);
+                    self.synchronize();
+                }
+            }
+        }
+        return if errors.is_empty() {
+            Ok(statements)
+        } else {
+            Err(errors)
+        }
     }
 }
 
-/// 语法错误
-#[cfg_attr(debug_assertions, derive(Debug))]
-pub struct SyntaxError {
-    /// 错误位置
-    pub pos: Position,
-    /// 错误信息
-    pub message: String,
-}
-
-impl SyntaxError {
-    pub fn new(pos: &Position, message: String) -> Self {
-        Self { pos: pos.clone(), message }
-    }
-}

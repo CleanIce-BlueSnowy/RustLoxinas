@@ -2,7 +2,7 @@
 
 use std::collections::LinkedList;
 use std::fmt::Display;
-
+use crate::data::DataSize;
 use crate::object::LoxinasClass;
 use crate::position::Position;
 
@@ -22,9 +22,7 @@ pub enum ValueType {
     Object(LoxinasClass),
 }
 
-unsafe impl Sync for ValueType {
-    
-}
+unsafe impl Sync for ValueType {}
 
 /// 整数类型
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -48,6 +46,36 @@ pub enum ValueIntegerType {
 pub enum ValueFloatType {
     Float,
     Double,
+}
+
+impl ValueType {
+    /// 获取该类型数据的数据大小
+    pub fn get_size(&self) -> DataSize {
+        use ValueType::*;
+        use ValueIntegerType::*;
+        use ValueFloatType::*;
+        
+        match self {
+            Char => DataSize::Dword,
+            Bool => DataSize::Byte,
+            Integer(integer) => {
+                match integer {
+                    SByte | Byte => DataSize::Byte,
+                    Short | UShort => DataSize::Word,
+                    Int | UInt => DataSize::Dword,
+                    Long | ULong => DataSize::Qword,
+                    ExtInt | UExtInt => DataSize::ExtInt,
+                }
+            }
+            ValueType::Float(float) => {
+                match float {
+                    ValueFloatType::Float => DataSize::Dword,
+                    Double => DataSize::Qword,
+                }
+            }
+            Object(_) => DataSize::Qword,
+        }
+    }
 }
 
 impl Display for ValueType {
@@ -96,5 +124,24 @@ pub struct TypeTag {
 impl TypeTag {
     pub fn new() -> Self {
         Self { pos: Position::new(0, 0, 0, 0), chain: LinkedList::new() }
+    }
+}
+
+impl Display for TypeTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut res = String::new();
+        let mut first_type = true;
+        for type_name in &self.chain {
+            res.push_str(
+                if first_type {
+                    first_type = false;
+                    ""
+                } else {
+                    "::"
+                }
+            );
+            res.push_str(&type_name);
+        }
+        return write!(f, "{}", res);
     }
 }

@@ -3,32 +3,38 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::expr::Expr;
 use crate::hashmap;
 use crate::object::LoxinasClass;
-use crate::position::Position;
+use crate::stmt::Stmt;
 use crate::tokens::Token;
 use crate::types::ValueType;
 
 mod resolver_expr;
+mod resolver_stmt;
+mod resolver_assistance;
 
 /// 语义分析器
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct Resolver {
-    pub expr_ope_type: HashMap<*const Expr, ValueType>,
-    pub expr_res_type: HashMap<*const Expr, ValueType>,
     pub global_types: HashMap<String, ValueType>,
+    pub variables: Vec<(HashMap<String, Variable>, usize)>,
+    pub now_slot: usize,
 }
 
 impl Resolver {
     pub fn new() -> Self {
-        Self { expr_ope_type: HashMap::new(), expr_res_type: HashMap::new(), global_types: Self::init_types() }
+        Self {
+            global_types: Self::init_types(),
+            variables: vec![],
+            now_slot: 0,
+        }
     }
-    
+
+    /// 初始化全局类型列表
     fn init_types() -> HashMap<String, ValueType> {
         use crate::types::ValueIntegerType::*;
         use crate::types::ValueFloatType::*;
-        hashmap!{
+        hashmap! {
             "char".to_string() => ValueType::Char,
             "bool".to_string() => ValueType::Bool,
             "byte".to_string() => ValueType::Integer(Byte),
@@ -48,11 +54,6 @@ impl Resolver {
         }
     }
     
-    /// 分析表达式
-    pub fn resolve_expr(&mut self, expr: &Expr) -> Result<ExprResolveRes, CompileError> {
-        expr.accept(self)
-    }
-
     /// 操作符转字符串，方便报错
     pub fn operator_to_string(token: &Rc<Token>) -> String {
         use crate::tokens::TokenType;
@@ -102,6 +103,7 @@ impl Resolver {
 
 /// 表达式语义分析结果
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone)]
 pub struct ExprResolveRes {
     /// 表达式得到的结果类型
     pub res_type: ValueType,
@@ -115,17 +117,24 @@ impl ExprResolveRes {
     }
 }
 
-/// 编译错误
+/// 变量
 #[cfg_attr(debug_assertions, derive(Debug))]
-pub struct CompileError {
-    /// 出错位置
-    pub pos: Position,
-    /// 错误信息
-    pub message: String,
+#[derive(Clone)]
+pub struct Variable {
+    /// 定义位置的语句指针
+    pub define_stmt: *const Stmt,
+    /// 已定义
+    pub defined: bool,
+    /// 已初始化
+    pub initialized: bool,
+    /// 栈偏移量
+    pub slot: usize,
+    /// 变量类型
+    pub var_type: Option<ValueType>,
 }
 
-impl CompileError {
-    pub fn new(pos: &Position, message: String) -> Self {
-        Self { pos: pos.clone(), message }
+impl Variable {
+    pub fn new(define_stmt: *const Stmt, defined: bool, initialized: bool, slot: usize, var_type: Option<ValueType>) -> Self {
+        Self { define_stmt, defined, initialized, slot, var_type }
     }
 }

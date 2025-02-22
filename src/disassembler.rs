@@ -12,7 +12,7 @@ pub fn disassemble_file(path: &str) -> Result<(), String> {
         Ok(temp) => file = temp,
         Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
     }
-    let mut buffer = Vec::new();
+    let mut buffer = vec![];
     if let Err(err) = file.read_to_end(&mut buffer) {
         return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
     }
@@ -144,6 +144,11 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpConvertDoubleToUExtInt => Ok(simple("Convert", "Double -> Unsigned ExtInt", chunk, offset)),
         OpConvertFloatToDouble => Ok(simple("Convert", "Float -> Double", chunk, offset)),
         OpConvertDoubleToFloat => Ok(simple("Convert", "Double -> Float", chunk, offset)),
+        OpConvertByteToBool => Ok(simple("Convert", "Byte -> Bool", chunk, offset)),
+        OpConvertWordToBool => Ok(simple("Convert", "Word -> Bool", chunk, offset)),
+        OpConvertDwordToBool => Ok(simple("Convert", "Dword -> Bool", chunk, offset)),
+        OpConvertQwordToBool => Ok(simple("Convert", "Qword -> Bool", chunk, offset)),
+        OpConvertExtIntToBool => Ok(simple("Convert", "ExtInt -> Bool", chunk, offset)),
         OpFAddFloat => Ok(simple("FAdd", "Float", chunk, offset)),
         OpFAddDouble => Ok(simple("FAdd", "Double", chunk, offset)),
         OpFSubFloat => Ok(simple("FSub", "Float", chunk, offset)),
@@ -236,6 +241,21 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpFCmpGreaterDouble => Ok(simple("FCmpGreater", "Double", chunk, offset)),
         OpFCmpGreaterEqualFloat => Ok(simple("FCmpGreaterEqual", "Float", chunk, offset)),
         OpFCmpGreaterEqualDouble => Ok(simple("FCmpGreaterEqual", "Double", chunk, offset)),
+        OpPopByte => Ok(simple("Pop", "Byte", chunk, offset)),
+        OpPopWord => Ok(simple("Pop", "Word", chunk, offset)),
+        OpPopDword => Ok(simple("Pop", "Dword", chunk, offset)),
+        OpPopQword => Ok(simple("Pop", "Qword", chunk, offset)),
+        OpPopExtInt => Ok(simple("Pop", "ExtInt", chunk, offset)),
+        OpPushByte => const_byte("Push", "Byte", chunk, offset),
+        OpPushWord => const_word("Push", "Word", chunk, offset),
+        OpPushDword => const_dword("Push", "Dword", chunk, offset),
+        OpPushQword => const_qword("Push", "Qword", chunk, offset),
+        OpPushExtInt => const_extend("Push", "ExtInt", chunk, offset),
+        OpGetLocalByte => get_local("GetLocal", "Byte", chunk, offset),
+        OpGetLocalWord => get_local("GetLocal", "Word", chunk, offset),
+        OpGetLocalDword => get_local("GetLocal", "Dword", chunk, offset),
+        OpGetLocalQword => get_local("GetLocal", "Qword", chunk, offset),
+        OpGetLocalExtInt => get_local("GetLocal", "ExtInt", chunk, offset),
     }
 }
 
@@ -245,7 +265,7 @@ fn simple(instr: &str, info: &str, _chunk: &[u8], offset: usize) -> (String, usi
     (format!("{:<20} [{:^25}]", instr, info), offset)
 }
 
-/// 加载常数字节指令
+/// 常数字节指令
 #[inline]
 fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_byte, res_offset)) = read_byte(chunk, offset) {
@@ -257,7 +277,7 @@ fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     }
 }
 
-/// 加载常数单字指令
+/// 常数单字指令
 #[inline]
 fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_word, res_offset)) = read_word(chunk, offset) {
@@ -269,7 +289,7 @@ fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     }
 }
 
-/// 加载常数双字指令
+/// 常数双字指令
 #[inline]
 fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_dword, res_offset)) = read_dword(chunk, offset) {
@@ -282,7 +302,7 @@ fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     }
 }
 
-/// 加载常数四字指令
+/// 常数四字指令
 #[inline]
 fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_qword, res_offset)) = read_qword(chunk, offset) {
@@ -295,7 +315,7 @@ fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     }
 }
 
-/// 加载常数扩展整数指令
+/// 常数扩展整数指令
 #[inline]
 fn const_extend(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_extend, res_offset)) = read_extend(chunk, offset) {
@@ -304,5 +324,16 @@ fn const_extend(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<
         Ok((format!("{:<20} [{:^25}] {:032X} ({})", instr, info, extend, u_num), res_offset))
     } else {
         Err("Not enough bytes to read: need 16 bytes.".to_string())
+    }
+}
+
+/// 获取局部变量指令
+#[inline]
+fn get_local(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+    if let Ok((res_slot, new_offset)) = read_word(chunk, offset) {
+        let slot = u16::from_le_bytes(res_slot);
+        Ok((format!("{:<20} [{:^25}] {:04X}", instr, info, slot), new_offset))
+    } else {
+        Err("Not enough bytes to read: need 2 bytes.".to_string())
     }
 }

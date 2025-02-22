@@ -1,30 +1,43 @@
 //! 语法树打印——表达式打印模块
 
-use std::rc::Rc;
+use indexmap::indexmap;
 
-use crate::ast_printer::AstPrinter;
+use crate::ast_printer::{AstPrinter, TreeChild};
 use crate::data::{Data, DataFloat, DataInteger};
-use crate::expr::{Expr, ExprVisitor};
-use crate::position::Position;
-use crate::tokens::Token;
-use crate::types::TypeTag;
+use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable, ExprVisitor};
 
 #[cfg(debug_assertions)]
 impl ExprVisitor<String> for AstPrinter {
-    fn visit_binary_expr(&mut self, this: &Expr, _pos: &Position, left: &Box<Expr>, operator: &Rc<Token>, right: &Box<Expr>) -> String {
-        let name = self.operator_to_string(&operator.token_type);
-        let ptr: *const Expr = this as *const Expr;
-        return format!("{:?} {}", ptr, self.parenthesize(&name, &[left, right]));
+    fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> String {
+        let name = format!("Binary {}", self.operator_to_string(&expr.operator.token_type));
+        return format!(
+            "EXPR {:?} {}",
+            this,
+            self.parenthesize(
+                &name,
+                indexmap! {
+                    "left" => TreeChild::Expr(expr.left.as_ref()),
+                    "right" => TreeChild::Expr(expr.right.as_ref()),
+                },
+            ),
+        );
     }
 
-    fn visit_grouping_expr(&mut self, this: &Expr, _pos: &Position, expr: &Box<Expr>) -> String {
-        let ptr: *const Expr = this as *const Expr;
-        return format!("{:?} {}", ptr, self.parenthesize("group", &[expr]));
+    fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> String {
+        return format!(
+            "EXPR {:?} {}",
+            this,
+            self.parenthesize(
+                "Group",
+                indexmap! {
+                    "expr" => TreeChild::Expr(expr.expression.as_ref()),
+                },
+            ),
+        );
     }
 
-    fn visit_literal_expr(&mut self, this: &Expr, _pos: &Position, value: &Data) -> String {
-        let ptr: *const Expr = this as *const Expr;
-        return match value {  // 将数据转换为对应的字符串，并带上 Loxinas 代码对应的数据后缀，字符串需要处理
+    fn visit_literal_expr(&mut self, this: *const Expr, expr: &ExprLiteral) -> String {
+        return match &expr.value {  // 将数据转换为对应的字符串，并带上 Loxinas 代码对应的数据后缀，字符串需要处理
             Data::Bool(res) => res.to_string(),
             Data::String(res) => {  // 处理字符串
                 let mut ret = String::new();
@@ -41,16 +54,16 @@ impl ExprVisitor<String> for AstPrinter {
                         _ => ret.push(ch),
                     }
                 }
-                format!("{:?} {}", ptr, ret)
+                format!("EXPR {:?} Literal {}", this, ret)
             }
             Data::Float(float) => {
-                format!("{:?} {}", ptr, match float {
+                format!("EXPR {:?} Literal {}", this, match float {
                     DataFloat::Float(res) => format!("{}f", res.to_string()),
                     DataFloat::Double(res) => res.to_string(),
                 })
             }
             Data::Integer(integer) => {
-                format!("{:?} {}", ptr, match integer {
+                format!("EXPR {:?} Literal {}", this, match integer {
                     DataInteger::Byte(res) => format!("{}b", res.to_string()),
                     DataInteger::SByte(res) => format!("{}sb", res.to_string()),
                     DataInteger::Short(res) => format!("{}s", res.to_string()),
@@ -64,7 +77,7 @@ impl ExprVisitor<String> for AstPrinter {
                 })
             }
             Data::Char(ch) => {
-                format!("{:?} '{}'", ptr, match ch {
+                format!("EXPR {:?} Literal '{}'", this, match ch {
                     '"' => r#"""#.to_string(),
                     '\n' => r"\n".to_string(),
                     '\0' => r"\0".to_string(),
@@ -78,27 +91,44 @@ impl ExprVisitor<String> for AstPrinter {
         }
     }
 
-    fn visit_unary_expr(&mut self, this: &Expr, _pos: &Position, operator: &Rc<Token>, right: &Box<Expr>) -> String {
-        let name = self.operator_to_string(&operator.token_type);
-        let ptr: *const Expr = this as *const Expr;
-        return format!("{:?} {}", ptr, self.parenthesize(&name, &[right]));
+    fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> String {
+        let name = format!("Unary {}", self.operator_to_string(&expr.operator.token_type));
+        return format!(
+            "EXPR {:?} {}",
+            this,
+            self.parenthesize(
+                &name,
+                indexmap! {
+                    "right" => TreeChild::Expr(expr.right.as_ref()),
+                },
+            ),
+        );
     }
 
-    fn visit_as_expr(&mut self, this: &Expr, _pos: &Position, expr: &Box<Expr>, target: &TypeTag) -> String {
-        let mut name = "as => ".to_string();
-        let mut first_type = true;
-        for type_name in &target.chain {
-            name.push_str(
-                if first_type {
-                    first_type = false;
-                    ""
-                } else {
-                    "::"
-                }
-            );
-            name.push_str(&type_name);
-        }
-        let ptr: *const Expr = this as *const Expr;
-        return format!("{:?} {}", ptr, self.parenthesize(&name, &[expr]));
+    fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> String {
+        let name = format!("As => {}", expr.target);
+        return format!(
+            "EXPR {:?} {}",
+            this,
+            self.parenthesize(
+                &name,
+                indexmap! {
+                    "expr" => TreeChild::Expr(expr.expression.as_ref()),
+                },
+            ),
+        );
+    }
+
+    fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> String {
+        return format!(
+            "EXPR {:?} {}",
+            this,
+            self.parenthesize(
+                "Variable",
+                indexmap! {
+                    "name" => TreeChild::Identifier(&expr.name),
+                },
+            ),
+        );
     }
 }

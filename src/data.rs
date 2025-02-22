@@ -31,3 +31,27 @@ pub enum DataFloat {
     Float(f32),
     Double(f64),
 }
+
+/// 数据大小
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub enum DataSize {
+    Byte,
+    Word,
+    Dword,
+    Qword,
+    ExtInt,
+}
+
+impl DataSize {
+    /// 获取字节数量
+    #[inline]
+    pub fn get_bytes_cnt(&self) -> usize {
+        match self {
+            DataSize::Byte => 1,
+            DataSize::Word => 2,
+            DataSize::Dword => 4,
+            DataSize::Qword => 8,
+            DataSize::ExtInt => 16,
+        }
+    }
+}

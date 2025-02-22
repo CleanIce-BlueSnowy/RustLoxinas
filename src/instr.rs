@@ -175,6 +175,16 @@ pub enum Instruction {
     OpConvertFloatToDouble,
     /// 双精度转单精度
     OpConvertDoubleToFloat,
+    /// 字节转布尔型
+    OpConvertByteToBool,
+    /// 单字转布尔型
+    OpConvertWordToBool,
+    /// 双字转布尔型
+    OpConvertDwordToBool,
+    /// 四字转布尔型
+    OpConvertQwordToBool,
+    /// 扩展整数转布尔型
+    OpConvertExtIntToBool,
     /// 单精度加法
     OpFAddFloat,
     /// 双精度加法
@@ -358,5 +368,35 @@ pub enum Instruction {
     /// 单精度比较大于等于
     OpFCmpGreaterEqualFloat,
     /// 双精度比较大于等于
-    OpFCmpGreaterEqualDouble
+    OpFCmpGreaterEqualDouble,
+    /// 弹出字节
+    OpPopByte,
+    /// 弹出单字
+    OpPopWord,
+    /// 弹出双字
+    OpPopDword,
+    /// 弹出四字
+    OpPopQword,
+    /// 弹出扩展整数
+    OpPopExtInt,
+    /// 压入字节
+    OpPushByte,
+    /// 压入单字
+    OpPushWord,
+    /// 压入双字
+    OpPushDword,
+    /// 压入四字
+    OpPushQword,
+    /// 压入扩展整数
+    OpPushExtInt,
+    /// 获取局部变量字节
+    OpGetLocalByte,
+    /// 获取局部变量单字
+    OpGetLocalWord,
+    /// 获取局部变量双字
+    OpGetLocalDword,
+    /// 获取局部变量四字
+    OpGetLocalQword,
+    /// 获取局部变量扩展整数
+    OpGetLocalExtInt,
 }

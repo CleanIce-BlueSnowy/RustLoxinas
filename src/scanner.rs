@@ -2,6 +2,7 @@
 
 use std::num;
 use std::rc::Rc;
+use crate::errors::error_types::{LexicalError, LexicalResult};
 use crate::position::Position;
 use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
 use crate::tokens::TokenParen::*;
@@ -29,48 +30,39 @@ pub struct TokenScanner<'a> {
     chars: Vec<char>,
 }
 
-/// 词法错误
-#[cfg_attr(debug_assertions, derive(Debug))]
-pub struct LexicalError {
-    pub pos: Position,
-    pub message: String,
-}
-
-impl LexicalError {
-    pub fn new(pos: &Position, message: String) -> Self {
-        Self { pos: pos.clone(), message }
-    }
-}
-
 impl<'a> TokenScanner<'a> {
     pub fn new(source: &'a str) -> Self {
-        Self { source, tokens: Vec::new(), start: 0, current: 0, line: 1, scanned_chars: 0, chars: Vec::new() }
+        Self { source, tokens: vec![], start: 0, current: 0, line: 1, scanned_chars: 0, chars: vec![] }
     }
 
-    /// 扫描所有令牌
-    pub fn scan_tokens(&mut self) -> Result<(), LexicalError> {
+    /** 扫描所有令牌并获取令牌
+    # 警告
+    这个函数将会移动 `self`！
+     */
+    pub fn scan_tokens(mut self) -> Result<Vec<Rc<Token>>, Vec<LexicalError>> {
         self.chars = self.source.chars().collect();  // 获取字符
+        let mut errors: Vec<LexicalError> = vec![];
 
         while !self.is_at_end() {
             self.start = self.current;  // 设置新的令牌开头
-            self.scan_token()?;
+            if let Err(err) = self.scan_token() {
+                errors.push(err);
+                self.synchronize();
+            }
         }
 
         // 结尾令牌，方便语法分析
         self.tokens.push(Rc::new(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len())));
-        return Ok(());
-    }
-
-    /** 获取令牌和源码字符串
-    # 警告
-    这个函数将会移动 `self`！
-     */
-    pub fn get_tokens(self) -> Vec<Rc<Token>> {
-        self.tokens
+        
+        return if errors.is_empty() {
+            Ok(self.tokens)
+        } else {
+            Err(errors)
+        }
     }
 
     /// 扫描单个令牌
-    fn scan_token(&mut self) -> Result<(), LexicalError> {
+    fn scan_token(&mut self) -> LexicalResult<()> {
         let ch = self.advance();  // 消耗字符
         match ch {
             '\n' => {
@@ -175,11 +167,13 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 添加令牌并自动填写位置信息
+    #[inline]
     fn add_token(&mut self, token_type: TokenType) {
         self.tokens.push(Rc::new(Token::new(token_type, self.line, self.start - self.scanned_chars, self.current - self.scanned_chars)));
     }
 
     /// 消耗字符
+    #[inline]
     fn advance(&mut self) -> char {
         let ch = self.chars[self.current];
         self.current += 1;
@@ -187,6 +181,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 是否为合法的标识符字符，开始字符不能为数字，支持下划线
+    #[inline]
     fn is_identifier_char(&self, ch: char, at_start: bool) -> bool {
         if at_start {
             ch.is_alphabetic() || ch == '_'
@@ -196,6 +191,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 是否在字符串尾
+    #[inline]
     fn is_at_end(&self) -> bool {
         self.current >= self.chars.len()
     }
@@ -213,6 +209,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 返回下一个字符。支持末尾检查
+    #[inline]
     fn peek(&self) -> char {
         if self.is_at_end() { '\0' } else { self.chars[self.current] }
     }
@@ -221,7 +218,8 @@ impl<'a> TokenScanner<'a> {
     
     自动调用 `throw_error_at()` 并填写位置信息
      */
-    fn throw_error(&self, msg: &str) -> Result<(), LexicalError> {
+    #[inline]
+    fn throw_error(&self, msg: &str) -> LexicalResult<()> {
         self.throw_error_at(msg, self.start, self.current)
     }
 
@@ -229,9 +227,10 @@ impl<'a> TokenScanner<'a> {
     
     需要手动传入位置信息
      */
-    fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> Result<(), LexicalError> {
+    #[inline]
+    fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> LexicalResult<()> {
         Err(LexicalError::new(
-            &Position::new(self.line, start, self.line, end),
+            &Position::new(self.line, start - self.scanned_chars, self.line, end - self.scanned_chars),
             msg.to_string(),
         ))
     }
@@ -267,7 +266,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 扫描数字
-    fn scan_number(&mut self) -> Result<(), LexicalError> {
+    fn scan_number(&mut self) -> LexicalResult<()> {
         let mut has_dot = false;  // 是否含有 `.`（是否为浮点数）
         let mut ch = self.chars[self.current - 1];  // 获取当前字符
 
@@ -438,7 +437,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 扫描字符串
-    fn scan_string(&mut self, has_pref: bool) -> Result<(), LexicalError> {
+    fn scan_string(&mut self, has_pref: bool) -> LexicalResult<()> {
         let mut raw_string = false;  // 原始字符串
 
         if has_pref {  // 含有前缀
@@ -475,7 +474,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 扫描字符
-    fn scan_char(&mut self) -> Result<(), LexicalError> {
+    fn scan_char(&mut self) -> LexicalResult<()> {
         if self.can_match('\'') {  // 空字符
             self.throw_error("Empty character.")?;
         }
@@ -495,7 +494,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 转义字符串
-    fn escape_char(&self, ch: char) -> Result<char, LexicalError> {
+    fn escape_char(&self, ch: char) -> LexicalResult<char> {
         let mut res = Ok('\0');
         match ch {
             'n' => res = Ok('\n'),
@@ -508,5 +507,14 @@ impl<'a> TokenScanner<'a> {
             _ => self.throw_error_at(&format!("Unknown escape character: `\\{ch}`"), self.current, self.current + 1)?,
         }
         return res;
+    }
+    
+    /// 同步错误
+    fn synchronize(&mut self) {
+        let mut ch = self.advance();
+        while !ch.is_whitespace() {
+            ch = self.advance();
+        }
+        self.start = self.current;
     }
 }

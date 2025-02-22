@@ -1,7 +1,8 @@
 //! 虚拟机模块
 
-use crate::byte_handler::byte_reader::{read_byte, read_dword, read_extend, read_qword, read_word};
+use crate::byte_handler::byte_reader::read_byte;
 use crate::disassembler::disassemble_instruction;
+use crate::errors::error_types::{RuntimeError, RuntimeResult};
 use crate::instr::Instruction;
 use crate::instr::Instruction::*;
 
@@ -12,14 +13,16 @@ pub struct VM<'a> {
     pub vm_stack: Vec<u8>,
     pub chunk: &'a [u8],
     pub ip: usize,
+    pub frame_start: usize,
 }
 
 impl<'a> VM<'a> {
     pub fn new(chunk: &'a [u8]) -> Self {
-        Self { vm_stack: Vec::new(), chunk, ip: 0 }
+        Self { vm_stack: vec![], chunk, ip: 0, frame_start: 0 }
     }
-
-    pub fn run(&mut self) -> Result<(), RuntimeError> {
+    
+    /// 运行字节码
+    pub fn run(&mut self) -> RuntimeResult<()> {
         while self.ip < self.chunk.len() {
             #[cfg(debug_assertions)]
             let old_ip = self.ip;
@@ -59,51 +62,32 @@ impl<'a> VM<'a> {
 
         return Ok(());
     }
-
-    fn run_code(&mut self, instr: Instruction) -> Result<(), RuntimeError> {
+    
+    /// 运行单条指令
+    fn run_code(&mut self, instr: Instruction) -> RuntimeResult<()> {
         match instr {
             OpReturn => {
                 return Err(RuntimeError::new("Return instruction".to_string()));
             }
             OpLoadConstByte => {
-                if let Ok((byte, new_ip)) = read_byte(self.chunk, self.ip) {
-                    self.ip = new_ip;
-                    self.push_byte(byte);
-                } else {
-                    return Err(RuntimeError::new("Data not enough: need 1 byte.".to_string()));
-                }
+                let byte = self.read_arg_byte();
+                self.push_byte(byte);
             }
             OpLoadConstWord => {
-                if let Ok((word, new_ip)) = read_word(self.chunk, self.ip) {
-                    self.ip = new_ip;
-                    self.push_word(word);
-                } else {
-                    return Err(RuntimeError::new("Data not enough: need 2 bytes.".to_string()));
-                }
+                let word = self.read_arg_word();
+                self.push_word(word);
             }
             OpLoadConstDword => {
-                if let Ok((dword, new_ip)) = read_dword(self.chunk, self.ip) {
-                    self.ip = new_ip;
-                    self.push_dword(dword);
-                } else {
-                    return Err(RuntimeError::new("Data not enough: need 4 bytes.".to_string()));
-                }
+                let dword = self.read_arg_dword();
+                self.push_dword(dword);
             }
             OpLoadConstQword => {
-                if let Ok((qword, new_ip)) = read_qword(self.chunk, self.ip) {
-                    self.ip = new_ip;
-                    self.push_qword(qword);
-                } else {
-                    return Err(RuntimeError::new("Data not enough: need 8 bytes.".to_string()));
-                }
+                let qword = self.read_arg_qword();
+                self.push_qword(qword);
             }
             OpLoadConstExtInt => {
-                if let Ok((extend, new_ip)) = read_extend(self.chunk, self.ip) {
-                    self.ip = new_ip;
-                    self.push_extend(extend);
-                } else {
-                    return Err(RuntimeError::new("Data not enough: need 16 bytes.".to_string()));
-                }
+                let extend = self.read_arg_extend();
+                self.push_extend(extend);
             }
             OpSignExtendByteToWord => {
                 let high_byte = self.peek_byte()[0];
@@ -585,6 +569,26 @@ impl<'a> VM<'a> {
                 let num = f64::from_le_bytes(self.pop_qword());
                 let res = num as f32;
                 self.push_dword(res.to_le_bytes());
+            }
+            OpConvertByteToBool => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                self.push_bool(num != 0);
+            }
+            OpConvertWordToBool => {
+                let num = u16::from_le_bytes(self.pop_word());
+                self.push_bool(num != 0);
+            }
+            OpConvertDwordToBool => {
+                let num = u32::from_le_bytes(self.pop_dword());
+                self.push_bool(num != 0);
+            }
+            OpConvertQwordToBool => {
+                let num = u64::from_le_bytes(self.pop_qword());
+                self.push_bool(num != 0);
+            }
+            OpConvertExtIntToBool => {
+                let num = u128::from_le_bytes(self.pop_extend());
+                self.push_bool(num != 0);
             }
             OpFAddFloat => {
                 let num2 = f32::from_le_bytes(self.pop_dword());
@@ -1075,18 +1079,68 @@ impl<'a> VM<'a> {
                 let num1 = f64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 >= num2);
             }
+            OpPopByte => {
+                self.pop_byte();
+            }
+            OpPopWord => {
+                self.pop_word();
+            }
+            OpPopDword => {
+                self.pop_dword();
+            }
+            OpPopQword => {
+                self.pop_qword();
+            }
+            OpPopExtInt => {
+                self.pop_extend();
+            }
+            OpPushByte => {
+                let byte = self.read_arg_byte();
+                self.push_byte(byte);
+            }
+            OpPushWord => {
+                let word = self.read_arg_word();
+                self.push_word(word);
+            }
+            OpPushDword => {
+                let dword = self.read_arg_dword();
+                self.push_dword(dword);
+            }
+            OpPushQword => {
+                let qword = self.read_arg_qword();
+                self.push_qword(qword);
+            }
+            OpPushExtInt => {
+                let extend = self.read_arg_extend();
+                self.push_extend(extend);
+            }
+            OpGetLocalByte => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let byte = self.get_frame_slot_byte(slot as usize);
+                self.push_byte(byte);
+            }
+            OpGetLocalWord => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let word = self.get_frame_slot_word(slot as usize);
+                self.push_word(word);
+            }
+            OpGetLocalDword => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let dword = self.get_frame_slot_dword(slot as usize);
+                self.push_dword(dword);
+            }
+            OpGetLocalQword => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let qword = self.get_frame_slot_qword(slot as usize);
+                self.push_qword(qword);
+            }
+            OpGetLocalExtInt => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let extend = self.get_frame_slot_extend(slot as usize);
+                self.push_extend(extend);
+            }
         }
 
         return Ok(());
-    }
-}
-
-pub struct RuntimeError {
-    pub message: String,
-}
-
-impl RuntimeError {
-    pub fn new(msg: String) -> Self {
-        Self { message: msg }
     }
 }

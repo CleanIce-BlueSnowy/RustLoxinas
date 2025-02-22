@@ -6,6 +6,7 @@ version = 4
 name = "RustLoxinas"
 version = "1.0.0"
 dependencies = [
+ "indexmap",
  "lazy_static",
  "num_enum",
 ]

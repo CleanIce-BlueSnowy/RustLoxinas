@@ -1,5 +1,6 @@
 //! 虚拟机——辅助功能模块
 
+use crate::byte_handler::byte_reader::{read_byte, read_dword, read_extend, read_qword, read_word};
 use crate::vm::VM;
 
 impl<'a> VM<'a> {
@@ -123,5 +124,100 @@ impl<'a> VM<'a> {
         let res = self.peek_bool();
         self.vm_stack.truncate(self.vm_stack.len() - 1);
         return res;
+    }
+
+    #[inline]
+    pub fn read_arg_byte(&mut self) -> [u8; 1] {
+        if let Ok((byte, new_ip)) = read_byte(self.chunk, self.ip) {
+            self.ip = new_ip;
+            byte
+        } else {
+            panic!("Data not enough: need 1 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn read_arg_word(&mut self) -> [u8; 2] {
+        if let Ok((word, new_ip)) = read_word(self.chunk, self.ip) {
+            self.ip = new_ip;
+            word
+        } else {
+            panic!("Data not enough: need 2 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn read_arg_dword(&mut self) -> [u8; 4] {
+        if let Ok((dword, new_ip)) = read_dword(self.chunk, self.ip) {
+            self.ip = new_ip;
+            dword
+        } else {
+            panic!("Data not enough: need 4 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn read_arg_qword(&mut self) -> [u8; 8] {
+        if let Ok((qword, new_ip)) = read_qword(self.chunk, self.ip) {
+            self.ip = new_ip;
+            qword
+        } else {
+            panic!("Data not enough: need 8 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn read_arg_extend(&mut self) -> [u8; 16] {
+        if let Ok((extend, new_ip)) = read_extend(self.chunk, self.ip) {
+            self.ip = new_ip;
+            extend
+        } else {
+            panic!("Data not enough: need 16 byte.");
+        }
+    }
+    
+    #[inline]
+    pub fn get_frame_slot_byte(&mut self, slot: usize) -> [u8; 1] {
+        if let Ok((byte, _)) = read_byte(&self.vm_stack, self.frame_start + slot) {
+            byte
+        } else {
+            panic!("Data not enough: need 1 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn get_frame_slot_word(&mut self, slot: usize) -> [u8; 2] {
+        if let Ok((word, _)) = read_word(&self.vm_stack, self.frame_start + slot) {
+            word
+        } else {
+            panic!("Data not enough: need 2 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn get_frame_slot_dword(&mut self, slot: usize) -> [u8; 4] {
+        if let Ok((dword, _)) = read_dword(&self.vm_stack, self.frame_start + slot) {
+            dword
+        } else {
+            panic!("Data not enough: need 4 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn get_frame_slot_qword(&mut self, slot: usize) -> [u8; 8] {
+        if let Ok((qword, _)) = read_qword(&self.vm_stack, self.frame_start + slot) {
+            qword
+        } else {
+            panic!("Data not enough: need 8 byte.");
+        }
+    }
+
+    #[inline]
+    pub fn get_frame_slot_extend(&mut self, slot: usize) -> [u8; 16] {
+        if let Ok((extend, _)) = read_extend(&self.vm_stack, self.frame_start + slot) {
+            extend
+        } else {
+            panic!("Data not enough: need 16 byte.");
+        }
     }
 }

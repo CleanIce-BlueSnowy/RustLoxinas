@@ -1,13 +1,22 @@
+//! 辅助功能模块
+
+/// 快速创建散列表
 #[macro_export]
 macro_rules! hashmap {
     () => {
-        HashMap::new()
+        {
+            use std::collections::HashMap;
+            HashMap::new()
+        }
     };
     ( $( $key:expr => $value:expr ),+ $(,)? ) => {
-        HashMap::from([
-            $(
-                ($key, $value),
-            )*
-        ])
+        {
+            use std::collections::HashMap;
+            HashMap::from([
+                $(
+                    ($key, $value),
+                )*
+            ])
+        }
     }
 }

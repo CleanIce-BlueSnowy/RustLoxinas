@@ -1,5 +1,7 @@
 //! 编译器——辅助功能模块
 
+use std::collections::LinkedList;
+
 use crate::byte_handler::byte_writer::{write_byte, write_dword, write_extend, write_qword, write_word};
 use crate::compiler::Compiler;
 use crate::instr::Instruction;
@@ -7,6 +9,7 @@ use crate::instr::Instruction::*;
 use crate::types::{ValueFloatType, ValueType};
 
 impl Compiler {
+    /// 写入类型转换指令
     pub fn convert_types(&mut self, from: &ValueType, to: &ValueType) {
         use crate::types::ValueType::*;
         use crate::types::ValueIntegerType::*;
@@ -296,6 +299,40 @@ impl Compiler {
                     }
                 }
             }
+            (Integer(from), Bool) => {
+                match from {
+                    Byte | SByte => {
+                        self.write_code(OpConvertByteToBool);
+                    }
+                    Short | UShort => {
+                        self.write_code(OpConvertWordToBool);
+                    }
+                    Int | UInt => {
+                        self.write_code(OpConvertDwordToBool);
+                    }
+                    Long | ULong => {
+                        self.write_code(OpConvertQwordToBool);
+                    }
+                    ExtInt | UExtInt => {
+                        self.write_code(OpConvertExtIntToBool);
+                    }
+                }
+            }
+            (ValueType::Float(from), Bool) => {
+                match from {
+                    ValueFloatType::Float => {
+                        self.write_code(OpConvertDwordToBool);
+                    }
+                    Double => {
+                        self.write_code(OpConvertQwordToBool);
+                    }
+                }
+            }
+            (Bool, Integer(_)) |
+            (Bool, ValueType::Float(_)) => {
+                self.convert_types(&Integer(Byte), to);
+            }
+            (Bool, Bool) => (),
             _ => panic!("Invalid convert!"),
         }
     }
@@ -351,6 +388,7 @@ impl Compiler {
         }
     }
     
+    /// 浮点型操作指令快捷函数
     #[inline]
     pub fn float_code(&mut self, this_type: &ValueType, float: Instruction, double: Instruction) {
         use crate::types::ValueFloatType::*;
@@ -364,6 +402,7 @@ impl Compiler {
         }
     }
     
+    /// 相反数指令快捷函数
     #[inline]
     pub fn neg_ope_code(&mut self, src_type: &ValueType) {
         match src_type {
@@ -392,36 +431,47 @@ impl Compiler {
     /// 添加新指令
     #[inline]
     pub fn write_code(&mut self, instr: Instruction) {
-        write_byte(&mut self.chunk, [instr.into()]);
+        write_byte(&mut self.temp_chunk, [instr.into()]);
     }
     
     /// 添加字节参数
     #[inline]
     pub fn write_arg_byte(&mut self, byte: [u8; 1]) {
-        write_byte(&mut self.chunk, byte);
+        write_byte(&mut self.temp_chunk, byte);
     }
     
     /// 添加单字参数
     #[inline]
     pub fn write_arg_word(&mut self, word: [u8; 2]) {
-        write_word(&mut self.chunk, word);
+        write_word(&mut self.temp_chunk, word);
     }
     
     /// 添加双字参数
     #[inline]
     pub fn write_arg_dword(&mut self, dword: [u8; 4]) {
-        write_dword(&mut self.chunk, dword);
+        write_dword(&mut self.temp_chunk, dword);
     }
     
     /// 添加四字参数
     #[inline]
     pub fn write_arg_qword(&mut self, qword: [u8; 8]) {
-        write_qword(&mut self.chunk, qword);
+        write_qword(&mut self.temp_chunk, qword);
     }
     
     /// 添加扩展整数参数
     #[inline]
     pub fn write_arg_extend(&mut self, extend: [u8; 16]) {
-        write_extend(&mut self.chunk, extend);
+        write_extend(&mut self.temp_chunk, extend);
+    }
+    
+    /// 清空临时代码
+    #[inline]
+    pub fn clear_temp_chunk(&mut self) {
+        self.temp_chunk.clear();
+    }
+    
+    /// 附加临时代码
+    pub fn append_temp_chunk(&mut self, target: &mut LinkedList<u8>) {
+        target.append(&mut self.temp_chunk);
     }
 }
