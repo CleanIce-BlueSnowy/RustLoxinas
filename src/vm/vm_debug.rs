@@ -1,5 +1,6 @@
 //! 虚拟机——调试模块
 
+#[cfg(debug_assertions)]
 use crate::vm::VM;
 
 #[cfg(debug_assertions)]

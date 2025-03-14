@@ -52,7 +52,7 @@ impl<'a> TokenScanner<'a> {
         }
 
         // 结尾令牌，方便语法分析
-        self.tokens.push(Rc::new(Token::new(TokenType::EOF, 0, self.chars.len(), self.chars.len())));
+        self.tokens.push(Rc::new(Token::new(TokenType::EOF, self.line, self.chars.len(), self.chars.len() + 1)));
         
         return if errors.is_empty() {
             Ok(self.tokens)
@@ -261,6 +261,7 @@ impl<'a> TokenScanner<'a> {
             "true" => Some(True),
             "false" => Some(False),
             "as" => Some(As),
+            "init" => Some(Init),
             _ => None,
         }
     }

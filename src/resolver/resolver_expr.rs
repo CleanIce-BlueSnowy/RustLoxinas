@@ -317,7 +317,7 @@ impl Resolver {
         let variable = if let Some(var) = self.find_variable(&expr.name) {
             var
         } else {
-            return Err(CompileError::new(&expr.pos, "Undefined variable".to_string()));
+            return Err(CompileError::new(&expr.pos, "Undefined variable.".to_string()));
         };
         
         // 检查定义

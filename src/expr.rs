@@ -127,13 +127,16 @@ impl Expr {
 #[macro_export]
 macro_rules! expr_get_pos {
     ( $expression:expr ) => {
-        match $expression {
-            Expr::Binary(expr) => expr.pos.clone(),
-            Expr::Grouping(expr) => expr.pos.clone(),
-            Expr::Literal(expr) => expr.pos.clone(),
-            Expr::Unary(expr) => expr.pos.clone(),
-            Expr::As(expr) => expr.pos.clone(),
-            Expr::Variable(expr) => expr.pos.clone(), 
+        {
+            use crate::expr::Expr;
+            match $expression {
+                Expr::Binary(expr) => expr.pos.clone(),
+                Expr::Grouping(expr) => expr.pos.clone(),
+                Expr::Literal(expr) => expr.pos.clone(),
+                Expr::Unary(expr) => expr.pos.clone(),
+                Expr::As(expr) => expr.pos.clone(),
+                Expr::Variable(expr) => expr.pos.clone(), 
+            }
         }
     }
 }

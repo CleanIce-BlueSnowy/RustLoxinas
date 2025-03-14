@@ -39,7 +39,7 @@ pub enum DataSize {
     Word,
     Dword,
     Qword,
-    ExtInt,
+    Oword,
 }
 
 impl DataSize {
@@ -51,7 +51,7 @@ impl DataSize {
             DataSize::Word => 2,
             DataSize::Dword => 4,
             DataSize::Qword => 8,
-            DataSize::ExtInt => 16,
+            DataSize::Oword => 16,
         }
     }
 }

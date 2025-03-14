@@ -4,7 +4,7 @@ use std::collections::LinkedList;
 
 use crate::compiler::Compiler;
 use crate::data::DataSize;
-use crate::errors::error_types::CompileError;
+use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::{ExprBinary, ExprLiteral, ExprUnary};
 use crate::instr::Instruction::*;
 use crate::resolver::ExprResolveRes;
@@ -40,20 +40,20 @@ impl Compiler {
                     Operator(ope) => {
                         use crate::tokens::TokenOperator::*;
                         match ope {
-                            Plus => self.integer_code(this_type, OpIAddByte, OpIAddWord, OpIAddDword, OpIAddQword, OpIAddExtInt),
-                            Minus => self.integer_code(this_type, OpISubByte, OpISubWord, OpISubDword, OpISubQword, OpISubExtInt),
-                            Star => self.integer_code(this_type, OpIMulByte, OpIMulWord, OpIMulDword, OpIMulQword, OpIMulExtInt),
-                            Slash => self.sign_integer_code(this_type, OpIDivSByte, OpIDivUByte, OpIDivSWord, OpIDivUWord, OpIDivSDword, OpIDivUDword, OpIDivSQword, OpIDivUQword, OpIDivSExtInt, OpIDivUExtInt),
-                            Mod => self.sign_integer_code(this_type, OpIModSByte, OpIModUByte, OpIModSWord, OpIModUWord, OpIModSDword, OpIModUDword, OpIModSQword, OpIModUQword, OpIModSExtInt, OpIModUExtInt),
-                            And => self.integer_code(this_type, OpBitAndByte, OpBitAndWord, OpBitAndDword, OpBitAndQword, OpBitAndExtInt),
-                            Pipe => self.integer_code(this_type, OpBitOrByte, OpBitOrWord, OpBitOrDword, OpBitOrQword, OpBitOrExtInt),
-                            Caret => self.integer_code(this_type, OpBitXorByte, OpBitXorWord, OpBitXorDword, OpBitXorQword, OpBitXorExtInt),
-                            EqualEqual => self.integer_code(this_type, OpICmpEqualByte, OpICmpEqualWord, OpICmpEqualDword, OpICmpEqualQword, OpICmpEqualExtInt),
-                            NotEqual => self.integer_code(this_type, OpICmpNotEqualByte, OpICmpNotEqualWord, OpICmpNotEqualDword, OpICmpNotEqualQword, OpICmpNotEqualExtInt),
-                            Less => self.sign_integer_code(this_type, OpICmpLessSByte, OpICmpLessUByte, OpICmpLessSWord, OpICmpLessUWord, OpICmpLessSDword, OpICmpLessUDword, OpICmpLessSQword, OpICmpLessUQword, OpICmpLessSExtInt, OpICmpLessUExtInt),
-                            LessEqual => self.sign_integer_code(this_type, OpICmpLessEqualSByte, OpICmpLessEqualUByte, OpICmpLessEqualSWord, OpICmpLessEqualUWord, OpICmpLessEqualSDword, OpICmpLessEqualUDword, OpICmpLessEqualSQword, OpICmpLessEqualUQword, OpICmpLessEqualSExtInt, OpICmpLessEqualUExtInt),
-                            Greater => self.sign_integer_code(this_type, OpICmpGreaterSByte, OpICmpGreaterUByte, OpICmpGreaterSWord, OpICmpGreaterUWord, OpICmpGreaterSDword, OpICmpGreaterUDword, OpICmpGreaterSQword, OpICmpGreaterUQword, OpICmpGreaterSExtInt, OpICmpGreaterUExtInt),
-                            GreaterEqual => self.sign_integer_code(this_type, OpICmpGreaterEqualSByte, OpICmpGreaterEqualUByte, OpICmpGreaterEqualSWord, OpICmpGreaterEqualUWord, OpICmpGreaterEqualSDword, OpICmpGreaterEqualUDword, OpICmpGreaterEqualSQword, OpICmpGreaterEqualUQword, OpICmpGreaterEqualSExtInt, OpICmpGreaterEqualUExtInt),
+                            Plus => self.integer_code(this_type, OpIAddByte, OpIAddWord, OpIAddDword, OpIAddQword, OpIAddOword),
+                            Minus => self.integer_code(this_type, OpISubByte, OpISubWord, OpISubDword, OpISubQword, OpISubOword),
+                            Star => self.integer_code(this_type, OpIMulByte, OpIMulWord, OpIMulDword, OpIMulQword, OpIMulOword),
+                            Slash => self.sign_integer_code(this_type, OpIDivSByte, OpIDivUByte, OpIDivSWord, OpIDivUWord, OpIDivSDword, OpIDivUDword, OpIDivSQword, OpIDivUQword, OpIDivSOword, OpIDivUOword),
+                            Mod => self.sign_integer_code(this_type, OpIModSByte, OpIModUByte, OpIModSWord, OpIModUWord, OpIModSDword, OpIModUDword, OpIModSQword, OpIModUQword, OpIModSOword, OpIModUOword),
+                            And => self.integer_code(this_type, OpBitAndByte, OpBitAndWord, OpBitAndDword, OpBitAndQword, OpBitAndOword),
+                            Pipe => self.integer_code(this_type, OpBitOrByte, OpBitOrWord, OpBitOrDword, OpBitOrQword, OpBitOrOword),
+                            Caret => self.integer_code(this_type, OpBitXorByte, OpBitXorWord, OpBitXorDword, OpBitXorQword, OpBitXorOword),
+                            EqualEqual => self.integer_code(this_type, OpICmpEqualByte, OpICmpEqualWord, OpICmpEqualDword, OpICmpEqualQword, OpICmpEqualOword),
+                            NotEqual => self.integer_code(this_type, OpICmpNotEqualByte, OpICmpNotEqualWord, OpICmpNotEqualDword, OpICmpNotEqualQword, OpICmpNotEqualOword),
+                            Less => self.sign_integer_code(this_type, OpICmpLessSByte, OpICmpLessUByte, OpICmpLessSWord, OpICmpLessUWord, OpICmpLessSDword, OpICmpLessUDword, OpICmpLessSQword, OpICmpLessUQword, OpICmpLessSOword, OpICmpLessUOword),
+                            LessEqual => self.sign_integer_code(this_type, OpICmpLessEqualSByte, OpICmpLessEqualUByte, OpICmpLessEqualSWord, OpICmpLessEqualUWord, OpICmpLessEqualSDword, OpICmpLessEqualUDword, OpICmpLessEqualSQword, OpICmpLessEqualUQword, OpICmpLessEqualSOword, OpICmpLessEqualUOword),
+                            Greater => self.sign_integer_code(this_type, OpICmpGreaterSByte, OpICmpGreaterUByte, OpICmpGreaterSWord, OpICmpGreaterUWord, OpICmpGreaterSDword, OpICmpGreaterUDword, OpICmpGreaterSQword, OpICmpGreaterUQword, OpICmpGreaterSOword, OpICmpGreaterUOword),
+                            GreaterEqual => self.sign_integer_code(this_type, OpICmpGreaterEqualSByte, OpICmpGreaterEqualUByte, OpICmpGreaterEqualSWord, OpICmpGreaterEqualUWord, OpICmpGreaterEqualSDword, OpICmpGreaterEqualUDword, OpICmpGreaterEqualSQword, OpICmpGreaterEqualUQword, OpICmpGreaterEqualSOword, OpICmpGreaterEqualUOword),
                             _ => unimplemented!("Unsupported operation"),
                         }
                     }
@@ -142,12 +142,12 @@ impl Compiler {
                         self.write_arg_qword(data.to_le_bytes());
                     }
                     ExtInt(data) => {
-                        self.write_code(OpLoadConstExtInt);
-                        self.write_arg_extend(data.to_le_bytes());
+                        self.write_code(OpLoadConstOword);
+                        self.write_arg_oword(data.to_le_bytes());
                     }
                     UExtInt(data) => {
-                        self.write_code(OpLoadConstExtInt);
-                        self.write_arg_extend(data.to_le_bytes());
+                        self.write_code(OpLoadConstOword);
+                        self.write_arg_oword(data.to_le_bytes());
                     }
                 }
             }
@@ -190,7 +190,7 @@ impl Compiler {
                 if let Operator(Minus) = &expr.operator.token_type {
                     self.neg_ope_code(&expr_type);
                 } else if let Operator(Tilde) = &expr.operator.token_type {
-                    self.integer_code(&expr_type, OpBitNotByte, OpBitNotWord, OpBitNotDword, OpBitNotQword, OpBitNotExtInt);
+                    self.integer_code(&expr_type, OpBitNotByte, OpBitNotWord, OpBitNotDword, OpBitNotQword, OpBitNotOword);
                 } else {
                     unimplemented!("Unsupported operation");
                 }
@@ -220,7 +220,7 @@ impl Compiler {
     
     pub fn compile_variable_expr(&mut self,
                                  resolve_res: &ExprResolveRes,
-                                 slot: usize) -> Result<LinkedList<u8>, CompileError> {
+                                 slot: usize) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
         // 确定指令大小
         self.write_code(
@@ -229,7 +229,7 @@ impl Compiler {
                 DataSize::Word => OpGetLocalWord,
                 DataSize::Dword => OpGetLocalDword,
                 DataSize::Qword => OpGetLocalQword,
-                DataSize::ExtInt => OpGetLocalExtInt,
+                DataSize::Oword => OpGetLocalOword,
             }
         );
         // 写入偏移量

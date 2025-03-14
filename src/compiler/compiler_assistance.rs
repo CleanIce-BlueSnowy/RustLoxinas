@@ -2,7 +2,7 @@
 
 use std::collections::LinkedList;
 
-use crate::byte_handler::byte_writer::{write_byte, write_dword, write_extend, write_qword, write_word};
+use crate::byte_handler::byte_writer::{write_byte, write_dword, write_oword, write_qword, write_word};
 use crate::compiler::Compiler;
 use crate::instr::Instruction;
 use crate::instr::Instruction::*;
@@ -34,7 +34,7 @@ impl Compiler {
                         self.write_code(OpZeroExtendByteToWord);
                         self.write_code(OpZeroExtendWordToDword);
                         self.write_code(OpZeroExtendDwordToQword);
-                        self.write_code(OpZeroExtendToExtInt);
+                        self.write_code(OpZeroExtendQwordToOword);
                     }
                     (SByte, Short) | (SByte, UShort) => {
                         self.write_code(OpSignExtendByteToWord);
@@ -52,7 +52,7 @@ impl Compiler {
                         self.write_code(OpSignExtendByteToWord);
                         self.write_code(OpSignExtendWordToDword);
                         self.write_code(OpSignExtendDwordToQword);
-                        self.write_code(OpSignExtendToExtInt);
+                        self.write_code(OpSignExtendQwordToOword);
                     }
                     (Short, Byte) | (Short, SByte) | (UShort, Byte) | (UShort, SByte) => {
                         self.write_code(OpTruncateWordToByte);
@@ -68,7 +68,7 @@ impl Compiler {
                     (Short, ExtInt) | (Short, UExtInt) => {
                         self.write_code(OpSignExtendWordToDword);
                         self.write_code(OpSignExtendDwordToQword);
-                        self.write_code(OpSignExtendToExtInt);
+                        self.write_code(OpSignExtendQwordToOword);
                     }
                     (UShort, Int) | (UShort, UInt) => {
                         self.write_code(OpZeroExtendWordToDword);
@@ -80,7 +80,7 @@ impl Compiler {
                     (UShort, ExtInt) | (UShort, UExtInt) => {
                         self.write_code(OpZeroExtendWordToDword);
                         self.write_code(OpZeroExtendDwordToQword);
-                        self.write_code(OpZeroExtendToExtInt);
+                        self.write_code(OpZeroExtendQwordToOword);
                     }
                     (Int, Byte) | (Int, SByte) | (UInt, Byte) | (UInt, SByte) => {
                         self.write_code(OpTruncateDwordToWord);
@@ -95,14 +95,14 @@ impl Compiler {
                     }
                     (Int, ExtInt) | (Int, UExtInt) => {
                         self.write_code(OpSignExtendDwordToQword);
-                        self.write_code(OpSignExtendToExtInt);
+                        self.write_code(OpSignExtendQwordToOword);
                     }
                     (UInt, Long) | (UInt, ULong) => {
                         self.write_code(OpZeroExtendDwordToQword);
                     }
                     (UInt, ExtInt) | (UInt, UExtInt) => {
                         self.write_code(OpZeroExtendDwordToQword);
-                        self.write_code(OpZeroExtendToExtInt);
+                        self.write_code(OpZeroExtendQwordToOword);
                     }
                     (Long, Byte) | (Long, SByte) | (ULong, Byte) | (ULong, SByte) => {
                         self.write_code(OpTruncateQwordToDword);
@@ -118,28 +118,28 @@ impl Compiler {
                     }
                     (Long, Long) | (Long, ULong) | (ULong, Long) | (ULong, ULong) => (),
                     (Long, ExtInt) | (Long, UExtInt) => {
-                        self.write_code(OpSignExtendToExtInt);
+                        self.write_code(OpSignExtendQwordToOword);
                     }
                     (ULong, ExtInt) | (ULong, UExtInt) => {
-                        self.write_code(OpZeroExtendToExtInt);
+                        self.write_code(OpZeroExtendQwordToOword);
                     }
                     (ExtInt, Byte) | (ExtInt, SByte) | (UExtInt, Byte) | (UExtInt, SByte) => {
-                        self.write_code(OpTruncateFromExtInt);
+                        self.write_code(OpTruncateOwordToQword);
                         self.write_code(OpTruncateQwordToDword);
                         self.write_code(OpTruncateDwordToWord);
                         self.write_code(OpTruncateWordToByte);
                     }
                     (ExtInt, Short) | (ExtInt, UShort) | (UExtInt, Short) | (UExtInt, UShort) => {
-                        self.write_code(OpTruncateFromExtInt);
+                        self.write_code(OpTruncateOwordToQword);
                         self.write_code(OpTruncateQwordToDword);
                         self.write_code(OpTruncateDwordToWord);
                     }
                     (ExtInt, Int) | (ExtInt, UInt) | (UExtInt, Int) | (UExtInt, UInt) => {
-                        self.write_code(OpTruncateFromExtInt);
+                        self.write_code(OpTruncateOwordToQword);
                         self.write_code(OpTruncateQwordToDword);
                     }
                     (ExtInt, Long) | (ExtInt, ULong) | (UExtInt, Long) | (UExtInt, ULong) => {
-                        self.write_code(OpTruncateFromExtInt);
+                        self.write_code(OpTruncateOwordToQword);
                     }
                     (ExtInt, ExtInt) | (ExtInt, UExtInt) | (UExtInt, ExtInt) | (UExtInt, UExtInt) => (),
                 }
@@ -175,10 +175,10 @@ impl Compiler {
                         self.write_code(OpConvertUQwordToFloat);
                     }
                     (ExtInt, ValueFloatType::Float) => {
-                        self.write_code(OpConvertSExtIntToFloat);
+                        self.write_code(OpConvertSOwordToFloat);
                     }
                     (UExtInt, ValueFloatType::Float) => {
-                        self.write_code(OpConvertUExtIntToFloat);
+                        self.write_code(OpConvertUOwordToFloat);
                     }
                     (Byte, Double) => {
                         self.write_code(OpZeroExtendByteToWord);
@@ -209,10 +209,10 @@ impl Compiler {
                         self.write_code(OpConvertUQwordToDouble);
                     }
                     (ExtInt, Double) => {
-                        self.write_code(OpConvertSExtIntToDouble);
+                        self.write_code(OpConvertSOwordToDouble);
                     }
                     (UExtInt, Double) => {
-                        self.write_code(OpConvertUExtIntToDouble);
+                        self.write_code(OpConvertUOwordToDouble);
                     }
                 }
             }
@@ -247,10 +247,10 @@ impl Compiler {
                         self.write_code(OpConvertFloatToUQword);
                     }
                     (ValueFloatType::Float, ExtInt) => {
-                        self.write_code(OpConvertFloatToSExtInt);
+                        self.write_code(OpConvertFloatToSOword);
                     }
                     (ValueFloatType::Float, UExtInt) => {
-                        self.write_code(OpConvertFloatToUExtInt);
+                        self.write_code(OpConvertFloatToUOword);
                     }
                     (Double, Byte) => {
                         self.write_code(OpConvertDoubleToUWord);
@@ -281,10 +281,10 @@ impl Compiler {
                         self.write_code(OpConvertDoubleToUQword);
                     }
                     (Double, ExtInt) => {
-                        self.write_code(OpConvertDoubleToSExtInt);
+                        self.write_code(OpConvertDoubleToSOword);
                     }
                     (Double, UExtInt) => {
-                        self.write_code(OpConvertDoubleToUExtInt);
+                        self.write_code(OpConvertDoubleToUOword);
                     }
                 }
             }
@@ -314,7 +314,7 @@ impl Compiler {
                         self.write_code(OpConvertQwordToBool);
                     }
                     ExtInt | UExtInt => {
-                        self.write_code(OpConvertExtIntToBool);
+                        self.write_code(OpConvertOwordToBool);
                     }
                 }
             }
@@ -345,7 +345,7 @@ impl Compiler {
                         word: Instruction, 
                         dword: Instruction, 
                         qword: Instruction, 
-                        extend: Instruction) {
+                        oword: Instruction) {
         use crate::types::ValueIntegerType::*;
         if let ValueType::Integer(res_type) = this_type {
             match res_type {
@@ -353,7 +353,7 @@ impl Compiler {
                 Short | UShort => self.write_code(word),
                 Int | UInt => self.write_code(dword),
                 Long | ULong => self.write_code(qword),
-                ExtInt | UExtInt => self.write_code(extend),
+                ExtInt | UExtInt => self.write_code(oword),
             }
         } else {
             panic!("Unexpected result type!");
@@ -368,7 +368,7 @@ impl Compiler {
                              signed_word: Instruction, unsigned_word: Instruction,
                              signed_dword: Instruction, unsigned_dword: Instruction,
                              signed_qword: Instruction, unsigned_qword: Instruction,
-                             signed_extend: Instruction, unsigned_extend: Instruction) {
+                             signed_oword: Instruction, unsigned_oword: Instruction) {
         use crate::types::ValueIntegerType::*;
         if let ValueType::Integer(res_type) = this_type {
             match res_type {
@@ -380,8 +380,8 @@ impl Compiler {
                 UInt => self.write_code(unsigned_dword),
                 Long => self.write_code(signed_qword),
                 ULong => self.write_code(unsigned_qword),
-                ExtInt => self.write_code(signed_extend),
-                UExtInt => self.write_code(unsigned_extend),
+                ExtInt => self.write_code(signed_oword),
+                UExtInt => self.write_code(unsigned_oword),
             }
         } else {
             panic!("Unexpected result type!");
@@ -413,7 +413,7 @@ impl Compiler {
                     Short => self.write_code(OpINegWord),
                     Int => self.write_code(OpINegDword),
                     Long => self.write_code(OpINegQword),
-                    ExtInt => self.write_code(OpINegExtInt),
+                    ExtInt => self.write_code(OpINegOword),
                     _ => panic!("Unexpected result integer type!"),
                 }
             }
@@ -460,8 +460,8 @@ impl Compiler {
     
     /// 添加扩展整数参数
     #[inline]
-    pub fn write_arg_extend(&mut self, extend: [u8; 16]) {
-        write_extend(&mut self.temp_chunk, extend);
+    pub fn write_arg_oword(&mut self, oword: [u8; 16]) {
+        write_oword(&mut self.temp_chunk, oword);
     }
     
     /// 清空临时代码

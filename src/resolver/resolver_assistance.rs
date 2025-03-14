@@ -106,6 +106,12 @@ impl Resolver {
         return None;
     }
     
+    /// 在当前作用域寻找变量
+    pub fn find_variable_in_current_scope(&mut self, name: &String) -> Option<&mut Variable> {
+        let current = self.get_current_scope();
+        return current.0.get_mut(name);
+    }
+    
     /// 检查类型转换
     #[inline]
     pub fn check_type_parse(from: &ValueType, to: &ValueType) -> bool {

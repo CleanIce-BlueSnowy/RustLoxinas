@@ -3,13 +3,13 @@
 use indexmap::indexmap;
 
 use crate::ast_printer::{AstPrinter, TreeChild};
-use crate::stmt::{Stmt, StmtExpr, StmtLet, StmtVisitor};
+use crate::stmt::{Stmt, StmtExpr, StmtInit, StmtLet, StmtVisitor};
 
 #[cfg(debug_assertions)]
 impl StmtVisitor<String> for AstPrinter {
     fn visit_expr_stmt(&mut self, this: *const Stmt, stmt: &StmtExpr) -> String {
         // 直接打印即可
-        return format!(
+        format!(
             "STMT {:?} {}",
             this,
             self.parenthesize(
@@ -18,7 +18,7 @@ impl StmtVisitor<String> for AstPrinter {
                     "expr" => TreeChild::Expr(stmt.expression.as_ref())
                 },
             ),
-        );
+        )
     }
 
     fn visit_let_stmt(&mut self, this: *const Stmt, stmt: &StmtLet) -> String {
@@ -46,5 +46,19 @@ impl StmtVisitor<String> for AstPrinter {
                 children,
             ),
         );
+    }
+
+    fn visit_init_stmt(&mut self, this: *const Stmt, stmt: &StmtInit) -> String {
+        format!(
+            "STMT {:?} {}",
+            this, 
+            self.parenthesize(
+                "Init",
+                indexmap! {
+                    "name" => TreeChild::Identifier(&stmt.name),
+                    "init" => TreeChild::Expr(stmt.init.as_ref()),
+                }
+            )
+        )
     }
 }

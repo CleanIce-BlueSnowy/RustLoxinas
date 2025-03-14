@@ -1,6 +1,6 @@
 //! 虚拟机——辅助功能模块
 
-use crate::byte_handler::byte_reader::{read_byte, read_dword, read_extend, read_qword, read_word};
+use crate::byte_handler::byte_reader::{read_byte, read_dword, read_oword, read_qword, read_word};
 use crate::vm::VM;
 
 impl<'a> VM<'a> {
@@ -25,8 +25,8 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
-    pub fn push_extend(&mut self, extend: [u8; 16]) {
-        self.vm_stack.extend_from_slice(&extend);
+    pub fn push_oword(&mut self, oword: [u8; 16]) {
+        self.vm_stack.extend_from_slice(&oword);
     }
     
     #[inline]
@@ -68,7 +68,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
-    pub fn peek_extend(&self) -> [u8; 16] {
+    pub fn peek_oword(&self) -> [u8; 16] {
         let top = self.vm_stack.len() - 1;
         return [
             self.vm_stack[top - 15], self.vm_stack[top - 14], self.vm_stack[top - 13], self.vm_stack[top - 12],
@@ -113,8 +113,8 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
-    pub fn pop_extend(&mut self) -> [u8; 16] {
-        let res = self.peek_extend();
+    pub fn pop_oword(&mut self) -> [u8; 16] {
+        let res = self.peek_oword();
         self.vm_stack.truncate(self.vm_stack.len() - 16);
         return res;
     }
@@ -167,10 +167,10 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
-    pub fn read_arg_extend(&mut self) -> [u8; 16] {
-        if let Ok((extend, new_ip)) = read_extend(self.chunk, self.ip) {
+    pub fn read_arg_oword(&mut self) -> [u8; 16] {
+        if let Ok((oword, new_ip)) = read_oword(self.chunk, self.ip) {
             self.ip = new_ip;
-            extend
+            oword
         } else {
             panic!("Data not enough: need 16 byte.");
         }
@@ -213,11 +213,36 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
-    pub fn get_frame_slot_extend(&mut self, slot: usize) -> [u8; 16] {
-        if let Ok((extend, _)) = read_extend(&self.vm_stack, self.frame_start + slot) {
-            extend
+    pub fn get_frame_slot_oword(&mut self, slot: usize) -> [u8; 16] {
+        if let Ok((oword, _)) = read_oword(&self.vm_stack, self.frame_start + slot) {
+            oword
         } else {
             panic!("Data not enough: need 16 byte.");
         }
+    }
+    
+    #[inline]
+    pub fn set_frame_slot_byte(&mut self, slot: usize, byte: [u8; 1]) {
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 1)].copy_from_slice(&byte);
+    }
+
+    #[inline]
+    pub fn set_frame_slot_word(&mut self, slot: usize, word: [u8; 2]) {
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 2)].copy_from_slice(&word);
+    }
+
+    #[inline]
+    pub fn set_frame_slot_dword(&mut self, slot: usize, dword: [u8; 4]) {
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 4)].copy_from_slice(&dword);
+    }
+
+    #[inline]
+    pub fn set_frame_slot_qword(&mut self, slot: usize, qword: [u8; 8]) {
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 8)].copy_from_slice(&qword);
+    }
+
+    #[inline]
+    pub fn set_frame_slot_oword(&mut self, slot: usize, oword: [u8; 16]) {
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 16)].copy_from_slice(&oword);
     }
 }

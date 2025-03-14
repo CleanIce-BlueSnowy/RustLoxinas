@@ -28,6 +28,6 @@ pub fn write_qword(stream: &mut LinkedList<u8>, qword: [u8; 8]) {
 
 /// 写入扩展整数
 #[inline]
-pub fn write_extend(stream: &mut LinkedList<u8>, extend: [u8; 16]) {
-    stream.extend(&extend);
+pub fn write_oword(stream: &mut LinkedList<u8>, oword: [u8; 16]) {
+    stream.extend(&oword);
 }

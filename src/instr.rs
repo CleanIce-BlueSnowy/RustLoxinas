@@ -17,20 +17,26 @@ pub enum Instruction {
     OpLoadConstDword,
     /// 常数加载四字
     OpLoadConstQword,
-    /// 常数加载扩展整数（八字）
-    OpLoadConstExtInt,
+    /// 常数加载八字
+    OpLoadConstOword,
     /// 有符号位扩展，字节到单字
     OpSignExtendByteToWord,
     /// 有符号位扩展，单字到双字
     OpSignExtendWordToDword,
     /// 有符号位扩展，双字到四字
     OpSignExtendDwordToQword,
+    /// 有符号位扩展，四字到八字
+    OpSignExtendQwordToOword,
     /// 无符号位扩展，字节到单字
     OpZeroExtendByteToWord,
     /// 无符号位扩展，单字到双字
     OpZeroExtendWordToDword,
     /// 无符号位扩展，双字到四字
     OpZeroExtendDwordToQword,
+    /// 无符号位扩展，四字到八字
+    OpZeroExtendQwordToOword,
+    /// 位截断，八字到四字
+    OpTruncateOwordToQword,
     /// 位截断，四字到双字
     OpTruncateQwordToDword,
     /// 位截断，双字到单字
@@ -45,6 +51,8 @@ pub enum Instruction {
     OpIAddDword,
     /// 四字加法
     OpIAddQword,
+    /// 八字加法
+    OpIAddOword,
     /// 字节减法
     OpISubByte,
     /// 单字减法
@@ -53,6 +61,8 @@ pub enum Instruction {
     OpISubDword,
     /// 四字减法
     OpISubQword,
+    /// 八字减法
+    OpISubOword,
     /// 字节乘法
     OpIMulByte,
     /// 单字乘法
@@ -61,6 +71,8 @@ pub enum Instruction {
     OpIMulDword,
     /// 四字乘法
     OpIMulQword,
+    /// 八字乘法
+    OpIMulOword,
     /// 字节有符号除法
     OpIDivSByte,
     /// 单字有符号除法
@@ -69,6 +81,8 @@ pub enum Instruction {
     OpIDivSDword,
     /// 四字有符号除法
     OpIDivSQword,
+    /// 八字有符号除法
+    OpIDivSOword,
     /// 字节无符号除法
     OpIDivUByte,
     /// 单字无符号除法
@@ -77,6 +91,8 @@ pub enum Instruction {
     OpIDivUDword,
     /// 四字无符号除法
     OpIDivUQword,
+    /// 八字无符号除法
+    OpIDivUOword,
     /// 字节有符号取模
     OpIModSByte,
     /// 单字有符号取模
@@ -85,6 +101,8 @@ pub enum Instruction {
     OpIModSDword,
     /// 四字有符号取模
     OpIModSQword,
+    /// 八字有符号取模
+    OpIModSOword,
     /// 字节无符号取模
     OpIModUByte,
     /// 单字无符号取模
@@ -93,6 +111,8 @@ pub enum Instruction {
     OpIModUDword,
     /// 四字无符号取模
     OpIModUQword,
+    /// 八字无符号取模
+    OpIModUOword,
     /// 字节相反数（补码）
     OpINegByte,
     /// 单字相反数（补码）
@@ -101,76 +121,56 @@ pub enum Instruction {
     OpINegDword,
     /// 四字相反数（补码）
     OpINegQword,
-    /// 有符号位扩展至扩展整数（八字）
-    OpSignExtendToExtInt,
-    /// 无符号位扩展至扩展整数（八字）
-    OpZeroExtendToExtInt,
-    /// 位截断从扩展整数（八字）
-    OpTruncateFromExtInt,
-    /// 扩展整数加法
-    OpIAddExtInt,
-    /// 扩展整数减法
-    OpISubExtInt,
-    /// 扩展整数乘法
-    OpIMulExtInt,
-    /// 扩展整数有符号除法
-    OpIDivSExtInt,
-    /// 扩展整数无符号除法
-    OpIDivUExtInt,
-    /// 扩展整数有符号取模
-    OpIModSExtInt,
-    /// 扩展整数无符号取模
-    OpIModUExtInt,
-    /// 扩展整数相反数（补码）
-    OpINegExtInt,
-    /// 有符号单字转化单精度浮点数
+    /// 八字相反数（补码）
+    OpINegOword,
+    /// 有符号单字转单精度浮点数
     OpConvertSWordToFloat,
-    /// 无符号单字转化单精度浮点数
+    /// 无符号单字转单精度浮点数
     OpConvertUWordToFloat,
-    /// 有符号四字转化单精度浮点数
+    /// 有符号四字转单精度浮点数
     OpConvertSQwordToFloat,
-    /// 无符号四字转化单精度浮点数
+    /// 无符号四字转单精度浮点数
     OpConvertUQwordToFloat,
-    /// 有符号单字转化双精度浮点数
+    /// 有符号八字转单精度浮点数
+    OpConvertSOwordToFloat,
+    /// 无符号八字转单精度浮点数
+    OpConvertUOwordToFloat,
+    /// 有符号单字转双精度浮点数
     OpConvertSWordToDouble,
-    /// 无符号单字转化双精度浮点数
+    /// 无符号单字转双精度浮点数
     OpConvertUWordToDouble,
-    /// 有符号四字转化双精度浮点数
+    /// 有符号四字转双精度浮点数
     OpConvertSQwordToDouble,
-    /// 无符号四字转化双精度浮点数
+    /// 无符号四字转双精度浮点数
     OpConvertUQwordToDouble,
-    /// 单精度浮点数转化有符号单字
+    /// 有符号八字转双精度浮点数
+    OpConvertSOwordToDouble,
+    /// 无符号八字转双精度浮点数
+    OpConvertUOwordToDouble,
+    /// 单精度浮点数转有符号单字
     OpConvertFloatToSWord,
-    /// 单精度浮点数转化无符号单字
+    /// 单精度浮点数转无符号单字
     OpConvertFloatToUWord,
-    /// 单精度浮点数转化有符号四字
+    /// 单精度浮点数转有符号四字
     OpConvertFloatToSQword,
-    /// 单精度浮点数转化无符号四字
+    /// 单精度浮点数转无符号四字
     OpConvertFloatToUQword,
-    /// 双精度浮点数转化有符号单字
+    /// 单精度浮点数转有符号八字
+    OpConvertFloatToSOword,
+    /// 单精度浮点数转无符号八字
+    OpConvertFloatToUOword,
+    /// 双精度浮点数转有符号单字
     OpConvertDoubleToSWord,
-    /// 双精度浮点数转化无符号单字
+    /// 双精度浮点数转无符号单字
     OpConvertDoubleToUWord,
-    /// 双精度浮点数转化有符号四字
+    /// 双精度浮点数转有符号四字
     OpConvertDoubleToSQword,
-    /// 双精度浮点数转化无符号四字
+    /// 双精度浮点数转无符号四字
     OpConvertDoubleToUQword,
-    /// 有符号扩展整数转单精度浮点数
-    OpConvertSExtIntToFloat,
-    /// 无符号扩展整数转单精度浮点数
-    OpConvertUExtIntToFloat,
-    /// 有符号扩展整数转双精度浮点数
-    OpConvertSExtIntToDouble,
-    /// 无符号扩展整数转双精度浮点数
-    OpConvertUExtIntToDouble,
-    /// 单精度浮点数转有符号扩展整数
-    OpConvertFloatToSExtInt,
-    /// 单精度浮点数转无符号扩展整数
-    OpConvertFloatToUExtInt,
-    /// 双精度浮点数转有符号扩展整数
-    OpConvertDoubleToSExtInt,
-    /// 双精度浮点数转无符号扩展整数
-    OpConvertDoubleToUExtInt,
+    /// 双精度浮点数转有符号八字
+    OpConvertDoubleToSOword,
+    /// 双精度浮点数转无符号八字
+    OpConvertDoubleToUOword,
     /// 单精度转双精度
     OpConvertFloatToDouble,
     /// 双精度转单精度
@@ -183,8 +183,8 @@ pub enum Instruction {
     OpConvertDwordToBool,
     /// 四字转布尔型
     OpConvertQwordToBool,
-    /// 扩展整数转布尔型
-    OpConvertExtIntToBool,
+    /// 八字转布尔型
+    OpConvertOwordToBool,
     /// 单精度加法
     OpFAddFloat,
     /// 双精度加法
@@ -213,8 +213,8 @@ pub enum Instruction {
     OpBitNotDword,
     /// 四字位取反
     OpBitNotQword,
-    /// 扩展整数位取反
-    OpBitNotExtInt,
+    /// 八字位取反
+    OpBitNotOword,
     /// 字节位与
     OpBitAndByte,
     /// 单字位与
@@ -223,8 +223,8 @@ pub enum Instruction {
     OpBitAndDword,
     /// 四字位与
     OpBitAndQword,
-    /// 扩展整数位与
-    OpBitAndExtInt,
+    /// 八字位与
+    OpBitAndOword,
     /// 字节位或
     OpBitOrByte,
     /// 单字位或
@@ -233,8 +233,8 @@ pub enum Instruction {
     OpBitOrDword,
     /// 四字位或
     OpBitOrQword,
-    /// 扩展整数位或
-    OpBitOrExtInt,
+    /// 八字位或
+    OpBitOrOword,
     /// 字节位异或
     OpBitXorByte,
     /// 单字位异或
@@ -243,8 +243,8 @@ pub enum Instruction {
     OpBitXorDword,
     /// 四字位异或
     OpBitXorQword,
-    /// 扩展整数位异或
-    OpBitXorExtInt,
+    /// 八字位异或
+    OpBitXorOword,
     /// 字节比较等于
     OpICmpEqualByte,
     /// 单字比较等于
@@ -253,8 +253,8 @@ pub enum Instruction {
     OpICmpEqualDword,
     /// 四字比较等于
     OpICmpEqualQword,
-    /// 扩展整数比较等于
-    OpICmpEqualExtInt,
+    /// 八字比较等于
+    OpICmpEqualOword,
     /// 字节比较不等于
     OpICmpNotEqualByte,
     /// 单字比较不等于
@@ -263,8 +263,8 @@ pub enum Instruction {
     OpICmpNotEqualDword,
     /// 四字比较不等于
     OpICmpNotEqualQword,
-    /// 扩展整数比较不等于
-    OpICmpNotEqualExtInt,
+    /// 八字比较不等于
+    OpICmpNotEqualOword,
     /// 有符号字节比较小于
     OpICmpLessSByte,
     /// 有符号单字比较小于
@@ -273,8 +273,8 @@ pub enum Instruction {
     OpICmpLessSDword,
     /// 有符号四字比较小于
     OpICmpLessSQword,
-    /// 有符号扩展整数比较小于
-    OpICmpLessSExtInt,
+    /// 有符号八字比较小于
+    OpICmpLessSOword,
     /// 无符号字节比较小于
     OpICmpLessUByte,
     /// 无符号单字比较小于
@@ -283,8 +283,8 @@ pub enum Instruction {
     OpICmpLessUDword,
     /// 无符号四字比较小于
     OpICmpLessUQword,
-    /// 无符号扩展整数比较小于
-    OpICmpLessUExtInt,
+    /// 无符号八字比较小于
+    OpICmpLessUOword,
     /// 有符号字节比较小于等于
     OpICmpLessEqualSByte,
     /// 有符号单字比较小于等于
@@ -293,8 +293,8 @@ pub enum Instruction {
     OpICmpLessEqualSDword,
     /// 有符号四字比较小于等于
     OpICmpLessEqualSQword,
-    /// 有符号扩展整数比较小于等于
-    OpICmpLessEqualSExtInt,
+    /// 有符号八字比较小于等于
+    OpICmpLessEqualSOword,
     /// 无符号字节比较小于等于
     OpICmpLessEqualUByte,
     /// 无符号单字比较小于等于
@@ -303,8 +303,8 @@ pub enum Instruction {
     OpICmpLessEqualUDword,
     /// 无符号四字比较小于等于
     OpICmpLessEqualUQword,
-    /// 无符号扩展整数比较小于等于
-    OpICmpLessEqualUExtInt,
+    /// 无符号八字比较小于等于
+    OpICmpLessEqualUOword,
     /// 有符号字节比较大于
     OpICmpGreaterSByte,
     /// 有符号单字比较大于
@@ -313,8 +313,8 @@ pub enum Instruction {
     OpICmpGreaterSDword,
     /// 有符号四字比较大于
     OpICmpGreaterSQword,
-    /// 有符号扩展整数比较大于
-    OpICmpGreaterSExtInt,
+    /// 有符号八字比较大于
+    OpICmpGreaterSOword,
     /// 无符号字节比较大于
     OpICmpGreaterUByte,
     /// 无符号单字比较大于
@@ -323,8 +323,8 @@ pub enum Instruction {
     OpICmpGreaterUDword,
     /// 无符号四字比较大于
     OpICmpGreaterUQword,
-    /// 无符号扩展整数比较大于
-    OpICmpGreaterUExtInt,
+    /// 无符号八字比较大于
+    OpICmpGreaterUOword,
     /// 有符号字节比较大于等于
     OpICmpGreaterEqualSByte,
     /// 有符号单字比较大于等于
@@ -333,8 +333,8 @@ pub enum Instruction {
     OpICmpGreaterEqualSDword,
     /// 有符号四字比较大于等于
     OpICmpGreaterEqualSQword,
-    /// 有符号扩展整数比较大于等于
-    OpICmpGreaterEqualSExtInt,
+    /// 有符号八字比较大于等于
+    OpICmpGreaterEqualSOword,
     /// 无符号字节比较大于等于
     OpICmpGreaterEqualUByte,
     /// 无符号单字比较大于等于
@@ -343,8 +343,8 @@ pub enum Instruction {
     OpICmpGreaterEqualUDword,
     /// 无符号四字比较大于等于
     OpICmpGreaterEqualUQword,
-    /// 无符号扩展整数比较大于等于
-    OpICmpGreaterEqualUExtInt,
+    /// 无符号八字比较大于等于
+    OpICmpGreaterEqualUOword,
     /// 单精度比较等于
     OpFCmpEqualFloat,
     /// 双精度比较等于
@@ -377,8 +377,8 @@ pub enum Instruction {
     OpPopDword,
     /// 弹出四字
     OpPopQword,
-    /// 弹出扩展整数
-    OpPopExtInt,
+    /// 弹出八字
+    OpPopOword,
     /// 压入字节
     OpPushByte,
     /// 压入单字
@@ -387,8 +387,8 @@ pub enum Instruction {
     OpPushDword,
     /// 压入四字
     OpPushQword,
-    /// 压入扩展整数
-    OpPushExtInt,
+    /// 压入八字
+    OpPushOword,
     /// 获取局部变量字节
     OpGetLocalByte,
     /// 获取局部变量单字
@@ -397,6 +397,16 @@ pub enum Instruction {
     OpGetLocalDword,
     /// 获取局部变量四字
     OpGetLocalQword,
-    /// 获取局部变量扩展整数
-    OpGetLocalExtInt,
+    /// 获取局部变量八字
+    OpGetLocalOword,
+    /// 设置局部变量字节
+    OpSetLocalByte,
+    /// 设置局部变量单字
+    OpSetLocalWord,
+    /// 设置局部变量双字
+    OpSetLocalDword,
+    /// 设置局部变量四字
+    OpSetLocalQword,
+    /// 设置局部变量八字
+    OpSetLocalOword,
 }

@@ -64,7 +64,7 @@ impl ValueType {
                     Short | UShort => DataSize::Word,
                     Int | UInt => DataSize::Dword,
                     Long | ULong => DataSize::Qword,
-                    ExtInt | UExtInt => DataSize::ExtInt,
+                    ExtInt | UExtInt => DataSize::Oword,
                 }
             }
             ValueType::Float(float) => {

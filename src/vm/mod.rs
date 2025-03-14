@@ -1,7 +1,10 @@
 //! 虚拟机模块
 
 use crate::byte_handler::byte_reader::read_byte;
+
+#[cfg(debug_assertions)]
 use crate::disassembler::disassemble_instruction;
+
 use crate::errors::error_types::{RuntimeError, RuntimeResult};
 use crate::instr::Instruction;
 use crate::instr::Instruction::*;
@@ -85,9 +88,9 @@ impl<'a> VM<'a> {
                 let qword = self.read_arg_qword();
                 self.push_qword(qword);
             }
-            OpLoadConstExtInt => {
-                let extend = self.read_arg_extend();
-                self.push_extend(extend);
+            OpLoadConstOword => {
+                let oword = self.read_arg_oword();
+                self.push_oword(oword);
             }
             OpSignExtendByteToWord => {
                 let high_byte = self.peek_byte()[0];
@@ -113,6 +116,14 @@ impl<'a> VM<'a> {
                     self.push_dword([0xff, 0xff, 0xff, 0xff]);
                 }
             }
+            OpSignExtendQwordToOword => {
+                let high_byte = self.peek_byte()[0];
+                if high_byte & 0b10000000 == 0 {
+                    self.push_qword([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+                } else {
+                    self.push_qword([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+                }
+            }
             OpZeroExtendByteToWord => {
                 self.push_byte([0x00]);
             }
@@ -121,6 +132,12 @@ impl<'a> VM<'a> {
             }
             OpZeroExtendDwordToQword => {
                 self.push_dword([0x00, 0x00, 0x00, 0x00]);
+            }
+            OpZeroExtendQwordToOword => {
+                self.push_qword([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+            }
+            OpTruncateOwordToQword => {
+                self.pop_qword();
             }
             OpTruncateQwordToDword => {
                 self.pop_dword();
@@ -155,6 +172,12 @@ impl<'a> VM<'a> {
                 let res = num1.wrapping_add(num2);
                 self.push_qword(res.to_le_bytes());
             }
+            OpIAddOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
+                let res = num1.wrapping_add(num2);
+                self.push_oword(res.to_le_bytes());
+            }
             OpISubByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
@@ -179,6 +202,12 @@ impl<'a> VM<'a> {
                 let res = num1.wrapping_sub(num2);
                 self.push_qword(res.to_le_bytes());
             }
+            OpISubOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
+                let res = num1.wrapping_sub(num2);
+                self.push_oword(res.to_le_bytes());
+            }
             OpIMulByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
@@ -202,6 +231,12 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 let res = num1.wrapping_mul(num2);
                 self.push_qword(res.to_le_bytes());
+            }
+            OpIMulOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
+                let res = num1.wrapping_mul(num2);
+                self.push_oword(res.to_le_bytes());
             }
             OpIDivSByte => {
                 let num2 = i8::from_le_bytes(self.pop_byte());
@@ -239,6 +274,15 @@ impl<'a> VM<'a> {
                 let res = num1.wrapping_div(num2);
                 self.push_qword(res.to_le_bytes());
             }
+            OpIDivSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
+                if num2 == 0 {
+                    return Err(RuntimeError::new("Division by zero.".to_string()));
+                }
+                let res = num1.wrapping_div(num2);
+                self.push_oword(res.to_le_bytes());
+            }
             OpIDivUByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
@@ -274,6 +318,15 @@ impl<'a> VM<'a> {
                 }
                 let res = num1.wrapping_div(num2);
                 self.push_qword(res.to_le_bytes());
+            }
+            OpIDivUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
+                if num2 == 0 {
+                    return Err(RuntimeError::new("Division by zero.".to_string()));
+                }
+                let res = num1.wrapping_div(num2);
+                self.push_oword(res.to_le_bytes());
             }
             OpIModSByte => {
                 let num2 = i8::from_le_bytes(self.pop_byte());
@@ -311,6 +364,15 @@ impl<'a> VM<'a> {
                 let res = num1 % num2;
                 self.push_qword(res.to_le_bytes());
             }
+            OpIModSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
+                if num2 == 0 {
+                    return Err(RuntimeError::new("Integer modulo by zero.".to_string()));
+                }
+                let res = num1 % num2;
+                self.push_oword(res.to_le_bytes());
+            }
             OpIModUByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
@@ -347,6 +409,15 @@ impl<'a> VM<'a> {
                 let res = num1 % num2;
                 self.push_qword(res.to_le_bytes());
             }
+            OpIModUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
+                if num2 == 0 {
+                    return Err(RuntimeError::new("Integer modulo by zero.".to_string()));
+                }
+                let res = num1 % num2;
+                self.push_oword(res.to_le_bytes());
+            }
             OpINegByte => {
                 let num = i8::from_le_bytes(self.pop_byte());
                 let res = -num;
@@ -367,78 +438,10 @@ impl<'a> VM<'a> {
                 let res = -num;
                 self.push_qword(res.to_le_bytes());
             }
-            OpSignExtendToExtInt => {
-                let high_byte = self.peek_byte()[0];
-                if high_byte & 0b10000000 == 0 {
-                    self.push_qword([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-                } else {
-                    self.push_qword([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
-                }
-            }
-            OpZeroExtendToExtInt => {
-                self.push_qword([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-            }
-            OpTruncateFromExtInt => {
-                self.pop_qword();
-            }
-            OpIAddExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1.wrapping_add(num2);
-                self.push_extend(res.to_le_bytes());
-            }
-            OpISubExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1.wrapping_sub(num2);
-                self.push_extend(res.to_le_bytes());
-            }
-            OpIMulExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
-                let res = num1.wrapping_mul(num2);
-                self.push_extend(res.to_le_bytes());
-            }
-            OpIDivSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
-                if num2 == 0 {
-                    return Err(RuntimeError::new("Division by zero.".to_string()));
-                }
-                let res = num1.wrapping_div(num2);
-                self.push_extend(res.to_le_bytes());
-            }
-            OpIDivUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
-                if num2 == 0 {
-                    return Err(RuntimeError::new("Division by zero.".to_string()));
-                }
-                let res = num1.wrapping_div(num2);
-                self.push_extend(res.to_le_bytes());
-            }
-            OpIModSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
-                if num2 == 0 {
-                    return Err(RuntimeError::new("Integer modulo by zero.".to_string()));
-                }
-                let res = num1 % num2;
-                self.push_extend(res.to_le_bytes());
-            }
-            OpIModUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
-                if num2 == 0 {
-                    return Err(RuntimeError::new("Integer modulo by zero.".to_string()));
-                }
-                let res = num1 % num2;
-                self.push_extend(res.to_le_bytes());
-            }
-            OpINegExtInt => {
-                let num = i128::from_le_bytes(self.pop_extend());
+            OpINegOword => {
+                let num = i128::from_le_bytes(self.pop_oword());
                 let res = -num;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpConvertSWordToFloat => {
                 let num = i16::from_le_bytes(self.pop_word());
@@ -457,6 +460,16 @@ impl<'a> VM<'a> {
             }
             OpConvertUQwordToFloat => {
                 let num = u64::from_le_bytes(self.pop_qword());
+                let res = num as f32;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpConvertSOwordToFloat => {
+                let num = i128::from_le_bytes(self.pop_oword());
+                let res = num as f32;
+                self.push_dword(res.to_le_bytes());
+            }
+            OpConvertUOwordToFloat => {
+                let num = u128::from_le_bytes(self.pop_oword());
                 let res = num as f32;
                 self.push_dword(res.to_le_bytes());
             }
@@ -480,6 +493,16 @@ impl<'a> VM<'a> {
                 let res = num as f64;
                 self.push_qword(res.to_le_bytes());
             }
+            OpConvertSOwordToDouble => {
+                let num = i128::from_le_bytes(self.pop_oword());
+                let res = num as f64;
+                self.push_qword(res.to_le_bytes());
+            }
+            OpConvertUOwordToDouble => {
+                let num = u128::from_le_bytes(self.pop_oword());
+                let res = num as f64;
+                self.push_qword(res.to_le_bytes());
+            }
             OpConvertFloatToSWord => {
                 let num = f32::from_le_bytes(self.pop_dword());
                 let res = num as i16;
@@ -499,6 +522,16 @@ impl<'a> VM<'a> {
                 let num = f32::from_le_bytes(self.pop_dword());
                 let res = num as u64;
                 self.push_qword(res.to_le_bytes());
+            }
+            OpConvertFloatToSOword => {
+                let num = f32::from_le_bytes(self.pop_dword());
+                let res = num as i128;
+                self.push_oword(res.to_le_bytes());
+            }
+            OpConvertFloatToUOword => {
+                let num = f32::from_le_bytes(self.pop_dword());
+                let res = num as u128;
+                self.push_oword(res.to_le_bytes());
             }
             OpConvertDoubleToSWord => {
                 let num = f64::from_le_bytes(self.pop_qword());
@@ -520,45 +553,15 @@ impl<'a> VM<'a> {
                 let res = num as u64;
                 self.push_qword(res.to_le_bytes());
             }
-            OpConvertSExtIntToFloat => {
-                let num = i128::from_le_bytes(self.pop_extend());
-                let res = num as f32;
-                self.push_dword(res.to_le_bytes());
-            }
-            OpConvertUExtIntToFloat => {
-                let num = u128::from_le_bytes(self.pop_extend());
-                let res = num as f32;
-                self.push_dword(res.to_le_bytes());
-            }
-            OpConvertSExtIntToDouble => {
-                let num = i128::from_le_bytes(self.pop_extend());
-                let res = num as f64;
-                self.push_qword(res.to_le_bytes());
-            }
-            OpConvertUExtIntToDouble => {
-                let num = u128::from_le_bytes(self.pop_extend());
-                let res = num as f64;
-                self.push_qword(res.to_le_bytes());
-            }
-            OpConvertFloatToSExtInt => {
-                let num = f32::from_le_bytes(self.pop_dword());
-                let res = num as i128;
-                self.push_extend(res.to_le_bytes());
-            }
-            OpConvertFloatToUExtInt => {
-                let num = f32::from_le_bytes(self.pop_dword());
-                let res = num as u128;
-                self.push_extend(res.to_le_bytes());
-            }
-            OpConvertDoubleToSExtInt => {
+            OpConvertDoubleToSOword => {
                 let num = f64::from_le_bytes(self.pop_qword());
                 let res = num as i128;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
-            OpConvertDoubleToUExtInt => {
+            OpConvertDoubleToUOword => {
                 let num = f64::from_le_bytes(self.pop_qword());
                 let res = num as u128;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpConvertFloatToDouble => {
                 let num = f32::from_le_bytes(self.pop_dword());
@@ -586,8 +589,8 @@ impl<'a> VM<'a> {
                 let num = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num != 0);
             }
-            OpConvertExtIntToBool => {
-                let num = u128::from_le_bytes(self.pop_extend());
+            OpConvertOwordToBool => {
+                let num = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num != 0);
             }
             OpFAddFloat => {
@@ -674,10 +677,10 @@ impl<'a> VM<'a> {
                 let res = !num;
                 self.push_qword(res.to_le_bytes());
             }
-            OpBitNotExtInt => {
-                let num = u128::from_le_bytes(self.pop_extend());
+            OpBitNotOword => {
+                let num = u128::from_le_bytes(self.pop_oword());
                 let res = !num;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpBitAndByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
@@ -703,11 +706,11 @@ impl<'a> VM<'a> {
                 let res = num1 & num2;
                 self.push_qword(res.to_le_bytes());
             }
-            OpBitAndExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpBitAndOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 let res = num1 & num2;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpBitOrByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
@@ -733,11 +736,11 @@ impl<'a> VM<'a> {
                 let res = num1 | num2;
                 self.push_qword(res.to_le_bytes());
             }
-            OpBitOrExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpBitOrOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 let res = num1 | num2;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpBitXorByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
@@ -763,11 +766,11 @@ impl<'a> VM<'a> {
                 let res = num1 ^ num2;
                 self.push_qword(res.to_le_bytes());
             }
-            OpBitXorExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpBitXorOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 let res = num1 ^ num2;
-                self.push_extend(res.to_le_bytes());
+                self.push_oword(res.to_le_bytes());
             }
             OpICmpEqualByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
@@ -789,9 +792,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 == num2);
             }
-            OpICmpEqualExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpEqualOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 == num2);
             }
             OpICmpNotEqualByte => {
@@ -814,9 +817,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 != num2);
             }
-            OpICmpNotEqualExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpNotEqualOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 != num2);
             }
             OpICmpLessSByte => {
@@ -839,9 +842,9 @@ impl<'a> VM<'a> {
                 let num1 = i64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 < num2);
             }
-            OpICmpLessSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
+            OpICmpLessSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 < num2);
             }
             OpICmpLessUByte => {
@@ -864,9 +867,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 < num2);
             }
-            OpICmpLessUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpLessUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 < num2);
             }
             OpICmpLessEqualSByte => {
@@ -889,9 +892,9 @@ impl<'a> VM<'a> {
                 let num1 = i64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 <= num2);
             }
-            OpICmpLessEqualSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
+            OpICmpLessEqualSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 <= num2);
             }
             OpICmpLessEqualUByte => {
@@ -914,9 +917,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 <= num2);
             }
-            OpICmpLessEqualUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpLessEqualUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 <= num2);
             }
             OpICmpGreaterSByte => {
@@ -939,9 +942,9 @@ impl<'a> VM<'a> {
                 let num1 = i64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 > num2);
             }
-            OpICmpGreaterSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
+            OpICmpGreaterSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 > num2);
             }
             OpICmpGreaterUByte => {
@@ -964,9 +967,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 > num2);
             }
-            OpICmpGreaterUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpGreaterUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 > num2);
             }
             OpICmpGreaterEqualSByte => {
@@ -989,9 +992,9 @@ impl<'a> VM<'a> {
                 let num1 = i64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 >= num2);
             }
-            OpICmpGreaterEqualSExtInt => {
-                let num2 = i128::from_le_bytes(self.pop_extend());
-                let num1 = i128::from_le_bytes(self.pop_extend());
+            OpICmpGreaterEqualSOword => {
+                let num2 = i128::from_le_bytes(self.pop_oword());
+                let num1 = i128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 >= num2);
             }
             OpICmpGreaterEqualUByte => {
@@ -1014,9 +1017,9 @@ impl<'a> VM<'a> {
                 let num1 = u64::from_le_bytes(self.pop_qword());
                 self.push_bool(num1 >= num2);
             }
-            OpICmpGreaterEqualUExtInt => {
-                let num2 = u128::from_le_bytes(self.pop_extend());
-                let num1 = u128::from_le_bytes(self.pop_extend());
+            OpICmpGreaterEqualUOword => {
+                let num2 = u128::from_le_bytes(self.pop_oword());
+                let num1 = u128::from_le_bytes(self.pop_oword());
                 self.push_bool(num1 >= num2);
             }
             OpFCmpEqualFloat => {
@@ -1091,8 +1094,8 @@ impl<'a> VM<'a> {
             OpPopQword => {
                 self.pop_qword();
             }
-            OpPopExtInt => {
-                self.pop_extend();
+            OpPopOword => {
+                self.pop_oword();
             }
             OpPushByte => {
                 let byte = self.read_arg_byte();
@@ -1110,9 +1113,9 @@ impl<'a> VM<'a> {
                 let qword = self.read_arg_qword();
                 self.push_qword(qword);
             }
-            OpPushExtInt => {
-                let extend = self.read_arg_extend();
-                self.push_extend(extend);
+            OpPushOword => {
+                let oword = self.read_arg_oword();
+                self.push_oword(oword);
             }
             OpGetLocalByte => {
                 let slot = u16::from_le_bytes(self.read_arg_word());
@@ -1134,10 +1137,35 @@ impl<'a> VM<'a> {
                 let qword = self.get_frame_slot_qword(slot as usize);
                 self.push_qword(qword);
             }
-            OpGetLocalExtInt => {
+            OpGetLocalOword => {
                 let slot = u16::from_le_bytes(self.read_arg_word());
-                let extend = self.get_frame_slot_extend(slot as usize);
-                self.push_extend(extend);
+                let oword = self.get_frame_slot_oword(slot as usize);
+                self.push_oword(oword);
+            }
+            OpSetLocalByte => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let byte = self.pop_byte();
+                self.set_frame_slot_byte(slot as usize, byte);
+            }
+            OpSetLocalWord => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let word = self.pop_word();
+                self.set_frame_slot_word(slot as usize, word);
+            }
+            OpSetLocalDword => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let dword = self.pop_dword();
+                self.set_frame_slot_dword(slot as usize, dword);
+            }
+            OpSetLocalQword => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let qword = self.pop_qword();
+                self.set_frame_slot_qword(slot as usize, qword);
+            }
+            OpSetLocalOword => {
+                let slot = u16::from_le_bytes(self.read_arg_word());
+                let oword = self.pop_oword();
+                self.set_frame_slot_oword(slot as usize, oword);
             }
         }
 

@@ -4,7 +4,7 @@ use std::collections::LinkedList;
 
 use crate::compiler::Compiler;
 use crate::data::DataSize;
-use crate::errors::error_types::CompileError;
+use crate::errors::error_types::CompileResult;
 use crate::instr::Instruction::*;
 use crate::resolver::ExprResolveRes;
 use crate::types::ValueType;
@@ -13,7 +13,7 @@ impl Compiler {
     /// 编译表达式语句
     pub fn compile_expr_stmt(&mut self,
                              expr_res: &ExprResolveRes,
-                             expr_code: &mut LinkedList<u8>) -> Result<LinkedList<u8>, CompileError> {
+                             expr_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
         target.append(expr_code);
 
@@ -22,17 +22,18 @@ impl Compiler {
             DataSize::Word => OpPopWord,
             DataSize::Dword => OpPopDword,
             DataSize::Qword => OpPopQword,
-            DataSize::ExtInt => OpPopExtInt,
+            DataSize::Oword => OpPopOword,
         });
         self.append_temp_chunk(&mut target);
         
         return Ok(target);
     }
 
+    /// 编译变量定义语句
     pub fn compile_let_stmt(&mut self,
                             init_code: Option<&mut LinkedList<u8>>,
                             init_res: Option<&ExprResolveRes>,
-                            target_type: ValueType) -> Result<LinkedList<u8>, CompileError> {
+                            target_type: ValueType) -> CompileResult<LinkedList<u8>> {
         let init_type = if let Some(res) = init_res {
             Some(&res.res_type)
         } else {
@@ -64,13 +65,40 @@ impl Compiler {
                     self.write_code(OpPushQword);
                     self.write_arg_qword(0u64.to_le_bytes());
                 }
-                DataSize::ExtInt => {
-                    self.write_code(OpPushExtInt);
-                    self.write_arg_extend(0u128.to_le_bytes());
+                DataSize::Oword => {
+                    self.write_code(OpPushOword);
+                    self.write_arg_oword(0u128.to_le_bytes());
                 }
             }
             self.append_temp_chunk(&mut target);
         }
+        
+        return Ok(target);
+    }
+    
+    /// 编译变量延迟初始化语句
+    pub fn compile_init_stmt(&mut self, 
+                             slot: usize,
+                             init_code: &mut LinkedList<u8>, 
+                             init_res: &ExprResolveRes, 
+                             target_type: ValueType) -> CompileResult<LinkedList<u8>> {
+        let mut target = LinkedList::new();
+        target.append(init_code);
+        
+        self.convert_types(&init_res.res_type, &target_type);
+        
+        self.write_code(
+            match target_type.get_size() {
+                DataSize::Byte => OpSetLocalByte,
+                DataSize::Word => OpSetLocalWord,
+                DataSize::Dword => OpSetLocalDword,
+                DataSize::Qword => OpSetLocalQword,
+                DataSize::Oword => OpSetLocalOword,
+            }
+        );
+        self.write_arg_word((slot as u16).to_le_bytes());
+        
+        self.append_temp_chunk(&mut target);
         
         return Ok(target);
     }

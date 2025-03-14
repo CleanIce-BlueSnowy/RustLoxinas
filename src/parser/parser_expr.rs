@@ -16,7 +16,7 @@ use crate::tokens::TokenType::*;
 
 impl Parser {
     /// 解析表达式
-    pub fn expression(&mut self) -> SyntaxResult<Expr> {
+    pub fn parse_expression(&mut self) -> SyntaxResult<Expr> {
         self.equality()
     }
 
@@ -226,7 +226,7 @@ impl Parser {
                 ),
             }))
         } else if parser_can_match!(self, Paren(TokenParen::LeftParen)) {
-            let expr = self.expression()?;
+            let expr = self.parse_expression()?;
             let end_token = self.peek();
             parser_consume!(
                 self, 

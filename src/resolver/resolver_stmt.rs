@@ -1,8 +1,9 @@
 //! 语义分析——语句分析模块
 
 use crate::errors::error_types::{CompileError, CompileResult};
+use crate::expr_get_pos;
 use crate::resolver::{ExprResolveRes, Resolver};
-use crate::stmt::StmtLet;
+use crate::stmt::{StmtInit, StmtLet};
 use crate::types::ValueType;
 
 impl Resolver {
@@ -40,7 +41,7 @@ impl Resolver {
         
         // 处理无法推断类型的情况
         if let (None, None) = (&variable.var_type, init_expr_res) {
-            return Err(CompileError::new(&stmt.let_pos, "Cannot know the type.".to_string()));
+            return Err(CompileError::new(&stmt.let_pos, "Must provide at least one of the type identifiers and initialization expressions.".to_string()));
         }
 
         // 填写栈偏移量
@@ -55,5 +56,35 @@ impl Resolver {
         target_variable.var_type = variable.var_type;
         
         return Ok(target_variable.var_type.clone().unwrap());
+    }
+    
+    /// 分析变量延迟初始化语句
+    pub fn resolve_init_stmt(&mut self, 
+                             stmt: &StmtInit, 
+                             init_expr_res: &ExprResolveRes) -> CompileResult<(ValueType, usize)> {
+        let variable = if let Some(temp) = self.find_variable_in_current_scope(&stmt.name) {
+            temp
+        } else {
+            return Err(CompileError::new(
+                &stmt.name_pos,
+                // 更加明确的错误信息
+                if let Some(_) = self.find_variable(&stmt.name) {
+                    "Can only be used at the same scope level as the variable definition.".to_string()
+                } else {
+                    "Undefined variable.".to_string()
+                }
+            ));
+        };
+        
+        if !variable.defined {
+            return Err(CompileError::new(&stmt.name_pos, "Initialize a variable before it's defined.".to_string()));
+        }
+        
+        variable.initialized = true;
+        // 检查类型转换
+        if !Self::check_type_parse(&init_expr_res.res_type, &variable.var_type.as_ref().unwrap()) {
+            return Err(CompileError::new(&expr_get_pos!(stmt.init.as_ref()), format!("Cannot use 'as' to convert '{}' to '{}'.", init_expr_res.res_type, variable.var_type.as_ref().unwrap())));
+        }
+        return Ok((variable.var_type.as_ref().unwrap().clone(), variable.slot));
     }
 }

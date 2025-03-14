@@ -49,7 +49,7 @@ pub fn read_qword(stream: &[u8], offset: usize) -> Result<([u8; 8], usize), ()> 
 
 /// 读取扩展整数（八字）
 #[inline]
-pub fn read_extend(stream: &[u8], offset: usize) -> Result<([u8; 16], usize), ()> {
+pub fn read_oword(stream: &[u8], offset: usize) -> Result<([u8; 16], usize), ()> {
     if check_safety(stream, offset, 16) {
         Ok(([stream[offset], stream[offset + 1], stream[offset + 2], stream[offset + 3],
                 stream[offset + 4], stream[offset + 5], stream[offset + 6], stream[offset + 7],
