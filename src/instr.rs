@@ -7,6 +7,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[repr(u8)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Instruction {
+    /// 特殊功能
+    OpSpecialFunction,
     /// 返回
     OpReturn,
     /// 常数加载字节
@@ -389,6 +391,16 @@ pub enum Instruction {
     OpPushQword,
     /// 压入八字
     OpPushOword,
+    /// 复制字节
+    OpCopyByte,
+    /// 复制单字
+    OpCopyWord,
+    /// 复制双字
+    OpCopyDword,
+    /// 复制四字
+    OpCopyQword,
+    /// 复制八字
+    OpCopyOword,
     /// 获取局部变量字节
     OpGetLocalByte,
     /// 获取局部变量单字
@@ -409,4 +421,58 @@ pub enum Instruction {
     OpSetLocalQword,
     /// 设置局部变量八字
     OpSetLocalOword,
+    /// 获取引用字节
+    OpGetReferenceByte,
+    /// 获取引用单字
+    OpGetReferenceWord,
+    /// 获取引用双字
+    OpGetReferenceDword,
+    /// 获取引用四字
+    OpGetReferenceQword,
+    /// 获取引用八字
+    OpGetReferenceOword,
+    /// 设置引用字节
+    OpSetReferenceByte,
+    /// 设置引用单字
+    OpSetReferenceWord,
+    /// 设置引用双字
+    OpSetReferenceDword,
+    /// 设置引用四字
+    OpSetReferenceQword,
+    /// 设置引用八字
+    OpSetReferenceOword,
+}
+
+#[derive(IntoPrimitive, TryFromPrimitive, Clone)]
+#[repr(u8)]
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub enum SpecialFunction {
+    /// 打印无符号字节
+    PrintByte,
+    /// 打印有符号字节
+    PrintSByte,
+    /// 打印有符号短整型
+    PrintShort,
+    /// 打印无符号短整型
+    PrintUShort,
+    /// 打印有符号整型
+    PrintInt,
+    /// 打印无符号整型
+    PrintUInt,
+    /// 打印有符号长整型
+    PrintLong,
+    /// 打印无符号长整型
+    PrintULong,
+    /// 打印有符号扩展整数
+    PrintExtInt,
+    /// 打印无符号扩展整数
+    PrintUExtInt,
+    /// 打印单精度浮点型
+    PrintFloat,
+    /// 打印双精度浮点型
+    PrintDouble,
+    /// 打印布尔型
+    PrintBool,
+    /// 打印换行符
+    PrintNewLine,
 }

@@ -10,10 +10,11 @@ mod ast_printer_expr;
 mod ast_printer_stmt;
 
 /// 语法树子树节点
-pub enum TreeChild<'a> {
+pub enum TreeChildren<'a> {
     Expr(&'a Expr),
     Stmt(&'a Stmt),
     StmtList(&'a [Stmt]),
+    ExprList(&'a [Box<Expr>]),
     Identifier(&'a str),
 }
 
@@ -43,7 +44,7 @@ impl AstPrinter {
         match token {
             TokenType::Operator(TokenOperator::And) => "&",
             TokenType::Operator(TokenOperator::NotEqual) => "!=",
-            TokenType::Operator(TokenOperator::Caret) => "~",
+            TokenType::Operator(TokenOperator::Caret) => "^",
             TokenType::Operator(TokenOperator::Equal) => "=",
             TokenType::Operator(TokenOperator::EqualEqual) => "==",
             TokenType::Operator(TokenOperator::Greater) => ">",
@@ -65,23 +66,30 @@ impl AstPrinter {
     }
 
     /// 为语法树节点添加括号并格式化
-    pub fn parenthesize(&mut self, name: &str, exprs: IndexMap<&str, TreeChild>) -> String {
+    pub fn parenthesize(&mut self, name: &str, exprs: IndexMap<&str, TreeChildren>) -> String {
         let mut res = String::new();
         res.push_str("( ");
         res.push_str(name);
         res.push('\n');
         for (name, child) in exprs {
             let str: String = match child {
-                TreeChild::Expr(expr) => expr.accept(self),
-                TreeChild::Stmt(stmt) => stmt.accept(self),
-                TreeChild::StmtList(list) => {
+                TreeChildren::Expr(expr) => expr.accept(self),
+                TreeChildren::Stmt(stmt) => stmt.accept(self),
+                TreeChildren::StmtList(list) => {
                     let mut res = String::new();
                     for stmt in list {
-                        res.push_str(&format!("{},", stmt.accept(self)));
+                        res.push_str(&format!("{}, ", stmt.accept(self)));
                     }
                     res
                 }
-                TreeChild::Identifier(identifier) => identifier.to_string(),
+                TreeChildren::ExprList(list) => {
+                    let mut res = String::new();
+                    for expr in list {
+                        res.push_str(&format!("{}, ", expr.accept(self)));
+                    }
+                    res
+                }
+                TreeChildren::Identifier(identifier) => identifier.to_string(),
             };
             res.push_str(&format!("    {name}: "));
             let mut first_line = true;

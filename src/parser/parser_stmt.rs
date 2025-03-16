@@ -2,9 +2,10 @@
 
 use crate::{expr_get_pos, parser_can_match, parser_check, parser_consume};
 use crate::errors::error_types::{SyntaxError, SyntaxResult};
+use crate::expr::Expr;
 use crate::parser::Parser;
 use crate::position::Position;
-use crate::stmt::{Stmt, StmtExpr, StmtInit, StmtLet};
+use crate::stmt::{Stmt, StmtAssign, StmtExpr, StmtInit, StmtLet, StmtPrint};
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenType::*;
@@ -16,14 +17,25 @@ impl Parser {
             self.let_stmt()
         } else if parser_can_match!(self, Keyword(Init)) {
             self.init_stmt()
+        } else if parser_can_match!(self, Keyword(Print)) {
+            self.print_stmt()
         } else {
-            self.expr_stmt()
+            self.start_with_expr()
         }
     }
     
-    /// 表达式语句
-    fn expr_stmt(&mut self) -> SyntaxResult<Stmt> {
+    /// 以表达式开头的语句
+    fn start_with_expr(&mut self) -> SyntaxResult<Stmt> {
         let expr = self.parse_expression()?;
+        return if parser_can_match!(self, Operator(Equal)) {
+            self.assign_stmt(expr)
+        } else {
+            self.expr_stmt(expr)
+        };
+    }
+    
+    /// 表达式语句
+    fn expr_stmt(&mut self, expr: Expr) -> SyntaxResult<Stmt> {
         let expr_pos = expr_get_pos!(&expr);
         parser_consume!(
             self, 
@@ -40,7 +52,13 @@ impl Parser {
     fn let_stmt(&mut self) -> SyntaxResult<Stmt> {
         let keyword_let = self.previous();
         let let_pos = Position::new(keyword_let.line, keyword_let.start, keyword_let.line, keyword_let.end);
-        let token = self.peek();
+        let mut token = self.peek();
+        let mut is_ref = false;
+        if let Keyword(Ref) = &token.token_type {
+            self.advance();
+            token = self.peek();
+            is_ref = true;
+        }
         let (name, name_pos) = if let Identifier(temp) = &token.token_type {
             self.advance();
             (temp, Position::new(token.line, token.start, token.line, token.end))
@@ -74,6 +92,7 @@ impl Parser {
             name: name.clone(),
             var_type,
             init: if let Some(init) = init { Some(Box::new(init)) } else { None },
+            is_ref,
         }));
     }
     
@@ -102,6 +121,41 @@ impl Parser {
             name_pos: name_token_pos,
             name: name.clone(),
             init: Box::new(init),
+        }));
+    }
+    
+    /// 赋值语句
+    fn assign_stmt(&mut self, first_var: Expr) -> SyntaxResult<Stmt> {
+        let mut vars = vec![Box::new(first_var)];
+        let mut next_expr = self.parse_expression()?;
+        while parser_can_match!(self, Operator(Equal)) {
+            vars.push(Box::new(next_expr));
+            next_expr = self.parse_expression()?;
+        }
+        let pos = expr_get_pos!(&next_expr);
+        let end_pos = Position::new(pos.end_line, pos.end_idx, pos.end_line, pos.end_idx + 1);
+        parser_consume!(self, Operator(Semicolon), &end_pos, "Expect ';' after a statement.".to_string())?;
+        
+        return Ok(Stmt::Assign(StmtAssign {
+            assign_vars: vars,
+            right_expr: Box::new(next_expr),
+        }));
+    }
+    
+    /// 临时辅助功能：打印语句
+    fn print_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let expr = if parser_can_match!(self, Operator(Semicolon)) {
+            None
+        } else {
+            let res = self.parse_expression()?;
+            let pos = expr_get_pos!(&res);
+            let end_pos = Position::new(pos.end_line, pos.end_idx, pos.end_line, pos.end_idx + 1);
+            parser_consume!(self, Operator(Semicolon), &end_pos, "Expect ';' after a statement.".to_string())?;
+            Some(Box::new(res))
+        };
+        
+        return Ok(Stmt::Print(StmtPrint {
+            expr,
         }));
     }
 }

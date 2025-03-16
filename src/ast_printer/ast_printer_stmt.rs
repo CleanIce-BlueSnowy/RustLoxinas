@@ -2,40 +2,46 @@
 
 use indexmap::indexmap;
 
-use crate::ast_printer::{AstPrinter, TreeChild};
-use crate::stmt::{Stmt, StmtExpr, StmtInit, StmtLet, StmtVisitor};
+use crate::ast_printer::{AstPrinter, TreeChildren};
+use crate::stmt::{Stmt, StmtAssign, StmtExpr, StmtInit, StmtLet, StmtPrint, StmtVisitor};
 
 #[cfg(debug_assertions)]
 impl StmtVisitor<String> for AstPrinter {
     fn visit_expr_stmt(&mut self, this: *const Stmt, stmt: &StmtExpr) -> String {
-        // 直接打印即可
-        format!(
+        let children = indexmap! {
+            "expr" => TreeChildren::Expr(stmt.expression.as_ref())
+        };
+        
+        return format!(
             "STMT {:?} {}",
             this,
             self.parenthesize(
                 "Expr",
-                indexmap! {
-                    "expr" => TreeChild::Expr(stmt.expression.as_ref())
-                },
+                children,
             ),
-        )
+        );
     }
 
     fn visit_let_stmt(&mut self, this: *const Stmt, stmt: &StmtLet) -> String {
         // 直接打印即可
-        let stmt_name = if let Some(ty) = &stmt.var_type {
-            &format!("Let ({})", ty)
+        let ref_str = if stmt.is_ref {
+            "Ref"
         } else {
-            "Let"
+            ""
+        };
+        let stmt_name = if let Some(ty) = &stmt.var_type {
+            &format!("Let {} ({})", ref_str, ty)
+        } else {
+            &format!("Let {}", ref_str)
         };
         let children = if let Some(expr) = &stmt.init {
             indexmap! {
-                "name" => TreeChild::Identifier(&stmt.name),
-                "init" => TreeChild::Expr(expr.as_ref()),
+                "name" => TreeChildren::Identifier(&stmt.name),
+                "init" => TreeChildren::Expr(expr.as_ref()),
             }
         } else {
             indexmap! {
-                "name" => TreeChild::Identifier(&stmt.name),
+                "name" => TreeChildren::Identifier(&stmt.name),
             }
         };
         return format!(
@@ -49,16 +55,53 @@ impl StmtVisitor<String> for AstPrinter {
     }
 
     fn visit_init_stmt(&mut self, this: *const Stmt, stmt: &StmtInit) -> String {
-        format!(
+        let children = indexmap! {
+            "name" => TreeChildren::Identifier(&stmt.name),
+            "init" => TreeChildren::Expr(stmt.init.as_ref()),
+        };
+        
+        return format!(
             "STMT {:?} {}",
             this, 
             self.parenthesize(
                 "Init",
-                indexmap! {
-                    "name" => TreeChild::Identifier(&stmt.name),
-                    "init" => TreeChild::Expr(stmt.init.as_ref()),
-                }
+                children,
             )
-        )
+        );
+    }
+
+    fn visit_assign_stmt(&mut self, this: *const Stmt, stmt: &StmtAssign) -> String {
+        let children = indexmap! {
+            "vars" => TreeChildren::ExprList(&stmt.assign_vars),
+            "right" => TreeChildren::Expr(stmt.right_expr.as_ref()),
+        };
+        
+        return format!(
+            "STMT {:?} {}",
+            this,
+            self.parenthesize(
+                "Assign",
+                children,
+            )
+        );
+    }
+
+    fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> String {
+        let children = if let Some(expr) = &stmt.expr {
+            indexmap! {
+                "vars" => TreeChildren::Expr(expr.as_ref()),
+            }
+        } else {
+            indexmap!()
+        };
+        
+        return format!(
+            "STMT {:?} {}",
+            this,
+            self.parenthesize(
+                "Print",
+                children,
+            )
+        );
     }
 }

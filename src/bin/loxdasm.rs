@@ -6,6 +6,10 @@ use RustLoxinas::disassembler::disassemble_file;
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Loxinas 1.0.0 alpha [Developing] {{Disassembler}}");
+    #[cfg(debug_assertions)]
+    {
+        println!("--- Debug Mode ---");
+    }
     
     if args.len() < 2 {
         println!("Usage: loxinas disassemble (or loxdasm) <source file> [other args]");

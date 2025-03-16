@@ -45,14 +45,14 @@ pub fn print_all_errors(lines: &[&str], errors: ErrorList) -> String {
 
 错误格式（单行）：
 
-```
+```text
 <Error Type>: line ? at ?-?: <Error Message>
   |> This is the code and here leads an error
                           ^^^^
 ```
 
 错误格式（两行）：
-```
+```text
 <Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
   |> This is the first line and here begins the error
                                 ^^^^^^^^^^^^^^^^^^^^^
@@ -61,7 +61,7 @@ pub fn print_all_errors(lines: &[&str], errors: ErrorList) -> String {
 ```
 
 错误格式（多行）：
-```
+```text
 <Error Type>: from (line ? at ?) to (line ? at ?): <Error Message>
   |> This is the first line and here begins the error
                                 ^^^^^^^^^^^^^^^^^^^^^
@@ -117,7 +117,7 @@ pub fn print_error(error_type: &str, lines: &[&str], message: &str, pos: &Positi
 
 错误格式：
 
-```
+```text
 Runtime Error: <Error Message>
 ```
  */

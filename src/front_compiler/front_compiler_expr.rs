@@ -9,7 +9,7 @@ impl<'a> ExprVisitor<Result<(ExprResolveRes, LinkedList<u8>), CompileError>> for
         let (left_res, mut left_code) = expr.left.accept(self)?;
         let (right_res, mut right_code) = expr.right.accept(self)?;
         let expr_res = self.resolver.resolve_binary_expr(expr, &left_res, &right_res)?;
-        let expr_code = self.compiler.compile_binary_expr(expr, &expr_res, &left_res, &right_res, &mut left_code, &mut right_code)?;
+        let expr_code = self.compiler.compile_binary_expr(expr, &expr_res, &mut left_code, &left_res, &mut right_code, &right_res)?;
         return Ok((expr_res, expr_code));
     }
 
@@ -29,7 +29,7 @@ impl<'a> ExprVisitor<Result<(ExprResolveRes, LinkedList<u8>), CompileError>> for
     fn visit_unary_expr(&mut self, _this: *const Expr, expr: &ExprUnary) -> Result<(ExprResolveRes, LinkedList<u8>), CompileError> {
         let (right_res, mut right_code) = expr.right.accept(self)?;
         let expr_res = self.resolver.resolve_unary_expr(expr, &right_res)?;
-        let expr_code = self.compiler.compile_unary_expr(expr, &right_res, &mut right_code)?;
+        let expr_code = self.compiler.compile_unary_expr(expr, &mut right_code, &right_res)?;
         return Ok((expr_res, expr_code));
     }
 
@@ -41,8 +41,8 @@ impl<'a> ExprVisitor<Result<(ExprResolveRes, LinkedList<u8>), CompileError>> for
     }
 
     fn visit_variable_expr(&mut self, _this: *const Expr, expr: &ExprVariable) -> Result<(ExprResolveRes, LinkedList<u8>), CompileError> {
-        let (expr_res, slot) = self.resolver.resolve_variable_expr(expr)?;
-        let expr_code = self.compiler.compile_variable_expr(&expr_res, slot)?;
+        let (expr_res, slot, is_ref) = self.resolver.resolve_variable_expr(expr)?;
+        let expr_code = self.compiler.compile_variable_expr(&expr_res, slot, self.in_assign, self.in_ref_let, is_ref)?;
         return Ok((expr_res, expr_code));
     }
 }

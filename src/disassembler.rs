@@ -3,7 +3,7 @@
 use std::fs::File;
 use std::io::Read;
 use crate::byte_handler::byte_reader::{read_byte, read_dword, read_oword, read_qword, read_word};
-use crate::instr::Instruction;
+use crate::instr::{Instruction, SpecialFunction};
 
 /// 反汇编字节码文件
 pub fn disassemble_file(path: &str) -> Result<(), String> {
@@ -60,6 +60,7 @@ fn disassemble_chunk(name: &str, chunk: &[u8]) {
 pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     use crate::instr::Instruction::*;
     match instr {
+        OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
         OpLoadConstByte => const_byte("LoadConst", "Byte", chunk, offset),
         OpLoadConstWord => const_word("LoadConst", "Word", chunk, offset),
@@ -251,6 +252,11 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpPushDword => const_dword("Push", "Dword", chunk, offset),
         OpPushQword => const_qword("Push", "Qword", chunk, offset),
         OpPushOword => const_oword("Push", "Oword", chunk, offset),
+        OpCopyByte => Ok(simple("Copy", "Byte", chunk, offset)),
+        OpCopyWord => Ok(simple("Copy", "Word", chunk, offset)),
+        OpCopyDword => Ok(simple("Copy", "Dword", chunk, offset)),
+        OpCopyQword => Ok(simple("Copy", "Qword", chunk, offset)),
+        OpCopyOword => Ok(simple("Copy", "Oword", chunk, offset)),
         OpGetLocalByte => local("GetLocal", "Byte", chunk, offset),
         OpGetLocalWord => local("GetLocal", "Word", chunk, offset),
         OpGetLocalDword => local("GetLocal", "Dword", chunk, offset),
@@ -261,6 +267,16 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpSetLocalDword => local("SetLocal", "Dword", chunk, offset),
         OpSetLocalQword => local("SetLocal", "Qword", chunk, offset),
         OpSetLocalOword => local("SetLocal", "Oword", chunk, offset),
+        OpGetReferenceByte => local("GetReference", "Byte", chunk, offset),
+        OpGetReferenceWord => local("GetReference", "Word", chunk, offset),
+        OpGetReferenceDword => local("GetReference", "Dword", chunk, offset),
+        OpGetReferenceQword => local("GetReference", "Qword", chunk, offset),
+        OpGetReferenceOword => local("GetReference", "Oword", chunk, offset),
+        OpSetReferenceByte => local("SetReference", "Byte", chunk, offset),
+        OpSetReferenceWord => local("SetReference", "Word", chunk, offset),
+        OpSetReferenceDword => local("SetReference", "Dword", chunk, offset),
+        OpSetReferenceQword => local("SetReference", "Qword", chunk, offset),
+        OpSetReferenceOword => local("SetReference", "Oword", chunk, offset),
     }
 }
 
@@ -340,5 +356,41 @@ fn local(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String
         Ok((format!("{:<20} [{:^25}] {:04X}", instr, info, slot), new_offset))
     } else {
         Err("Not enough bytes to read: need 2 bytes.".to_string())
+    }
+}
+
+/// 特殊功能指令
+#[inline]
+fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+    if let Ok((res_func, new_offset)) = read_byte(chunk, offset) {
+        if let Ok(special_func) = SpecialFunction::try_from(u8::from_le_bytes(res_func)) {
+            let result = parse_special_function(instr, special_func, chunk, new_offset)?;
+            Ok(result)
+        } else {
+            Err(format!("Disassemble Error: Invalid special function instruction '{:02X}'", u8::from_le_bytes(res_func)))
+        }
+    } else {
+        Err("Not enough bytes to read: need 1 bytes".to_string())
+    }
+}
+
+#[inline]
+fn parse_special_function(instr: &str, special_func: SpecialFunction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+    use crate::instr::SpecialFunction::*;
+    match special_func {
+        PrintByte => Ok(simple(instr, "Print Byte", chunk, offset)),
+        PrintSByte => Ok(simple(instr, "Print SByte", chunk, offset)),
+        PrintShort => Ok(simple(instr, "Print Short", chunk, offset)),
+        PrintUShort => Ok(simple(instr, "Print UShort", chunk, offset)),
+        PrintInt => Ok(simple(instr, "Print Int", chunk, offset)),
+        PrintUInt => Ok(simple(instr, "Print UInt", chunk, offset)),
+        PrintLong => Ok(simple(instr, "Print Long", chunk, offset)),
+        PrintULong => Ok(simple(instr, "Print ULong", chunk, offset)),
+        PrintExtInt => Ok(simple(instr, "Print ExtInt", chunk, offset)),
+        PrintUExtInt => Ok(simple(instr, "Print UExtInt", chunk, offset)),
+        PrintFloat => Ok(simple(instr, "Print Float", chunk, offset)),
+        PrintDouble => Ok(simple(instr, "Print Double", chunk, offset)),
+        PrintBool => Ok(simple(instr, "Print Bool", chunk, offset)),
+        PrintNewLine => Ok(simple(instr, "Print NewLine", chunk, offset)),
     }
 }

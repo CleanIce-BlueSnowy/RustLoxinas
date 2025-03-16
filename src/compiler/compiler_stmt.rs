@@ -4,16 +4,17 @@ use std::collections::LinkedList;
 
 use crate::compiler::Compiler;
 use crate::data::DataSize;
-use crate::errors::error_types::CompileResult;
+use crate::errors::error_types::{CompileError, CompileResult};
 use crate::instr::Instruction::*;
+use crate::position::Position;
 use crate::resolver::ExprResolveRes;
 use crate::types::ValueType;
 
 impl Compiler {
     /// 编译表达式语句
     pub fn compile_expr_stmt(&mut self,
-                             expr_res: &ExprResolveRes,
-                             expr_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
+                             expr_code: &mut LinkedList<u8>,
+                             expr_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
         target.append(expr_code);
 
@@ -97,6 +98,89 @@ impl Compiler {
             }
         );
         self.write_arg_word((slot as u16).to_le_bytes());
+        
+        self.append_temp_chunk(&mut target);
+        
+        return Ok(target);
+    }
+    
+    pub fn compile_assign_stmt(&mut self,
+                               vars_code: &mut [LinkedList<u8>],
+                               vars_res: &[ExprResolveRes],
+                               right_code: &mut LinkedList<u8>,
+                               right_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
+        let mut target = LinkedList::new();
+        
+        // 写入赋值源
+        target.append(right_code);
+        
+        // 除第一个，其他的赋值源需要复制
+        for i in (1..vars_code.len()).rev() {
+            let var_code = &mut vars_code[i];
+            let var_res = &vars_res[i];
+            self.write_code(match var_res.res_type.get_size() {
+                DataSize::Byte => OpCopyByte,
+                DataSize::Word => OpCopyWord,
+                DataSize::Dword => OpCopyDword,
+                DataSize::Qword => OpCopyQword,
+                DataSize::Oword => OpCopyOword,
+            });
+            self.convert_types(&right_res.res_type, &var_res.res_type);
+            self.append_temp_chunk(&mut target);
+            target.append(var_code);
+        }
+        
+        // 第一个直接赋值
+        let var_code = &mut vars_code[0];
+        let var_res = &vars_res[0];
+        self.convert_types(&right_res.res_type, &var_res.res_type);
+        self.append_temp_chunk(&mut target);
+        target.append(var_code);
+        
+        return Ok(target);
+    }
+    
+    /// 临时辅助功能：编译打印语句
+    pub fn compile_print_stmt(&mut self, 
+                              expr_code: Option<LinkedList<u8>>, 
+                              expr_res: Option<ExprResolveRes>,
+                              expr_pos: Option<Position>) -> CompileResult<LinkedList<u8>> {
+        use crate::instr::SpecialFunction::*;
+        
+        let mut target = LinkedList::new();
+
+        self.write_code(OpSpecialFunction);
+        if let Some(mut code) = expr_code {
+            target.append(&mut code);
+            self.write_special_func(match &expr_res.as_ref().unwrap().res_type {
+                ValueType::Integer(integer) => {
+                    use crate::types::ValueIntegerType::*;
+                    match integer {
+                        Byte => PrintByte,
+                        SByte => PrintSByte,
+                        Short => PrintShort,
+                        UShort => PrintUShort,
+                        Int => PrintInt,
+                        UInt => PrintUInt,
+                        Long => PrintLong,
+                        ULong => PrintULong,
+                        ExtInt => PrintExtInt,
+                        UExtInt => PrintUExtInt,
+                    }
+                }
+                ValueType::Float(float) => {
+                    use crate::types::ValueFloatType::*;
+                    match float {
+                        Float => PrintFloat,
+                        Double => PrintDouble,
+                    }
+                }
+                ValueType::Bool => PrintBool,
+                _ => return Err(CompileError::new(&expr_pos.unwrap(), format!("Cannot print the value of type '{}'.", expr_res.unwrap().res_type))),
+            });
+        } else {
+            self.write_special_func(PrintNewLine);
+        }
         
         self.append_temp_chunk(&mut target);
         

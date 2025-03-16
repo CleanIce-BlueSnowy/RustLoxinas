@@ -16,6 +16,10 @@ use RustLoxinas::scanner::TokenScanner;
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Loxinas 1.0.0 alpha [Developing] {{Compiler}}");
+    #[cfg(debug_assertions)]
+    {
+        println!("--- Debug Mode ---");
+    }
 
     if args.len() < 2 {
         println!("Usage: loxinas compile (or loxc) <source file> [other args]");

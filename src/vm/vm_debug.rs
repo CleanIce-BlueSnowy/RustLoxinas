@@ -7,7 +7,7 @@ use crate::vm::VM;
 impl<'a> VM<'a> {
     /// 打印虚拟机栈
     pub fn print_stack(&self) {
-        print!("STACK: {{ ");
+        print!("\nSTACK: {{ ");
         for byte in &self.vm_stack {
             print!("{:02X} ", byte);
         }

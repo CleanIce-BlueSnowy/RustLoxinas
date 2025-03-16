@@ -182,8 +182,8 @@ impl Parser {
                                 UInt(uint) => DataInteger::UInt(*uint),
                                 Long(long) => DataInteger::Long(*long),
                                 ULong(ulong) => DataInteger::ULong(*ulong),
-                                ExtInt(eint) => DataInteger::ExtInt(*eint),
-                                UExtInt(ueint) => DataInteger::UExtInt(*ueint),
+                                ExtInt(extint) => DataInteger::ExtInt(*extint),
+                                UExtInt(uextint) => DataInteger::UExtInt(*uextint),
                             }
                         }
                         _ => panic!("Invalid token"),

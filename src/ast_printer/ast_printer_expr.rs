@@ -2,7 +2,7 @@
 
 use indexmap::indexmap;
 
-use crate::ast_printer::{AstPrinter, TreeChild};
+use crate::ast_printer::{AstPrinter, TreeChildren};
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable, ExprVisitor};
 
@@ -10,28 +10,32 @@ use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary
 impl ExprVisitor<String> for AstPrinter {
     fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> String {
         let name = format!("Binary {}", self.operator_to_string(&expr.operator.token_type));
+        let children = indexmap! {
+            "left" => TreeChildren::Expr(expr.left.as_ref()),
+            "right" => TreeChildren::Expr(expr.right.as_ref()),
+        };
+        
         return format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize(
                 &name,
-                indexmap! {
-                    "left" => TreeChild::Expr(expr.left.as_ref()),
-                    "right" => TreeChild::Expr(expr.right.as_ref()),
-                },
+                children,
             ),
         );
     }
 
     fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> String {
+        let children = indexmap! {
+            "expr" => TreeChildren::Expr(expr.expression.as_ref()),
+        };
+        
         return format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize(
                 "Group",
-                indexmap! {
-                    "expr" => TreeChild::Expr(expr.expression.as_ref()),
-                },
+                children,
             ),
         );
     }
@@ -93,41 +97,47 @@ impl ExprVisitor<String> for AstPrinter {
 
     fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> String {
         let name = format!("Unary {}", self.operator_to_string(&expr.operator.token_type));
+        let children = indexmap! {
+            "right" => TreeChildren::Expr(expr.right.as_ref()),
+        };
+        
         return format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize(
                 &name,
-                indexmap! {
-                    "right" => TreeChild::Expr(expr.right.as_ref()),
-                },
+                children,
             ),
         );
     }
 
     fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> String {
         let name = format!("As => {}", expr.target);
+        let children = indexmap! {
+            "expr" => TreeChildren::Expr(expr.expression.as_ref()),
+        };
+        
         return format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize(
                 &name,
-                indexmap! {
-                    "expr" => TreeChild::Expr(expr.expression.as_ref()),
-                },
+                children,
             ),
         );
     }
 
     fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> String {
+        let children = indexmap! {
+            "name" => TreeChildren::Identifier(&expr.name),
+        };
+        
         return format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize(
                 "Variable",
-                indexmap! {
-                    "name" => TreeChild::Identifier(&expr.name),
-                },
+                children,
             ),
         );
     }

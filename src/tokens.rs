@@ -88,6 +88,8 @@ pub enum TokenKeyword {
     True,
     As,
     Init,
+    Ref,
+    Print,
 }
 
 /// 整型令牌

@@ -10,6 +10,10 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!("Loxinas 1.0.0 alpha [Developing]");
+        #[cfg(debug_assertions)]
+        {
+            println!("--- Debug Mode ---");
+        }
         println!("Usage: loxinas <operation> [other args]");
         println!("[help: Type 'loxinas help' to get more help information]");
         return;

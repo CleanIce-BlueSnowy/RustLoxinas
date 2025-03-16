@@ -93,8 +93,8 @@ impl Display for ValueType {
                     UInt => "uint",
                     Long => "long",
                     ULong => "ulong",
-                    ExtInt => "eint",
-                    UExtInt => "ueint",
+                    ExtInt => "extint",
+                    UExtInt => "uextint",
                 }
             }
             Float(float) => {

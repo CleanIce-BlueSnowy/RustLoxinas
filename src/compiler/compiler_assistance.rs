@@ -4,7 +4,7 @@ use std::collections::LinkedList;
 
 use crate::byte_handler::byte_writer::{write_byte, write_dword, write_oword, write_qword, write_word};
 use crate::compiler::Compiler;
-use crate::instr::Instruction;
+use crate::instr::{Instruction, SpecialFunction};
 use crate::instr::Instruction::*;
 use crate::types::{ValueFloatType, ValueType};
 
@@ -432,6 +432,12 @@ impl Compiler {
     #[inline]
     pub fn write_code(&mut self, instr: Instruction) {
         write_byte(&mut self.temp_chunk, [instr.into()]);
+    }
+    
+    /// 写入特殊功能
+    #[inline]
+    pub fn write_special_func(&mut self, special_func: SpecialFunction) {
+        write_byte(&mut self.temp_chunk, [special_func.into()]);
     }
     
     /// 添加字节参数

@@ -262,6 +262,8 @@ impl<'a> TokenScanner<'a> {
             "false" => Some(False),
             "as" => Some(As),
             "init" => Some(Init),
+            "ref" => Some(Ref),
+            "print" => Some(Print),
             _ => None,
         }
     }

@@ -14,10 +14,10 @@ impl Compiler {
     pub fn compile_binary_expr(&mut self, 
                                expr: &ExprBinary,
                                resolve_res: &ExprResolveRes,
-                               left_res: &ExprResolveRes,
-                               right_res: &ExprResolveRes,
                                left_code: &mut LinkedList<u8>,
-                               right_code: &mut LinkedList<u8>) -> Result<LinkedList<u8>, CompileError> {
+                               left_res: &ExprResolveRes,
+                               right_code: &mut LinkedList<u8>,
+                               right_res: &ExprResolveRes) -> Result<LinkedList<u8>, CompileError> {
         let mut target = LinkedList::new();
         
         // 获取类型并粘合代码
@@ -175,8 +175,8 @@ impl Compiler {
     /// 编译单元运算表达式
     pub fn compile_unary_expr(&mut self,
                               expr: &ExprUnary,
-                              right_res: &ExprResolveRes,
-                              right_code: &mut LinkedList<u8>) -> Result<LinkedList<u8>, CompileError> {
+                              right_code: &mut LinkedList<u8>,
+                              right_res: &ExprResolveRes) -> Result<LinkedList<u8>, CompileError> {
         let mut target = LinkedList::new();
         
         let expr_type = &right_res.res_type;
@@ -220,21 +220,59 @@ impl Compiler {
     
     pub fn compile_variable_expr(&mut self,
                                  resolve_res: &ExprResolveRes,
-                                 slot: usize) -> CompileResult<LinkedList<u8>> {
+                                 slot: usize, 
+                                 in_assign: bool,
+                                 in_ref_let: bool,
+                                 is_ref: bool) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
-        // 确定指令大小
-        self.write_code(
-            match resolve_res.res_type.get_size() {
-                DataSize::Byte => OpGetLocalByte,
-                DataSize::Word => OpGetLocalWord,
-                DataSize::Dword => OpGetLocalDword,
-                DataSize::Qword => OpGetLocalQword,
-                DataSize::Oword => OpGetLocalOword,
-            }
-        );
-        // 写入偏移量
-        self.write_arg_word((slot as u16).to_le_bytes());
-        // 写入代码
+        
+        // 引用中，直接返回偏移量
+        if in_ref_let {
+            self.write_code(OpPushWord);
+            self.write_arg_word((slot as u16).to_le_bytes());
+        } else {
+            self.write_code(
+                if is_ref {
+                    if in_assign {
+                        match resolve_res.res_type.get_size() {
+                            DataSize::Byte => OpSetReferenceByte,
+                            DataSize::Word => OpSetReferenceWord,
+                            DataSize::Dword => OpSetReferenceDword,
+                            DataSize::Qword => OpSetReferenceQword,
+                            DataSize::Oword => OpSetReferenceOword,
+                        }
+                    } else {
+                        match resolve_res.res_type.get_size() {
+                            DataSize::Byte => OpGetReferenceByte,
+                            DataSize::Word => OpGetReferenceWord,
+                            DataSize::Dword => OpGetReferenceDword,
+                            DataSize::Qword => OpGetReferenceQword,
+                            DataSize::Oword => OpGetReferenceOword,
+                        }
+                    }
+                } else {
+                    if in_assign {
+                        match resolve_res.res_type.get_size() {
+                            DataSize::Byte => OpSetLocalByte,
+                            DataSize::Word => OpSetLocalWord,
+                            DataSize::Dword => OpSetLocalDword,
+                            DataSize::Qword => OpSetLocalQword,
+                            DataSize::Oword => OpSetLocalOword,
+                        }
+                    } else {
+                        match resolve_res.res_type.get_size() {
+                            DataSize::Byte => OpGetLocalByte,
+                            DataSize::Word => OpGetLocalWord,
+                            DataSize::Dword => OpGetLocalDword,
+                            DataSize::Qword => OpGetLocalQword,
+                            DataSize::Oword => OpGetLocalOword,
+                        }
+                    }
+                }
+            );
+            self.write_arg_word((slot as u16).to_le_bytes());
+        }
+        
         self.append_temp_chunk(&mut target);
         
         return Ok(target);

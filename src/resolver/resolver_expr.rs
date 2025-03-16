@@ -304,7 +304,7 @@ impl Resolver {
         let res_type = self.parse_value_type(&expr.target)?;
         
         // 不允许在对象上使用 `as`
-        if !Self::check_type_parse(ope_type, &res_type) {
+        if !Self::check_type_convert(ope_type, &res_type) {
             return Err(CompileError::new(&expr.pos, format!("Cannot use 'as' to convert '{}' to '{}'.", ope_type, res_type)));
         }
         
@@ -312,7 +312,7 @@ impl Resolver {
     }
 
     pub fn resolve_variable_expr(&mut self,
-                                 expr: &ExprVariable) -> CompileResult<(ExprResolveRes, usize)> {
+                                 expr: &ExprVariable) -> CompileResult<(ExprResolveRes, usize, bool)> {
         // 获取变量
         let variable = if let Some(var) = self.find_variable(&expr.name) {
             var
@@ -333,6 +333,6 @@ impl Resolver {
         // 设置类型
         let ty = variable.var_type.clone().unwrap();
         
-        return Ok((ExprResolveRes::new(ty.clone(), ty.clone()), variable.slot));
+        return Ok((ExprResolveRes::new(ty.clone(), ty.clone()), variable.slot, variable.is_ref));
     }
 }

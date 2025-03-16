@@ -45,8 +45,8 @@ impl Resolver {
             "uint".to_string() => ValueType::Integer(UInt),
             "long".to_string() => ValueType::Integer(Long),
             "ulong".to_string() => ValueType::Integer(ULong),
-            "eint".to_string() => ValueType::Integer(ExtInt),
-            "ueint".to_string() => ValueType::Integer(UExtInt),
+            "extint".to_string() => ValueType::Integer(ExtInt),
+            "uextint".to_string() => ValueType::Integer(UExtInt),
             "float".to_string() => ValueType::Float(Float),
             "double".to_string() => ValueType::Float(Double),
             "Object".to_string() => ValueType::Object(LoxinasClass::Object),
@@ -131,10 +131,12 @@ pub struct Variable {
     pub slot: usize,
     /// 变量类型
     pub var_type: Option<ValueType>,
+    /// 是否为引用
+    pub is_ref: bool,
 }
 
 impl Variable {
-    pub fn new(define_stmt: *const Stmt, defined: bool, initialized: bool, slot: usize, var_type: Option<ValueType>) -> Self {
-        Self { define_stmt, defined, initialized, slot, var_type }
+    pub fn new(define_stmt: *const Stmt, defined: bool, initialized: bool, slot: usize, var_type: Option<ValueType>, is_ref: bool) -> Self {
+        Self { define_stmt, defined, initialized, slot, var_type, is_ref }
     }
 }

@@ -8,7 +8,11 @@ use RustLoxinas::vm::VM;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("Loxinas 1.0.0 alpha [Developing] {{Disassembler}}");
+    println!("Loxinas 1.0.0 alpha [Developing] {{Runner}}");
+    #[cfg(debug_assertions)]
+    {
+        println!("--- Debug Mode ---");
+    }
 
     if args.len() < 2 {
         println!("Usage: loxinas run (or loxr) <byte code file> [other args]");

@@ -15,11 +15,19 @@ pub struct FrontCompiler<'a> {
     pub resolver: Resolver,
     pub compiler: Compiler,
     statements: &'a [Stmt],
+    in_assign: bool,
+    in_ref_let: bool,
 }
 
 impl<'a> FrontCompiler<'a> {
     pub fn new(statements: &'a [Stmt]) -> Self {
-        Self { resolver: Resolver::new(), compiler: Compiler::new(), statements }
+        Self {
+            resolver: Resolver::new(), 
+            compiler: Compiler::new(), 
+            statements, 
+            in_assign: false,
+            in_ref_let: false,
+        }
     }
     
     /// 启动编译
