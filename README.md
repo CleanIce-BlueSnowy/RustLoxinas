@@ -2,7 +2,7 @@
 
 ## English
 
-***A New Programming Language Implemented Rust.***
+***A New Programming Language Implemented by Rust.***
 
 This document is still being written. Let’s look forward to it together!
 
