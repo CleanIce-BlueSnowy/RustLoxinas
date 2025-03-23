@@ -32,12 +32,19 @@ impl Resolver {
                     return Err(CompileError::new(&expr.pos, format!("Cannot ues operator '{}' between chars.", Self::operator_to_string(&expr.operator))));
                 }
             }
-            // 两个整数，运算时需要整型提升，操作符不能是布尔运算符
+            // 两个整数，运算时需要整型提升，操作符不能是布尔运算符；如果是位移运算符，则为左操作数类型
             (Integer(left_type), Integer(right_type)) => {
                 use crate::types::ValueIntegerType::*;
                 use crate::tokens::TokenKeyword::*;
                 if let TokenType::Keyword(And | Or | Not) = &expr.operator.token_type {
                     return Err(CompileError::new(&expr.pos, format!("Cannot use operator '{}' between integers.", Self::operator_to_string(&expr.operator))));
+                } else if let TokenType::Keyword(Shl | Shr) = &expr.operator.token_type {
+                    if let Byte = right_type {
+                        ope_type = Integer(left_type.clone());
+                        res_type = Integer(left_type.clone());
+                    } else {
+                        return Err(CompileError::new(&expr.pos, "Must use 'byte' type in the right operation.".to_string()));
+                    }
                 } else {
                     use crate::tokens::TokenOperator::*;
                     ope_type = match (left_type, right_type) {

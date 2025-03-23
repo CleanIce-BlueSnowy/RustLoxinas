@@ -92,6 +92,8 @@ impl Resolver {
                         And => "and",
                         Or => "or",
                         Not => "not",
+                        Shl => "shl",
+                        Shr => "shr",
                         _ => panic!("Invalid operator"),
                     }
                 }

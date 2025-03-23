@@ -15,6 +15,9 @@ impl Compiler {
         use crate::types::ValueIntegerType::*;
         use crate::types::ValueFloatType::*;
         match (from, to) {
+            (Char, Integer(to)) => {
+                self.convert_types(&Integer(UInt), &Integer(to.clone()))
+            }
             (Integer(from), Integer(to)) => {
                 match (from, to) {
                     (Byte, Byte) | (Byte, SByte) | (SByte, Byte) | (SByte, SByte) => (),

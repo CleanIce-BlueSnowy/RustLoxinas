@@ -90,6 +90,8 @@ pub enum TokenKeyword {
     Init,
     Ref,
     Print,
+    Shl,
+    Shr,
 }
 
 /// 整型令牌

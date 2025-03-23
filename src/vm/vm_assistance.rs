@@ -220,7 +220,7 @@ impl<'a> VM<'a> {
             panic!("Data not enough: need 16 byte.");
         }
     }
-    
+
     #[inline]
     pub fn set_frame_slot_byte(&mut self, slot: usize, byte: [u8; 1]) {
         self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 1)].copy_from_slice(&byte);

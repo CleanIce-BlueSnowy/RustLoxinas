@@ -176,6 +176,7 @@ impl Compiler {
                     }
                 }
                 ValueType::Bool => PrintBool,
+                ValueType::Char => PrintChar,
                 _ => return Err(CompileError::new(&expr_pos.unwrap(), format!("Cannot print the value of type '{}'.", expr_res.unwrap().res_type))),
             });
         } else {

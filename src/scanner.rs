@@ -264,6 +264,8 @@ impl<'a> TokenScanner<'a> {
             "init" => Some(Init),
             "ref" => Some(Ref),
             "print" => Some(Print),
+            "shl" => Some(Shl),
+            "shr" => Some(Shr),
             _ => None,
         }
     }

@@ -247,6 +247,36 @@ pub enum Instruction {
     OpBitXorQword,
     /// 八字位异或
     OpBitXorOword,
+    /// 字节左位移
+    OpShiftLeftByte,
+    /// 单字左位移
+    OpShiftLeftWord,
+    /// 双字左位移
+    OpShiftLeftDword,
+    /// 四字左位移
+    OpShiftLeftQword,
+    /// 八字左位移
+    OpShiftLeftOword,
+    /// 字节符号右位移
+    OpSignShiftRightByte,
+    /// 单字符号右位移
+    OpSignShiftRightWord,
+    /// 双字符号右位移
+    OpSignShiftRightDword,
+    /// 四字符号右位移
+    OpSignShiftRightQword,
+    /// 八字符号右位移
+    OpSignShiftRightOword,
+    /// 字节零右位移
+    OpZeroShiftRightByte,
+    /// 单字零右位移
+    OpZeroShiftRightWord,
+    /// 双字零右位移
+    OpZeroShiftRightDword,
+    /// 四字零右位移
+    OpZeroShiftRightQword,
+    /// 八字零右位移
+    OpZeroShiftRightOword,
     /// 字节比较等于
     OpICmpEqualByte,
     /// 单字比较等于
@@ -473,6 +503,8 @@ pub enum SpecialFunction {
     PrintDouble,
     /// 打印布尔型
     PrintBool,
+    /// 打印字符
+    PrintChar,
     /// 打印换行符
     PrintNewLine,
 }

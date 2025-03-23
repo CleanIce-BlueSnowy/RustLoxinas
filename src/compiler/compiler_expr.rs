@@ -8,6 +8,7 @@ use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::{ExprBinary, ExprLiteral, ExprUnary};
 use crate::instr::Instruction::*;
 use crate::resolver::ExprResolveRes;
+use crate::tokens::{TokenKeyword, TokenType};
 
 impl Compiler {
     /// 编译二元运算表达式
@@ -17,8 +18,22 @@ impl Compiler {
                                left_code: &mut LinkedList<u8>,
                                left_res: &ExprResolveRes,
                                right_code: &mut LinkedList<u8>,
-                               right_res: &ExprResolveRes) -> Result<LinkedList<u8>, CompileError> {
+                               right_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
+        
+        // 位移走单独路线
+        if let TokenType::Keyword(TokenKeyword::Shl | TokenKeyword::Shr) = &expr.operator.token_type {
+            target.append(left_code);
+            target.append(right_code);
+            let this_type = &resolve_res.ope_type;
+            if let TokenType::Keyword(TokenKeyword::Shl) = &expr.operator.token_type {
+                self.integer_code(this_type, OpShiftLeftByte, OpShiftLeftWord, OpShiftLeftDword, OpShiftLeftQword, OpShiftLeftOword);
+            } else {  // TokenType::Keyword(TokenKeyword::Rsh)
+                self.sign_integer_code(this_type, OpSignShiftRightByte, OpZeroShiftRightByte, OpSignShiftRightWord, OpZeroShiftRightWord, OpSignShiftRightDword, OpZeroShiftRightDword, OpSignShiftRightQword, OpZeroShiftRightQword, OpSignShiftRightOword, OpZeroShiftRightOword);
+            }
+            self.append_temp_chunk(&mut target);
+            return Ok(target);
+        }
         
         // 获取类型并粘合代码
         let this_type = &resolve_res.ope_type;
@@ -163,6 +178,10 @@ impl Compiler {
                         self.write_arg_qword(data.to_le_bytes());
                     }
                 }
+            }
+            Char(char) => {
+                self.write_code(OpLoadConstDword);
+                self.write_arg_dword((*char as u32).to_le_bytes());
             }
             _ => unimplemented!("Unsupported literal"),
         }

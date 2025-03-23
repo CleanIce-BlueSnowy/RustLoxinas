@@ -40,8 +40,26 @@ impl Parser {
     
     /// 比较表达式
     fn comparison(&mut self) -> SyntaxResult<Expr> {
-        let mut expr = self.binary_bit()?;
+        let mut expr = self.binary_shift()?;
         while parser_can_match!(self, Operator(Greater | GreaterEqual | Less | LessEqual)) {
+            let operator = self.previous();
+            let right = self.binary_shift()?;
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary(ExprBinary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        return Ok(expr);
+    }
+    
+    /// 位移表达式
+    fn binary_shift(&mut self) -> SyntaxResult<Expr> {
+        let mut expr = self.binary_bit()?;
+        while parser_can_match!(self, Keyword(Shl | Shr)) {
             let operator = self.previous();
             let right = self.binary_bit()?;
             let pos_left = expr_get_pos!(&expr);

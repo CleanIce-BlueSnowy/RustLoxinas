@@ -1,6 +1,7 @@
 //! RustLoxinas 前端编译
 
 use std::{env, process};
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -81,7 +82,10 @@ fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
     let output_file_path = if let Some(output_path) = output_path {  // 用户提供了输出文件
         output_path
     } else {  // 默认输出文件
-        &(Path::new(path).file_stem().and_then(|name| name.to_str()).unwrap_or("main").to_string() + ".loxc")
+        let file_path = Path::new(path);
+        let parent = file_path.parent().unwrap_or(Path::new("."));
+        let stem = file_path.file_stem().unwrap_or(OsStr::new("main"));
+        &format!("{}/{}.loxc", parent.to_str().unwrap(), stem.to_str().unwrap())
     };
     let mut file;
     match File::create(output_file_path) {

@@ -41,26 +41,33 @@ impl AstPrinter {
 
     /// 将合法的运算符转换为运算符对应的字符串
     pub fn operator_to_string(&self, token: &TokenType) -> String {
+        use crate::tokens::TokenType::*;
+        use crate::tokens::TokenOperator::*;
+        use crate::tokens::TokenKeyword::*;
+        
         match token {
-            TokenType::Operator(TokenOperator::And) => "&",
-            TokenType::Operator(TokenOperator::NotEqual) => "!=",
-            TokenType::Operator(TokenOperator::Caret) => "^",
-            TokenType::Operator(TokenOperator::Equal) => "=",
-            TokenType::Operator(TokenOperator::EqualEqual) => "==",
-            TokenType::Operator(TokenOperator::Greater) => ">",
-            TokenType::Operator(TokenOperator::GreaterEqual) => ">=",
-            TokenType::Operator(TokenOperator::Less) => "<",
-            TokenType::Operator(TokenOperator::LessEqual) => "<=",
-            TokenType::Operator(TokenOperator::Minus) => "-",
-            TokenType::Operator(TokenOperator::Pipe) => "|",
-            TokenType::Operator(TokenOperator::Plus) => "+",
-            TokenType::Operator(TokenOperator::Power) => "**",
-            TokenType::Operator(TokenOperator::Slash) => "/",
-            TokenType::Operator(TokenOperator::Star) => "*",
-            TokenType::Operator(TokenOperator::Tilde) => "~",
-            TokenType::Keyword(TokenKeyword::And) => "and",
-            TokenType::Keyword(TokenKeyword::Not) => "not",
-            TokenType::Keyword(TokenKeyword::Or) => "or",
+            Operator(TokenOperator::And) => "&",
+            Operator(NotEqual) => "!=",
+            Operator(Caret) => "^",
+            Operator(Equal) => "=",
+            Operator(EqualEqual) => "==",
+            Operator(Greater) => ">",
+            Operator(GreaterEqual) => ">=",
+            Operator(Less) => "<",
+            Operator(LessEqual) => "<=",
+            Operator(Minus) => "-",
+            Operator(Pipe) => "|",
+            Operator(Plus) => "+",
+            Operator(Power) => "**",
+            Operator(Slash) => "/",
+            Operator(Star) => "*",
+            Operator(Tilde) => "~",
+            Operator(Mod) => "%",
+            Keyword(TokenKeyword::And) => "and",
+            Keyword(Not) => "not",
+            Keyword(Or) => "or",
+            Keyword(Shl) => "shl",
+            Keyword(Shr) => "shr",
             _ => panic!("Invalid token: {token:?}"),  // 不合法的运算符令牌，在解析表达式时就应该去除
         }.to_string()
     }

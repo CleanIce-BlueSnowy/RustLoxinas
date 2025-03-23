@@ -790,6 +790,96 @@ impl<'a> VM<'a> {
                 let res = num1 ^ num2;
                 self.push_oword(res.to_le_bytes());
             }
+            OpShiftLeftByte => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let byte = u8::from_le_bytes(self.pop_byte());
+                let res = byte.wrapping_shl(num as u32);
+                self.push_byte(res.to_le_bytes());
+            }
+            OpShiftLeftWord => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let word = u16::from_le_bytes(self.pop_word());
+                let res = word.wrapping_shl(num as u32);
+                self.push_word(res.to_le_bytes());
+            }
+            OpShiftLeftDword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let dword = u32::from_le_bytes(self.pop_dword());
+                let res = dword.wrapping_shl(num as u32);
+                self.push_dword(res.to_le_bytes());
+            }
+            OpShiftLeftQword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let qword = u64::from_le_bytes(self.pop_qword());
+                let res = qword.wrapping_shl(num as u32);
+                self.push_qword(res.to_le_bytes());
+            }
+            OpShiftLeftOword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let oword = u128::from_le_bytes(self.pop_oword());
+                let res = oword.wrapping_shl(num as u32);
+                self.push_oword(res.to_le_bytes());
+            }
+            OpSignShiftRightByte => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let byte = i8::from_le_bytes(self.pop_byte());
+                let res = byte.wrapping_shr(num as u32);
+                self.push_byte(res.to_le_bytes());
+            }
+            OpSignShiftRightWord => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let word = i16::from_le_bytes(self.pop_word());
+                let res = word.wrapping_shr(num as u32);
+                self.push_word(res.to_le_bytes());
+            }
+            OpSignShiftRightDword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let dword = i32::from_le_bytes(self.pop_dword());
+                let res = dword.wrapping_shr(num as u32);
+                self.push_dword(res.to_le_bytes());
+            }
+            OpSignShiftRightQword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let qword = i64::from_le_bytes(self.pop_qword());
+                let res = qword.wrapping_shr(num as u32);
+                self.push_qword(res.to_le_bytes());
+            }
+            OpSignShiftRightOword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let oword = i128::from_le_bytes(self.pop_oword());
+                let res = oword.wrapping_shr(num as u32);
+                self.push_oword(res.to_le_bytes());
+            }
+            OpZeroShiftRightByte => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let byte = u8::from_le_bytes(self.pop_byte());
+                let res = byte.wrapping_shr(num as u32);
+                self.push_byte(res.to_le_bytes());
+            }
+            OpZeroShiftRightWord => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let word = u16::from_le_bytes(self.pop_word());
+                let res = word.wrapping_shr(num as u32);
+                self.push_word(res.to_le_bytes());
+            }
+            OpZeroShiftRightDword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let dword = u32::from_le_bytes(self.pop_dword());
+                let res = dword.wrapping_shr(num as u32);
+                self.push_dword(res.to_le_bytes());
+            }
+            OpZeroShiftRightQword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let qword = u64::from_le_bytes(self.pop_qword());
+                let res = qword.wrapping_shr(num as u32);
+                self.push_qword(res.to_le_bytes());
+            }
+            OpZeroShiftRightOword => {
+                let num = u8::from_le_bytes(self.pop_byte());
+                let oword = u128::from_le_bytes(self.pop_oword());
+                let res = oword.wrapping_shr(num as u32);
+                self.push_oword(res.to_le_bytes());
+            }
             OpICmpEqualByte => {
                 let num2 = u8::from_le_bytes(self.pop_byte());
                 let num1 = u8::from_le_bytes(self.pop_byte());
@@ -1326,6 +1416,22 @@ impl<'a> VM<'a> {
             PrintBool => {
                 let value = self.pop_bool();
                 Self::stdout_print_bool(value);
+            }
+            PrintChar => {
+                #[cfg(debug_assertions)]
+                {
+                    let ch = if let Some(temp) = char::from_u32(u32::from_le_bytes(self.pop_dword())) {
+                        temp
+                    } else {
+                        panic!("Invalid Unicode point code.")
+                    };
+                    Self::stdout_print_char(ch);
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    let ch = char::from_u32(u32::from_le_bytes(self.pop_dword())).unwrap();
+                    Self::stdout_print_char(ch);
+                }
             }
             PrintNewLine => {
                 Self::stdout_print_new_line();

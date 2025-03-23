@@ -180,6 +180,21 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpBitXorDword => Ok(simple("BitXor", "Dword", chunk, offset)),
         OpBitXorQword => Ok(simple("BitXor", "Qword", chunk, offset)),
         OpBitXorOword => Ok(simple("BitXor", "Oword", chunk, offset)),
+        OpShiftLeftByte => Ok(simple("ShiftLeft", "Byte", chunk, offset)),
+        OpShiftLeftWord => Ok(simple("ShiftLeft", "Word", chunk, offset)),
+        OpShiftLeftDword => Ok(simple("ShiftLeft", "Dword", chunk, offset)),
+        OpShiftLeftQword => Ok(simple("ShiftLeft", "Qword", chunk, offset)),
+        OpShiftLeftOword => Ok(simple("ShiftLeft", "Oword", chunk, offset)),
+        OpSignShiftRightByte => Ok(simple("SignShiftRight", "Byte", chunk, offset)),
+        OpSignShiftRightWord => Ok(simple("SignShiftRight", "Word", chunk, offset)),
+        OpSignShiftRightDword => Ok(simple("SignShiftRight", "Dword", chunk, offset)),
+        OpSignShiftRightQword => Ok(simple("SignShiftRight", "Qword", chunk, offset)),
+        OpSignShiftRightOword => Ok(simple("SignShiftRight", "Oword", chunk, offset)),
+        OpZeroShiftRightByte => Ok(simple("ZeroShiftRight", "Byte", chunk, offset)),
+        OpZeroShiftRightWord => Ok(simple("ZeroShiftRight", "Word", chunk, offset)),
+        OpZeroShiftRightDword => Ok(simple("ZeroShiftRight", "Dword", chunk, offset)),
+        OpZeroShiftRightQword => Ok(simple("ZeroShiftRight", "Qword", chunk, offset)),
+        OpZeroShiftRightOword => Ok(simple("ZeroShiftRight", "Oword", chunk, offset)),
         OpICmpEqualByte => Ok(simple("ICmpEqual", "Byte", chunk, offset)),
         OpICmpEqualWord => Ok(simple("ICmpEqual", "Word", chunk, offset)),
         OpICmpEqualDword => Ok(simple("ICmpEqual", "Dword", chunk, offset)),
@@ -280,10 +295,17 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
     }
 }
 
+/// 通用格式化字符串
+macro_rules! fmt_str {
+    () => {
+        "{:<20} [{:^25}] {}"
+    }
+}
+
 /// 简单指令
 #[inline]
 fn simple(instr: &str, info: &str, _chunk: &[u8], offset: usize) -> (String, usize) {
-    (format!("{:<20} [{:^25}]", instr, info), offset)
+    (format!(fmt_str!(), instr, info, ""), offset)
 }
 
 /// 常数字节指令
@@ -292,7 +314,7 @@ fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     if let Ok((res_byte, res_offset)) = read_byte(chunk, offset) {
         let byte = u8::from_le_bytes(res_byte);
         let u_num = byte;
-        Ok((format!("{:<20} [{:^25}] {:02X} ({})", instr, info, byte, u_num), res_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:02X} ({})", byte, u_num)), res_offset))
     } else {
         Err("Not enough bytes to read: need 1 byte.".to_string())
     }
@@ -304,7 +326,7 @@ fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
     if let Ok((res_word, res_offset)) = read_word(chunk, offset) {
         let word = u16::from_le_bytes(res_word);
         let u_num = word;
-        Ok((format!("{:<20} [{:^25}] {:04X} ({})", instr, info, word, u_num), res_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:04X} ({})", word, u_num)), res_offset))
     } else {
         Err("Not enough bytes to read: need 2 bytes.".to_string())
     }
@@ -317,7 +339,7 @@ fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
         let dword = u32::from_le_bytes(res_dword);
         let u_num = dword;
         let float = f32::from_le_bytes(res_dword);
-        Ok((format!("{:<20} [{:^25}] {:08X} ({} or {:e})", instr, info, dword, u_num, float), res_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:08X} ({} or {:e})", dword, u_num, float)), res_offset))
     } else {
         Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
@@ -330,7 +352,7 @@ fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
         let qword = u64::from_le_bytes(res_qword);
         let u_num = qword;
         let double = f64::from_le_bytes(res_qword);
-        Ok((format!("{:<20} [{:^25}] {:016X} ({} or {:e})", instr, info, qword, u_num, double), res_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:016X} ({} or {:e})", qword, u_num, double)), res_offset))
     } else {
         Err("Not enough bytes to read: need 8 bytes.".to_string())
     }
@@ -342,7 +364,7 @@ fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     if let Ok((res_oword, res_offset)) = read_oword(chunk, offset) {
         let oword = u128::from_le_bytes(res_oword);
         let u_num = oword;
-        Ok((format!("{:<20} [{:^25}] {:032X} ({})", instr, info, oword, u_num), res_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:032X} ({})", oword, u_num)), res_offset))
     } else {
         Err("Not enough bytes to read: need 16 bytes.".to_string())
     }
@@ -353,7 +375,7 @@ fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
 fn local(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_slot, new_offset)) = read_word(chunk, offset) {
         let slot = u16::from_le_bytes(res_slot);
-        Ok((format!("{:<20} [{:^25}] {:04X}", instr, info, slot), new_offset))
+        Ok((format!(fmt_str!(), instr, info, format!("{:04X}", slot)), new_offset))
     } else {
         Err("Not enough bytes to read: need 2 bytes.".to_string())
     }
@@ -391,6 +413,7 @@ fn parse_special_function(instr: &str, special_func: SpecialFunction, chunk: &[u
         PrintFloat => Ok(simple(instr, "Print Float", chunk, offset)),
         PrintDouble => Ok(simple(instr, "Print Double", chunk, offset)),
         PrintBool => Ok(simple(instr, "Print Bool", chunk, offset)),
+        PrintChar => Ok(simple(instr, "Print Char", chunk, offset)),
         PrintNewLine => Ok(simple(instr, "Print NewLine", chunk, offset)),
     }
 }
