@@ -27,6 +27,7 @@ lazy_static! {
 
 impl LoxinasClass {
     /// 获取包含类型
+    #[must_use]
     pub fn get_contain_types(&self) -> &HashMap<String, ValueType> {
         match self {
             LoxinasClass::Object => &*OBJECT_CONTAIN_TYPES,
@@ -36,6 +37,7 @@ impl LoxinasClass {
     }
     
     /// 获取名称
+    #[must_use]
     pub fn get_name(&self) -> &str {
         match self {
             LoxinasClass::Object => "Object",
@@ -53,6 +55,7 @@ pub struct UserClass {
 }
 
 impl UserClass {
+    #[must_use]
     pub fn new(name: String) -> Self {
         Self { name, contain_types: hashmap!{} }
     }

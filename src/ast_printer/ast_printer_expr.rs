@@ -11,8 +11,8 @@ impl ExprVisitor<String> for AstPrinter {
     fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> String {
         let name = format!("Binary {}", self.operator_to_string(&expr.operator.token_type));
         let children = indexmap! {
-            "left" => TreeChildren::Expr(expr.left.as_ref()),
-            "right" => TreeChildren::Expr(expr.right.as_ref()),
+            "left" => TreeChildren::Expr(&expr.left),
+            "right" => TreeChildren::Expr(&expr.right),
         };
         
         return format!(
@@ -27,7 +27,7 @@ impl ExprVisitor<String> for AstPrinter {
 
     fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> String {
         let children = indexmap! {
-            "expr" => TreeChildren::Expr(expr.expression.as_ref()),
+            "expr" => TreeChildren::Expr(&expr.expression),
         };
         
         return format!(
@@ -98,7 +98,7 @@ impl ExprVisitor<String> for AstPrinter {
     fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> String {
         let name = format!("Unary {}", self.operator_to_string(&expr.operator.token_type));
         let children = indexmap! {
-            "right" => TreeChildren::Expr(expr.right.as_ref()),
+            "right" => TreeChildren::Expr(&expr.right),
         };
         
         return format!(
@@ -114,7 +114,7 @@ impl ExprVisitor<String> for AstPrinter {
     fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> String {
         let name = format!("As => {}", expr.target);
         let children = indexmap! {
-            "expr" => TreeChildren::Expr(expr.expression.as_ref()),
+            "expr" => TreeChildren::Expr(&expr.expression),
         };
         
         return format!(

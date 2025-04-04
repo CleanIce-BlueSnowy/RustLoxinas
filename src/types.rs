@@ -22,6 +22,7 @@ pub enum ValueType {
     Object(LoxinasClass),
 }
 
+/// SAFETY: 用于 lazy_static
 unsafe impl Sync for ValueType {}
 
 /// 整数类型
@@ -50,6 +51,7 @@ pub enum ValueFloatType {
 
 impl ValueType {
     /// 获取该类型数据的数据大小
+    #[must_use]
     pub fn get_size(&self) -> DataSize {
         use ValueType::*;
         use ValueIntegerType::*;
@@ -122,6 +124,7 @@ pub struct TypeTag {
 }
 
 impl TypeTag {
+    #[must_use]
     pub fn new() -> Self {
         Self { pos: Position::new(0, 0, 0, 0), chain: LinkedList::new() }
     }

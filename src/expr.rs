@@ -14,17 +14,17 @@ use crate::types::TypeTag;
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Expr {
     /// 二元操作
-    Binary(ExprBinary),
+    Binary(Box<ExprBinary>),
     /// 分组，用于改变计算优先级，通过作为表达式生成树单独节点实现
-    Grouping(ExprGrouping),
+    Grouping(Box<ExprGrouping>),
     /// 字面量
-    Literal(ExprLiteral),
+    Literal(Box<ExprLiteral>),
     /// 一元操作
-    Unary(ExprUnary),
+    Unary(Box<ExprUnary>),
     /// 类型转换操作
-    As(ExprAs),
+    As(Box<ExprAs>),
     /// 变量
-    Variable(ExprVariable),
+    Variable(Box<ExprVariable>),
 }
 
 /// 二元操作表达式
@@ -33,11 +33,11 @@ pub struct ExprBinary {
     /// 位置信息
     pub pos: Position,
     /// 左操作数
-    pub left: Box<Expr>,
+    pub left: Expr,
     /// 操作符
     pub operator: Rc<Token>,
     /// 右操作数
-    pub right: Box<Expr>,
+    pub right: Expr,
 }
 
 /// 分组表达式
@@ -46,7 +46,7 @@ pub struct ExprGrouping {
     /// 位置信息
     pub pos: Position,
     /// 组内的表达式
-    pub expression: Box<Expr>,
+    pub expression: Expr,
 }
 
 /// 字面量表达式
@@ -66,7 +66,7 @@ pub struct ExprUnary {
     /// 操作符
     pub operator: Rc<Token>,
     /// 操作数
-    pub right: Box<Expr>,
+    pub right: Expr,
 }
 
 /// 类型转换表达式
@@ -75,7 +75,7 @@ pub struct ExprAs {
     /// 位置信息
     pub pos: Position,
     /// 操作数
-    pub expression: Box<Expr>,
+    pub expression: Expr,
     /// 目标类型
     pub target: TypeTag,
 }
@@ -94,22 +94,23 @@ pub struct ExprVariable {
 `RetType` 是返回类型
  */
 pub trait ExprVisitor<RetType> {
-    /// 访问二元操作
+    #[must_use]
     fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> RetType;
-    /// 访问分组
+    #[must_use]
     fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> RetType;
-    /// 访问字面量
+    #[must_use]
     fn visit_literal_expr(&mut self, this: *const Expr, expr: &ExprLiteral) -> RetType;
-    /// 访问一元操作
+    #[must_use]
     fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> RetType;
-    /// 访问类型转换操作
+    #[must_use]
     fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> RetType;
-    /// 访问变量
+    #[must_use]
     fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> RetType;
 }
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
+    #[must_use]
     pub fn accept<RetType>(&self, visitor: &mut dyn ExprVisitor<RetType>) -> RetType {
         let ptr = self as *const Expr;
         return match self {

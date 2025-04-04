@@ -3,7 +3,7 @@
 use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr_get_pos;
-use crate::resolver::{ExprResolveRes, Resolver};
+use crate::resolver::{ExprResolveRes, Resolver, Variable};
 use crate::stmt::{StmtAssign, StmtInit, StmtLet};
 use crate::types::ValueType;
 
@@ -64,8 +64,8 @@ impl Resolver {
         // 如果是引用，判断左值表达式
         if stmt.is_ref {
             if let Some(expr) = &stmt.init {
-                if !Self::check_left_value(expr.as_ref()) {
-                    return Err(CompileError::new(&expr_get_pos!(expr.as_ref()), "Expect a left value expression.".to_string()));
+                if !Self::check_left_value(expr) {
+                    return Err(CompileError::new(&expr_get_pos!(expr), "Expect a left value expression.".to_string()));
                 }
             } else {
                 return Err(CompileError::new(&stmt.name_pos, "Must provide an initialization expression.".to_string()));
@@ -79,17 +79,12 @@ impl Resolver {
     pub fn resolve_init_stmt(&mut self, 
                              stmt: &StmtInit, 
                              init_expr_res: &ExprResolveRes) -> CompileResult<(ValueType, usize)> {
-        let variable = if let Some(temp) = self.find_variable_in_current_scope(&stmt.name) {
+        let variable = if let Some(temp) = self.find_variable(&stmt.name) {
             temp
         } else {
             return Err(CompileError::new(
                 &stmt.name_pos,
-                // 更加明确的错误信息
-                if let Some(_) = self.find_variable(&stmt.name) {
-                    "Can only be used at the same scope level as the variable definition.".to_string()
-                } else {
-                    "Undefined variable.".to_string()
-                }
+                "Undefined variable.".to_string(),
             ));
         };
         
@@ -97,10 +92,23 @@ impl Resolver {
             return Err(CompileError::new(&stmt.name_pos, "Initialize a variable before it's defined.".to_string()));
         }
         
+        if variable.initialized {
+            return Err(CompileError::new(&stmt.name_pos, "Variable has already been initialized.".to_string()));
+        }
+        
         variable.initialized = true;
+        let ptr = variable as *mut Variable;
+        
+        // 上一个 variable 的作用域在此截止
+        
+        self.get_current_scope().init_vars.push(ptr);
+        
+        // 避免多次 self 可变引用
+        let variable = self.find_variable(&stmt.name).unwrap();
+        
         // 检查类型转换
         if !Self::check_type_convert(&init_expr_res.res_type, &variable.var_type.as_ref().unwrap()) {
-            return Err(CompileError::new(&expr_get_pos!(stmt.init.as_ref()), format!("Cannot use 'as' to convert '{}' to '{}'.", init_expr_res.res_type, variable.var_type.as_ref().unwrap())));
+            return Err(CompileError::new(&expr_get_pos!(&stmt.init), format!("Cannot use 'as' to convert '{}' to '{}'.", init_expr_res.res_type, variable.var_type.as_ref().unwrap())));
         }
         return Ok((variable.var_type.as_ref().unwrap().clone(), variable.slot));
     }
@@ -114,11 +122,11 @@ impl Resolver {
         for idx in 0..vars_res.len() {
             let var = &stmt.assign_vars[idx];
             let var_res = &vars_res[idx];
-            if !Self::check_left_value(var.as_ref()) {
-                return Err(CompileError::new(&expr_get_pos!(var.as_ref()), "Except a left value expression.".to_string()));
+            if !Self::check_left_value(var) {
+                return Err(CompileError::new(&expr_get_pos!(var), "Except a left value expression.".to_string()));
             }
             if !Self::check_type_convert(&right_res.res_type, &var_res.res_type) {
-                return Err(CompileError::new(&expr_get_pos!(var.as_ref()), format!("Cannot convert {} to {}", right_res.res_type, var_res.res_type)));
+                return Err(CompileError::new(&expr_get_pos!(var), format!("Cannot convert {} to {}", right_res.res_type, var_res.res_type)));
             }
         }
         

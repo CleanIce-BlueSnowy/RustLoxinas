@@ -44,18 +44,21 @@ macro_rules! parser_consume {
 impl Parser {
     /// 是否已到结尾
     #[inline]
+    #[must_use]
     pub fn is_at_end(&self) -> bool {
         return matches!(self.peek().token_type, TokenType::EOF);
     }
 
     /// 下一个令牌，不消耗
     #[inline]
+    #[must_use]
     pub fn peek(&self) -> Rc<Token> {
         return Rc::clone(&self.tokens[self.current]);
     }
 
     /// 当前令牌
     #[inline]
+    #[must_use]
     pub fn previous(&self) -> Rc<Token> {
         return Rc::clone(&self.tokens[self.current - 1]);
     }
@@ -101,6 +104,14 @@ impl Parser {
                 "Expect type name".to_string()
             ))
         }
+    }
+    
+    /// 获取最后词素位置信息
+    #[inline]
+    #[must_use]
+    pub fn get_final_pos(&self) -> Position {
+        let semicolon = self.previous();
+        return Position::new(semicolon.line, semicolon.start, semicolon.line, semicolon.end);
     }
     
     /// 同步错误

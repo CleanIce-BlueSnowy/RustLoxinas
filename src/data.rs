@@ -45,6 +45,7 @@ pub enum DataSize {
 impl DataSize {
     /// 获取字节数量
     #[inline]
+    #[must_use]
     pub fn get_bytes_cnt(&self) -> usize {
         match self {
             DataSize::Byte => 1,

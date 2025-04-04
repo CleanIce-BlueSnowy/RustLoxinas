@@ -6,7 +6,7 @@ macro_rules! stdout_debug_info {
     () => {
         #[cfg(debug_assertions)]
         {
-            print!(" <-- DEBUG MODE PROGRAM STDOUT --> ");
+            print!(" <-|---- DEBUG MODE PROGRAM STDOUT ----|-> ");
         }
     }
 }

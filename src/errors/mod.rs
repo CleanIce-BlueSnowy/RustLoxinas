@@ -8,6 +8,7 @@ use error_types::CompileError;
 use error_types::LexicalError;
 
 /// 错误列表
+#[must_use]
 pub enum ErrorList<'a> {
     LexicalErrors(&'a [LexicalError]),
     SyntaxErrors(&'a [SyntaxError]),
@@ -16,6 +17,7 @@ pub enum ErrorList<'a> {
 
 
 /// 打印错误列表
+#[must_use]
 pub fn print_all_errors(lines: &[&str], errors: ErrorList) -> String {
     let mut result = String::new();
     match errors {
@@ -70,6 +72,7 @@ pub fn print_all_errors(lines: &[&str], errors: ErrorList) -> String {
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
  */
+#[must_use]
 pub fn print_error(error_type: &str, lines: &[&str], message: &str, pos: &Position) -> String {
     let mut res = if pos.start_line == pos.end_line {  // 根据是否在同一行给出不同的输出格式
         format!("{}: line {} at {}-{}: {}\n", error_type, pos.start_line, pos.start_idx + 1, pos.end_idx, message)
@@ -121,6 +124,7 @@ pub fn print_error(error_type: &str, lines: &[&str], message: &str, pos: &Positi
 Runtime Error: <Error Message>
 ```
  */
+#[must_use]
 pub fn print_runtime_error(msg: &str) -> String {
     format!("Runtime Error: {}", msg)
 }

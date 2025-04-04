@@ -2,6 +2,7 @@ use crate::position::Position;
 
 /// 词法错误
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[must_use]
 pub struct LexicalError {
     pub pos: Position,
     pub message: String,
@@ -15,6 +16,7 @@ impl LexicalError {
 
 /// 语法错误
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[must_use]
 pub struct SyntaxError {
     /// 错误位置
     pub pos: Position,
@@ -30,6 +32,7 @@ impl SyntaxError {
 
 /// 编译错误
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[must_use]
 pub struct CompileError {
     /// 出错位置
     pub pos: Position,
@@ -44,6 +47,7 @@ impl CompileError {
 }
 
 /// 运行时错误
+#[must_use]
 pub struct RuntimeError {
     /// 错误信息
     pub message: String,

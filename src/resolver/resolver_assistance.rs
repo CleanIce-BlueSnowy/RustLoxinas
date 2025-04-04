@@ -1,9 +1,7 @@
-use std::collections::HashMap;
 use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::Expr;
-use crate::hashmap;
-use crate::resolver::{Resolver, Variable};
+use crate::resolver::{Resolver, Scope, Variable};
 use crate::stmt::Stmt;
 use crate::types::{TypeTag, ValueType};
 use crate::types::ValueType::Object;
@@ -16,10 +14,10 @@ impl Resolver {
         for statement in statements {
             match statement {
                 Stmt::Let(stmt) => {
-                    if current.0.contains_key(&stmt.name) {
+                    if current.variables.contains_key(&stmt.name) {
                         errors.push(CompileError::new(&stmt.name_pos, format!("Redefine variable '{}'.", &stmt.name)));
                     }
-                    current.0.insert(stmt.name.clone(), Variable::new(
+                    current.variables.insert(stmt.name.clone(), Variable::new(
                         statement,
                         false,
                         false,
@@ -76,32 +74,46 @@ impl Resolver {
     /// 进入作用域
     #[inline]
     pub fn enter_scope(&mut self) {
-        self.variables.push((hashmap!(), self.now_slot));
+        self.scopes.push(Scope::new(self.now_slot));
     }
     
     /// 离开作用域
     #[inline]
-    pub fn leave_scope(&mut self) {
-        let (_, slot) = self.variables.pop().unwrap();
-        self.now_slot = slot;
+    pub fn leave_scope(&mut self) -> Scope {
+        let scope = self.scopes.pop().unwrap();
+        
+        // 重置初始化变量
+        // 当某个语句有多个子语句块时，分析器需要检查每个子语句块的初始化变量是否一致，然后选择性地确认初始化
+        for &variable in &scope.init_vars {
+            // SAFETY: Scope 的 init_vars 一定引用的是上一层作用域的变量，所以安全
+            unsafe {
+                (*variable).initialized = false;
+            }
+        }
+        
+        self.now_slot = scope.top_slot;
+        
+        return scope;
     }
 
     /// 获取当前作用域
     #[inline]
-    pub fn get_current_scope(&mut self) -> &mut (HashMap<String, Variable>, usize) {
-        let length = self.variables.len();
-        return &mut self.variables[length - 1];
+    #[must_use]
+    pub fn get_current_scope(&mut self) -> &mut Scope {
+        let length = self.scopes.len();
+        return &mut self.scopes[length - 1];
     }
 
     /// 寻找变量
+    #[must_use]
     pub fn find_variable(&mut self, name: &String) -> Option<&mut Variable> {
-        let mut scope_idx = self.variables.len();
+        let mut scope_idx = self.scopes.len();
         while scope_idx > 0 {
-            let scope = &mut self.variables[scope_idx - 1].0;
-            if scope.contains_key(name) {
+            let var_scope = &mut self.scopes[scope_idx - 1].variables;
+            if var_scope.contains_key(name) {
                 // 避免中间变量导致的循环生命周期异常，从而导致多次可变借用
                 // 见：https://zhuanlan.zhihu.com/p/449797793
-                return Some(self.variables[scope_idx - 1].0.get_mut(name).unwrap());
+                return Some(self.scopes[scope_idx - 1].variables.get_mut(name).unwrap());
             }
             scope_idx -= 1;
         }
@@ -110,12 +122,14 @@ impl Resolver {
     
     /// 在当前作用域寻找变量
     #[inline]
+    #[must_use]
     pub fn find_variable_in_current_scope(&mut self, name: &String) -> Option<&mut Variable> {
         let current = self.get_current_scope();
-        return current.0.get_mut(name);
+        return current.variables.get_mut(name);
     }
     
     /// 检查类型转换
+    #[must_use]
     pub fn check_type_convert(from: &ValueType, to: &ValueType) -> bool {
         if let (Object(_), _) | (_, Object(_)) = (from, to) {
             return false;
@@ -131,6 +145,7 @@ impl Resolver {
     
     /// 检查左值
     #[inline]
+    #[must_use]
     pub fn check_left_value(expr: &Expr) -> bool {
         matches!(expr, Expr::Variable(_))
     }

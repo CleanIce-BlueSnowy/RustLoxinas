@@ -41,24 +41,28 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn peek_byte(&self) -> [u8; 1] {
         let top = self.vm_stack.len() - 1;
         return [self.vm_stack[top]];
     }
 
     #[inline]
+    #[must_use]
     pub fn peek_word(&self) -> [u8; 2] {
         let top = self.vm_stack.len() - 1;
         return [self.vm_stack[top - 1], self.vm_stack[top]];
     }
 
     #[inline]
+    #[must_use]
     pub fn peek_dword(&self) -> [u8; 4] {
         let top = self.vm_stack.len() - 1;
         return [self.vm_stack[top - 3], self.vm_stack[top - 2], self.vm_stack[top - 1], self.vm_stack[top]];
     }
 
     #[inline]
+    #[must_use]
     pub fn peek_qword(&self) -> [u8; 8] {
         let top = self.vm_stack.len() - 1;
         return [
@@ -68,6 +72,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn peek_oword(&self) -> [u8; 16] {
         let top = self.vm_stack.len() - 1;
         return [
@@ -79,6 +84,7 @@ impl<'a> VM<'a> {
     }
     
     #[inline]
+    #[must_use]
     pub fn peek_bool(&self) -> bool {
         let top = self.vm_stack.len() - 1;
         return self.vm_stack[top] != 0;
@@ -127,6 +133,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn read_arg_byte(&mut self) -> [u8; 1] {
         if let Ok((byte, new_ip)) = read_byte(self.chunk, self.ip) {
             self.ip = new_ip;
@@ -137,6 +144,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn read_arg_word(&mut self) -> [u8; 2] {
         if let Ok((word, new_ip)) = read_word(self.chunk, self.ip) {
             self.ip = new_ip;
@@ -147,6 +155,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn read_arg_dword(&mut self) -> [u8; 4] {
         if let Ok((dword, new_ip)) = read_dword(self.chunk, self.ip) {
             self.ip = new_ip;
@@ -157,6 +166,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn read_arg_qword(&mut self) -> [u8; 8] {
         if let Ok((qword, new_ip)) = read_qword(self.chunk, self.ip) {
             self.ip = new_ip;
@@ -167,6 +177,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn read_arg_oword(&mut self) -> [u8; 16] {
         if let Ok((oword, new_ip)) = read_oword(self.chunk, self.ip) {
             self.ip = new_ip;
@@ -177,6 +188,7 @@ impl<'a> VM<'a> {
     }
     
     #[inline]
+    #[must_use]
     pub fn get_frame_slot_byte(&mut self, slot: usize) -> [u8; 1] {
         if let Ok((byte, _)) = read_byte(&self.vm_stack, self.frame_start + slot) {
             byte
@@ -186,6 +198,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_frame_slot_word(&mut self, slot: usize) -> [u8; 2] {
         if let Ok((word, _)) = read_word(&self.vm_stack, self.frame_start + slot) {
             word
@@ -195,6 +208,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_frame_slot_dword(&mut self, slot: usize) -> [u8; 4] {
         if let Ok((dword, _)) = read_dword(&self.vm_stack, self.frame_start + slot) {
             dword
@@ -204,6 +218,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_frame_slot_qword(&mut self, slot: usize) -> [u8; 8] {
         if let Ok((qword, _)) = read_qword(&self.vm_stack, self.frame_start + slot) {
             qword
@@ -213,6 +228,7 @@ impl<'a> VM<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_frame_slot_oword(&mut self, slot: usize) -> [u8; 16] {
         if let Ok((oword, _)) = read_oword(&self.vm_stack, self.frame_start + slot) {
             oword

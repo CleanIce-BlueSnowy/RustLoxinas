@@ -20,6 +20,7 @@ pub struct Parser {
 
 impl Parser {
     /// 构造函数，将移动 `tokens`
+    #[must_use]
     pub fn new(tokens: Vec<Rc<Token>>) -> Self {
         Self { tokens, current: 0 }
     }

@@ -21,6 +21,7 @@ pub struct VM<'a> {
 }
 
 impl<'a> VM<'a> {
+    #[must_use]
     pub fn new(chunk: &'a [u8]) -> Self {
         Self { vm_stack: vec![], chunk, ip: 0, frame_start: 0 }
     }

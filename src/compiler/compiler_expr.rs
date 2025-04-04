@@ -4,7 +4,7 @@ use std::collections::LinkedList;
 
 use crate::compiler::Compiler;
 use crate::data::DataSize;
-use crate::errors::error_types::{CompileError, CompileResult};
+use crate::errors::error_types::CompileResult;
 use crate::expr::{ExprBinary, ExprLiteral, ExprUnary};
 use crate::instr::Instruction::*;
 use crate::resolver::ExprResolveRes;
@@ -108,7 +108,7 @@ impl Compiler {
 
     /// 编译分组表达式
     pub fn compile_grouping_expr(&mut self,
-                                 inside_code: &mut LinkedList<u8>) -> Result<LinkedList<u8>, CompileError> {
+                                 inside_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
         target.append(inside_code);
         return Ok(target);
@@ -116,7 +116,7 @@ impl Compiler {
 
     /// 编译字面量表达式
     pub fn compile_literal_expr(&mut self,
-                                expr: &ExprLiteral) -> Result<LinkedList<u8>, CompileError> {
+                                expr: &ExprLiteral) -> CompileResult<LinkedList<u8>> {
         use crate::data::Data::*;
         let mut target = LinkedList::new();
         
@@ -195,7 +195,7 @@ impl Compiler {
     pub fn compile_unary_expr(&mut self,
                               expr: &ExprUnary,
                               right_code: &mut LinkedList<u8>,
-                              right_res: &ExprResolveRes) -> Result<LinkedList<u8>, CompileError> {
+                              right_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
         let mut target = LinkedList::new();
         
         let expr_type = &right_res.res_type;
@@ -225,7 +225,7 @@ impl Compiler {
     /// 编译转换表达式
     pub fn compile_as_expr(&mut self,
                            resolve_res: &ExprResolveRes,
-                           inside_code: &mut LinkedList<u8>) -> Result<LinkedList<u8>, CompileError> {
+                           inside_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
         // 直接计算并转换
         let mut target = LinkedList::new();
         let ope_type = &resolve_res.ope_type;

@@ -2,6 +2,7 @@
 
 /// 检查安全性——是否会越界
 #[inline]
+#[must_use]
 pub fn check_safety(stream: &[u8], offset: usize, need: usize) -> bool {
     offset + need - 1 < stream.len()
 }

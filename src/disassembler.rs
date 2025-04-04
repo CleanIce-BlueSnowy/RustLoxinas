@@ -304,6 +304,7 @@ macro_rules! fmt_str {
 
 /// 简单指令
 #[inline]
+#[must_use]
 fn simple(instr: &str, info: &str, _chunk: &[u8], offset: usize) -> (String, usize) {
     (format!(fmt_str!(), instr, info, ""), offset)
 }

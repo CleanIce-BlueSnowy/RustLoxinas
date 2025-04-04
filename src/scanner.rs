@@ -31,6 +31,7 @@ pub struct TokenScanner<'a> {
 }
 
 impl<'a> TokenScanner<'a> {
+    #[must_use]
     pub fn new(source: &'a str) -> Self {
         Self { source, tokens: vec![], start: 0, current: 0, line: 1, scanned_chars: 0, chars: vec![] }
     }
@@ -182,6 +183,7 @@ impl<'a> TokenScanner<'a> {
 
     /// 是否为合法的标识符字符，开始字符不能为数字，支持下划线
     #[inline]
+    #[must_use]
     fn is_identifier_char(&self, ch: char, at_start: bool) -> bool {
         if at_start {
             ch.is_alphabetic() || ch == '_'
@@ -192,11 +194,13 @@ impl<'a> TokenScanner<'a> {
 
     /// 是否在字符串尾
     #[inline]
+    #[must_use]
     fn is_at_end(&self) -> bool {
         self.current >= self.chars.len()
     }
 
     /// 是否可以匹配。若可以，则消耗字符
+    #[must_use]
     fn can_match(&mut self, expected: char) -> bool {
         if self.is_at_end() {
             return false;
@@ -210,6 +214,7 @@ impl<'a> TokenScanner<'a> {
 
     /// 返回下一个字符。支持末尾检查
     #[inline]
+    #[must_use]
     fn peek(&self) -> char {
         if self.is_at_end() { '\0' } else { self.chars[self.current] }
     }
@@ -236,6 +241,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 获取整个令牌
+    #[must_use]
     fn get_whole_word(&mut self) -> String {
         let mut res = String::new();
         for &ch in &self.chars[self.start..self.current] {
@@ -245,6 +251,7 @@ impl<'a> TokenScanner<'a> {
     }
 
     /// 检查是否为关键字
+    #[must_use]
     fn check_keyword(&self, word: &str) -> Option<TokenKeyword> {
         match word {
             "if" => Some(If),

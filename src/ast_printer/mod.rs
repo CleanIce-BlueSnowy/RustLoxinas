@@ -14,7 +14,7 @@ pub enum TreeChildren<'a> {
     Expr(&'a Expr),
     Stmt(&'a Stmt),
     StmtList(&'a [Stmt]),
-    ExprList(&'a [Box<Expr>]),
+    ExprList(&'a [Expr]),
     Identifier(&'a str),
 }
 
