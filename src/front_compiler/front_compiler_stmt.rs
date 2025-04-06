@@ -4,8 +4,8 @@ use crate::byte_handler::byte_writer::write_dword;
 use crate::errors::error_types::CompileError;
 use crate::expr_get_pos;
 use crate::front_compiler::FrontCompiler;
-use crate::instr::Instruction;
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor};
+use crate::instr::Instruction::*;
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor, StmtWhile};
 
 impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompiler<'a> {
     fn visit_expr_stmt(&mut self, _this: *const Stmt, stmt: &StmtExpr) -> Result<LinkedList<u8>, Vec<CompileError>> {
@@ -31,7 +31,7 @@ impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompile
 
     fn visit_init_stmt(&mut self, _this: *const Stmt, stmt: &StmtInit) -> Result<LinkedList<u8>, Vec<CompileError>> {
         let (init_res, mut init_code) = stmt.init.accept(self)?;
-        let (var_type, slot) = Self::pack_error(self.resolver.resolve_init_stmt(stmt, &init_res))?;
+        let (var_type, slot) = Self::pack_error(self.resolver.resolve_init_stmt(stmt, &init_res, self.in_loop))?;
         let final_code = Self::pack_error(self.compiler.compile_init_stmt(slot, &mut init_code, &init_res, var_type))?;
         return Ok(final_code);
     }
@@ -45,7 +45,12 @@ impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompile
             vars_res.push(var_res);
             vars_code.push(var_code);
         }
+
+        // 右侧表达式不要使用 in_assign 标志！
+        self.in_assign = false;
         let (right_res, mut right_code) = stmt.right_expr.accept(self)?;
+        self.in_assign = true;
+
         Self::pack_error(self.resolver.resolve_assign_stmt(stmt, &vars_res, &right_res))?;
         let final_code = Self::pack_error(self.compiler.compile_assign_stmt(&mut vars_code, &vars_res, &mut right_code, &right_res))?;
         self.in_assign = false;
@@ -133,36 +138,105 @@ impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompile
             } else {
                 compare_target = Some(scope.init_vars);
             }
-            
+
             // 分支结尾跳转
             if end_cnt != 0 {
-                codes.push_back(Instruction::OpJump.into());
+                codes.push_back(OpJump.into());
                 write_dword(&mut codes, end_cnt.to_le_bytes());
             }
-            
+
             // 分支不符合时跳转
             let else_cnt = codes.len() as u32;
-            let mut temp: LinkedList<_> = [Instruction::OpJumpFalsePop.into()].into_iter().collect();
+            let mut temp: LinkedList<_> = [OpJumpFalsePop.into()].into_iter().collect();
             write_dword(&mut temp, else_cnt.to_le_bytes());
             temp.append(&mut codes);
             codes = temp;
-            
+
             // 写入判断条件
             expr_code.append(&mut codes);
             codes = expr_code;
-            
+
             // 更新结尾跳转
             end_cnt += codes.len() as u32;
-            
+
             // 写入代码
             codes.append(&mut target);
             target = codes;
+        }
+
+        // 初始化变量
+        for variables in compare_target.unwrap() {
+            // SAFETY: 不必多言
+            unsafe {
+                (*variables).initialized = true;
+            }
         }
 
         return if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(target)
+        };
+    }
+
+    fn visit_while_stmt(&mut self, _this: *const Stmt, stmt: &StmtWhile) -> Result<LinkedList<u8>, Vec<CompileError>> {
+        let (condition_res, mut condition_code) = stmt.condition.accept(self)?;
+
+        Self::pack_error(self.resolver.resolve_while_stmt(stmt, &condition_res))?;
+
+        let mut codes = LinkedList::new();
+
+        // 写入条件
+        codes.append(&mut condition_code);
+
+        // 写入跳转
+        codes.push_back(OpJumpFalsePop.into());
+        // 偏移占位符，并保存源地址
+        let jump_access: Vec<_> = [0x00, 0x00, 0x00, 0x00].into_iter().map(|value| {
+            codes.push_back(value);
+            return codes.back_mut().unwrap() as *mut u8
+        }).collect();
+
+        let condition_length = codes.len() as u32;  // 一会用来计算循环体大小
+
+        // 编译主体
+        let mut errors = vec![];
+
+        let before_slot = self.resolver.now_slot;  // 用于计算循环占用的空间
+        self.resolver.enter_scope();
+        self.in_loop = true;
+
+        let block = if let Stmt::Block(temp) = stmt.chunk.as_ref() { temp } else { panic!("Invalid.") };
+        self.compile_scope(&mut errors, &mut codes, &block.statements);
+
+        self.in_loop = false;
+        let after_slot = self.resolver.now_slot;
+        self.resolver.leave_scope();
+        
+        // 释放循环空间（小优化：若无占用空间则不用释放）
+        let memory_used = after_slot - before_slot;
+        if memory_used != 0 {
+            codes.push_back(OpStackShrink.into());
+            write_dword(&mut codes, (memory_used as u32).to_le_bytes());
+        }
+
+        let jump_back = codes.len() as u32;
+        codes.push_back(OpJump.into());
+        write_dword(&mut codes, (-(jump_back as i32 + 5)).to_le_bytes());  // 别忘了自己还有 5 个字节！
+
+        // 回填条件偏移地址
+        let jump_end = codes.len() as u32 - condition_length;
+        for (access, byte) in jump_access.into_iter().zip(jump_end.to_le_bytes().into_iter()) {
+            // SAFETY: 一定指向链表节点
+            unsafe {
+                *access = byte;
+            }
+        }
+
+        return if !errors.is_empty() {
+            Err(errors)
+        } else {
+            Ok(codes)
         };
     }
 

@@ -22,6 +22,8 @@ pub enum Stmt {
     Block(StmtBlock),
     /// 条件判断语句
     If(StmtIf),
+    /// 条件循环语句
+    While(StmtWhile),
     /// 临时辅助功能：打印语句
     Print(StmtPrint),
 }
@@ -96,6 +98,14 @@ pub struct StmtIf {
     pub else_case: Option<Box<Stmt>>,
 }
 
+/// 条件循环语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtWhile {
+    pub pos: Position,
+    pub condition: Expr,
+    pub chunk: Box<Stmt>,
+}
+
 /// 临时辅助功能：打印语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtPrint {
@@ -123,6 +133,8 @@ pub trait StmtVisitor<RetType> {
     #[must_use]
     fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> RetType;
     #[must_use]
+    fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> RetType;
+    #[must_use]
     fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> RetType;
 }
 
@@ -138,6 +150,7 @@ impl Stmt {
             Stmt::Assign(stmt) => visitor.visit_assign_stmt(ptr, stmt),
             Stmt::Block(stmt) => visitor.visit_block_stmt(ptr, stmt),
             Stmt::If(stmt) => visitor.visit_if_stmt(ptr, stmt),
+            Stmt::While(stmt) => visitor.visit_while_stmt(ptr, stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
         };
     }
@@ -156,6 +169,7 @@ macro_rules! stmt_get_pos {
                 Stmt::Assign(stmt) => stmt.pos.clone(),
                 Stmt::Block(stmt) => stmt.pos.clone(),
                 Stmt::If(stmt) => stmt.pos.clone(),
+                Stmt::While(stmt) => stmt.pos.clone(),
                 Stmt::Print(stmt) => stmt.pos.clone(),
             }
         }

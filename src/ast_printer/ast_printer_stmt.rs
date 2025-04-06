@@ -3,7 +3,7 @@
 use indexmap::indexmap;
 
 use crate::ast_printer::{AstPrinter, TreeChild};
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor, StmtWhile};
 
 #[cfg(debug_assertions)]
 impl StmtVisitor<String> for AstPrinter {
@@ -121,6 +121,22 @@ impl StmtVisitor<String> for AstPrinter {
             this,
             self.parenthesize(
                 "If",
+                children,
+            )
+        );
+    }
+
+    fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> String {
+        let children = indexmap! {
+            "condition" => TreeChild::Expr(&stmt.condition),
+            "chunk" => TreeChild::Stmt(&stmt.chunk),
+        };
+        
+        return format!(
+            "STMT {:?} {}",
+            this,
+            self.parenthesize(
+                "While",
                 children,
             )
         );

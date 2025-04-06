@@ -4,7 +4,7 @@ use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr_get_pos;
 use crate::resolver::{ExprResolveRes, Resolver, Variable};
-use crate::stmt::{StmtAssign, StmtIf, StmtInit, StmtLet};
+use crate::stmt::{StmtAssign, StmtIf, StmtInit, StmtLet, StmtWhile};
 use crate::types::ValueType;
 
 impl Resolver {
@@ -78,15 +78,19 @@ impl Resolver {
     /// 分析变量延迟初始化语句
     pub fn resolve_init_stmt(&mut self, 
                              stmt: &StmtInit, 
-                             init_expr_res: &ExprResolveRes) -> CompileResult<(ValueType, usize)> {
-        let variable = if let Some(temp) = self.find_variable(&stmt.name) {
-            temp
-        } else {
-            return Err(CompileError::new(
-                &stmt.name_pos,
-                "Undefined variable.".to_string(),
-            ));
+                             init_expr_res: &ExprResolveRes,
+                             in_loop: bool) -> CompileResult<(ValueType, usize)> {
+        if let None = self.find_variable(&stmt.name) {
+            return Err(CompileError::new(&stmt.name_pos, "Undefined variable.".to_string()));
         };
+
+        if in_loop {
+            if let None = self.find_variable_in_current_scope(&stmt.name) {
+                return Err(CompileError::new(&stmt.name_pos, "Cannot initialize an externally scoped variable in a loop.".to_string()))
+            }
+        }
+
+        let variable = self.find_variable(&stmt.name).unwrap();
         
         if !variable.defined {
             return Err(CompileError::new(&stmt.name_pos, "Initialize a variable before it's defined.".to_string()));
@@ -98,10 +102,12 @@ impl Resolver {
         
         variable.initialized = true;
         let ptr = variable as *mut Variable;
-        
         // 上一个 variable 的作用域在此截止
         
-        self.get_current_scope().init_vars.insert(ptr);
+        // 只记录外部作用域的
+        if let None = self.find_variable_in_current_scope(&stmt.name) {
+            self.get_current_scope().init_vars.insert(ptr);
+        }
         
         // 避免多次 self 可变引用
         let variable = self.find_variable(&stmt.name).unwrap();
@@ -149,12 +155,22 @@ impl Resolver {
                 errors.push(CompileError::new(&expr_get_pos!(expr), "The expression must return a bool value".to_string()));
             }
         }
-        
+
         return if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
         };
+    }
+
+    pub fn resolve_while_stmt(&mut self,
+                              stmt: &StmtWhile,
+                              condition_res: &ExprResolveRes) -> CompileResult<()> {
+        if !matches!(condition_res.res_type, ValueType::Bool) {
+            Err(CompileError::new(&expr_get_pos!(&stmt.condition), "The expression must return a bool value.".to_string()))
+        } else {
+            Ok(())
+        }
     }
     
     /// 临时辅助功能：分析打印语句

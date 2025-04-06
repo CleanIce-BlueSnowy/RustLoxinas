@@ -5,7 +5,7 @@ use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::expr::Expr;
 use crate::parser::Parser;
 use crate::position::Position;
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtWhile};
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenParen::*;
@@ -20,6 +20,8 @@ impl Parser {
             self.init_stmt()
         } else if parser_can_match!(self, Keyword(If)) {
             self.if_stmt()
+        } else if parser_can_match!(self, Keyword(While)) {
+            self.while_stmt()
         } else if parser_can_match!(self, Keyword(Print)) {
             self.print_stmt()
         } else if parser_can_match!(self, Paren(LeftBrace)) {
@@ -187,6 +189,25 @@ impl Parser {
                 else_case: None,
             }))
         };
+    }
+    
+    fn while_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let keyword_while = self.previous();
+        let while_pos = Position::new(keyword_while.line, keyword_while.start, keyword_while.line, keyword_while.end);
+        
+        let condition = self.parse_expression()?;
+        let condition_pos = expr_get_pos!(&condition);
+        let err_pos = Position::new(condition_pos.end_line, condition_pos.end_idx, condition_pos.end_line, condition_pos.end_idx + 1);
+        parser_consume!(self, Paren(LeftBrace), &err_pos, "Expect '{' after the condition.".to_string())?;
+        
+        let chunk = self.block_stmt()?;
+        let final_pos = self.get_final_pos();
+        
+        return Ok(Stmt::While(StmtWhile {
+            pos: Position::new(while_pos.start_line, while_pos.start_idx, final_pos.end_line, final_pos.end_idx),
+            condition,
+            chunk: Box::new(chunk),
+        }));
     }
     
     /// 赋值语句

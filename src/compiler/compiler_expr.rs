@@ -259,6 +259,7 @@ impl Compiler {
         return Ok(target);
     }
     
+    // 编译变量表达式
     pub fn compile_variable_expr(&mut self,
                                  resolve_res: &ExprResolveRes,
                                  slot: usize, 

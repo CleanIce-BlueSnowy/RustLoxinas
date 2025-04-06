@@ -19,6 +19,7 @@ pub struct FrontCompiler<'a> {
     statements: &'a [Stmt],
     in_assign: bool,
     in_ref_let: bool,
+    in_loop: bool,
 }
 
 impl<'a> FrontCompiler<'a> {
@@ -30,6 +31,7 @@ impl<'a> FrontCompiler<'a> {
             statements, 
             in_assign: false,
             in_ref_let: false,
+            in_loop: false,
         }
     }
     

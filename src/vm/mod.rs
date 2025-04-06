@@ -91,6 +91,10 @@ impl<'a> VM<'a> {
             OpReturn => {  // 临时充当结束程序的作用
                 return Ok(());
             }
+            OpStackShrink => {
+                let length = u32::from_le_bytes(self.read_arg_dword());
+                self.stack_shrink(length);
+            }
             OpJump => {
                 let goto = i32::from_le_bytes(self.read_arg_dword());
                 self.jump(goto);

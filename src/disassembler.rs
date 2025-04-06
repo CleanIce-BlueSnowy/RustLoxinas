@@ -62,6 +62,7 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
+        OpStackShrink => with_dword("StackShrink", "", chunk, offset),
         OpJump => jump("Jump", "", chunk, offset),
         OpJumpTrue => jump("Jump", "True", chunk, offset),
         OpJumpTruePop => jump("Jump", "True & Pop", chunk, offset),
@@ -277,26 +278,26 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpCopyDword => Ok(simple("Copy", "Dword", chunk, offset)),
         OpCopyQword => Ok(simple("Copy", "Qword", chunk, offset)),
         OpCopyOword => Ok(simple("Copy", "Oword", chunk, offset)),
-        OpGetLocalByte => local("GetLocal", "Byte", chunk, offset),
-        OpGetLocalWord => local("GetLocal", "Word", chunk, offset),
-        OpGetLocalDword => local("GetLocal", "Dword", chunk, offset),
-        OpGetLocalQword => local("GetLocal", "Qword", chunk, offset),
-        OpGetLocalOword => local("GetLocal", "Oword", chunk, offset),
-        OpSetLocalByte => local("SetLocal", "Byte", chunk, offset),
-        OpSetLocalWord => local("SetLocal", "Word", chunk, offset),
-        OpSetLocalDword => local("SetLocal", "Dword", chunk, offset),
-        OpSetLocalQword => local("SetLocal", "Qword", chunk, offset),
-        OpSetLocalOword => local("SetLocal", "Oword", chunk, offset),
-        OpGetReferenceByte => local("GetReference", "Byte", chunk, offset),
-        OpGetReferenceWord => local("GetReference", "Word", chunk, offset),
-        OpGetReferenceDword => local("GetReference", "Dword", chunk, offset),
-        OpGetReferenceQword => local("GetReference", "Qword", chunk, offset),
-        OpGetReferenceOword => local("GetReference", "Oword", chunk, offset),
-        OpSetReferenceByte => local("SetReference", "Byte", chunk, offset),
-        OpSetReferenceWord => local("SetReference", "Word", chunk, offset),
-        OpSetReferenceDword => local("SetReference", "Dword", chunk, offset),
-        OpSetReferenceQword => local("SetReference", "Qword", chunk, offset),
-        OpSetReferenceOword => local("SetReference", "Oword", chunk, offset),
+        OpGetLocalByte => with_dword("GetLocal", "Byte", chunk, offset),
+        OpGetLocalWord => with_dword("GetLocal", "Word", chunk, offset),
+        OpGetLocalDword => with_dword("GetLocal", "Dword", chunk, offset),
+        OpGetLocalQword => with_dword("GetLocal", "Qword", chunk, offset),
+        OpGetLocalOword => with_dword("GetLocal", "Oword", chunk, offset),
+        OpSetLocalByte => with_dword("SetLocal", "Byte", chunk, offset),
+        OpSetLocalWord => with_dword("SetLocal", "Word", chunk, offset),
+        OpSetLocalDword => with_dword("SetLocal", "Dword", chunk, offset),
+        OpSetLocalQword => with_dword("SetLocal", "Qword", chunk, offset),
+        OpSetLocalOword => with_dword("SetLocal", "Oword", chunk, offset),
+        OpGetReferenceByte => with_dword("GetReference", "Byte", chunk, offset),
+        OpGetReferenceWord => with_dword("GetReference", "Word", chunk, offset),
+        OpGetReferenceDword => with_dword("GetReference", "Dword", chunk, offset),
+        OpGetReferenceQword => with_dword("GetReference", "Qword", chunk, offset),
+        OpGetReferenceOword => with_dword("GetReference", "Oword", chunk, offset),
+        OpSetReferenceByte => with_dword("SetReference", "Byte", chunk, offset),
+        OpSetReferenceWord => with_dword("SetReference", "Word", chunk, offset),
+        OpSetReferenceDword => with_dword("SetReference", "Dword", chunk, offset),
+        OpSetReferenceQword => with_dword("SetReference", "Qword", chunk, offset),
+        OpSetReferenceOword => with_dword("SetReference", "Oword", chunk, offset),
     }
 }
 
@@ -381,8 +382,8 @@ fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
     }
 }
 
-/// 获取局部变量指令
-fn local(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+/// 带有 4 字节参数的指令
+fn with_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_slot, new_offset)) = read_dword(chunk, offset) {
         let slot = u32::from_le_bytes(res_slot);
         Ok((format!(fmt_str!(), instr, info, format!("{:08X}", slot)), new_offset))

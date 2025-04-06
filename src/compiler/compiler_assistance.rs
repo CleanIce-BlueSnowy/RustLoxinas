@@ -335,7 +335,8 @@ impl Compiler {
             (Bool, ValueType::Float(_)) => {
                 self.convert_types(&Integer(Byte), to);
             }
-            (Bool, Bool) => (),
+            (Bool, Bool) |
+            (Char, Char) => (),
             _ => panic!("Invalid convert!"),
         }
     }

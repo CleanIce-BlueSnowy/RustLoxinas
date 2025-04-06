@@ -11,6 +11,8 @@ pub enum Instruction {
     OpSpecialFunction,
     /// 返回
     OpReturn,
+    /// 栈收缩
+    OpStackShrink,
     /// 无条件跳转
     OpJump,
     /// 为真时跳转
