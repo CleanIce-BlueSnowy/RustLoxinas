@@ -122,7 +122,7 @@ impl Parser {
                 return;
             } else if let TokenType::Keyword(keyword) = &self.peek().token_type {
                 use crate::tokens::TokenKeyword::*;
-                if let If | Elif | Else | For | While | Let = keyword {
+                if let If | Else | For | While | Let | Init = keyword {
                     return;
                 }
             }

@@ -1,6 +1,6 @@
 //! 语义分析模块
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
 
 use crate::hashmap;
@@ -155,8 +155,8 @@ pub struct Scope {
     pub variables: HashMap<String, Variable>,
     /// 顶部偏移量
     pub top_slot: usize,
-    /// 作用域内初始化的变量
-    pub init_vars: Vec<*mut Variable>,
+    /// 作用域内初始化的变量，有序方便比较
+    pub init_vars: BTreeSet<*mut Variable>,
 }
 
 impl Scope {
@@ -165,7 +165,7 @@ impl Scope {
         Scope {
             variables: hashmap!(),
             top_slot: now_slot,
-            init_vars: vec![],
+            init_vars: BTreeSet::new(),
         }
     }
 }

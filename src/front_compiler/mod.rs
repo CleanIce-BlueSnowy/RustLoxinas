@@ -7,6 +7,7 @@ mod front_compiler_assistance;
 use std::collections::LinkedList;
 use crate::compiler::Compiler;
 use crate::errors::error_types::CompileError;
+use crate::instr::Instruction;
 use crate::resolver::Resolver;
 use crate::stmt::Stmt;
 
@@ -42,6 +43,9 @@ impl<'a> FrontCompiler<'a> {
         self.compile_scope(&mut errors, &mut codes, self.statements);
         
         self.resolver.leave_scope();
+        
+        // 补充返回指令，临时充当结束程序的作用
+        codes.push_back(Instruction::OpReturn.into());
         
         return if !errors.is_empty() {
             Err(errors)

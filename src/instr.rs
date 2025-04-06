@@ -11,6 +11,16 @@ pub enum Instruction {
     OpSpecialFunction,
     /// 返回
     OpReturn,
+    /// 无条件跳转
+    OpJump,
+    /// 为真时跳转
+    OpJumpTrue,
+    /// 为真时跳转并弹出数值
+    OpJumpTruePop,
+    /// 为假时跳转
+    OpJumpFalse,
+    /// 为假时跳转并弹出数值
+    OpJumpFalsePop,
     /// 常数加载字节
     OpLoadConstByte,
     /// 常数加载单字

@@ -7,7 +7,7 @@ use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary
 use crate::parser::Parser;
 use crate::parser_check;
 use crate::position::Position;
-use crate::tokens::{TokenFloat, TokenOperator, TokenParen, TokenType};
+use crate::tokens::{TokenFloat, TokenKeyword, TokenOperator, TokenParen, TokenType};
 use crate::tokens::TokenFloat::*;
 use crate::tokens::TokenInteger::*;
 use crate::tokens::TokenKeyword::*;
@@ -15,9 +15,45 @@ use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenType::*;
 
 impl Parser {
-    /// 解析表达式
+    /// 解析表达式——递归下降法
     pub fn parse_expression(&mut self) -> SyntaxResult<Expr> {
-        self.equality()
+        self.logical_or()
+    }
+
+    /// 逻辑运算布尔表达式——逻辑或
+    fn logical_or(&mut self) -> SyntaxResult<Expr> {
+        let mut expr = self.logical_and()?;
+        while parser_can_match!(self, Keyword(Or)) {
+            let operator = self.previous();
+            let right = self.logical_and()?;
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: expr,
+                operator,
+                right,
+            }));
+        }
+        return Ok(expr);
+    }
+
+    /// 逻辑运算布尔表达式——逻辑与
+    fn logical_and(&mut self) -> SyntaxResult<Expr> {
+        let mut expr = self.equality()?;
+        while parser_can_match!(self, Keyword(TokenKeyword::And)) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            let pos_left = expr_get_pos!(&expr);
+            let pos_right = expr_get_pos!(&right);
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
+                left: expr,
+                operator,
+                right,
+            }));
+        }
+        return Ok(expr);
     }
 
     /// 判等表达式

@@ -5,7 +5,7 @@ use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::expr::Expr;
 use crate::parser::Parser;
 use crate::position::Position;
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtInit, StmtLet, StmtPrint};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint};
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenParen::*;
@@ -18,6 +18,8 @@ impl Parser {
             self.let_stmt()
         } else if parser_can_match!(self, Keyword(Init)) {
             self.init_stmt()
+        } else if parser_can_match!(self, Keyword(If)) {
+            self.if_stmt()
         } else if parser_can_match!(self, Keyword(Print)) {
             self.print_stmt()
         } else if parser_can_match!(self, Paren(LeftBrace)) {
@@ -131,6 +133,60 @@ impl Parser {
             name: name.clone(),
             init,
         }));
+    }
+
+    /// 条件判断语句
+    fn if_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let keyword_if = self.previous();
+        let if_pos = Position::new(keyword_if.line, keyword_if.start, keyword_if.line, keyword_if.end);
+
+        let if_expr = self.parse_expression()?;
+        let if_expr_pos = expr_get_pos!(&if_expr);
+        let err_pos = Position::new(if_expr_pos.end_line, if_expr_pos.end_idx, if_expr_pos.end_line, if_expr_pos.end_idx + 1);
+        parser_consume!(self, Paren(LeftBrace), &err_pos, "Except '{' after the expression.".to_string())?;
+
+        let if_chunk = self.block_stmt()?;
+
+        return if parser_can_match!(self, Keyword(Else)) {
+            if parser_can_match!(self, Keyword(If)) {
+                let mut else_if_cases = vec![];
+                
+                let else_if_stmt = self.if_stmt()?;  // 递归解析，但线性拼接
+                let mut else_if = if let Stmt::If(temp) = else_if_stmt { temp } else { panic!("Invalid.") };
+                else_if_cases.push((else_if.if_case.0, *else_if.if_case.1));
+                else_if_cases.append(&mut else_if.else_if_cases);
+                let final_pos = self.get_final_pos();
+                
+                Ok(Stmt::If(StmtIf {
+                    pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
+                    if_case: (if_expr, Box::new(if_chunk)),
+                    else_if_cases,
+                    else_case: else_if.else_case,
+                }))
+            } else {
+                let keyword_else = self.previous();
+                let err_pos = Position::new(keyword_else.line, keyword_else.end, keyword_else.line, keyword_else.end + 1);
+                parser_consume!(self, Paren(LeftBrace), &err_pos, "Expect '{' after 'else'.".to_string())?;
+                let else_chunk = self.block_stmt()?;
+                let final_pos = self.get_final_pos();
+                
+                Ok(Stmt::If(StmtIf {
+                    pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
+                    if_case: (if_expr, Box::new(if_chunk)),
+                    else_if_cases: vec![],
+                    else_case: Some(Box::new(else_chunk)),
+                }))
+            }
+        } else {
+            let final_pos = self.get_final_pos();
+            
+            Ok(Stmt::If(StmtIf {
+                pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
+                if_case: (if_expr, Box::new(if_chunk)),
+                else_if_cases: vec![],
+                else_case: None,
+            }))
+        };
     }
     
     /// 赋值语句

@@ -5,6 +5,11 @@ use crate::vm::VM;
 
 impl<'a> VM<'a> {
     #[inline]
+    pub fn jump(&mut self, goto: i32) {
+        self.ip = (self.ip as isize + goto as isize) as usize;
+    }
+    
+    #[inline]
     pub fn push_byte(&mut self, byte: [u8; 1]) {
         self.vm_stack.extend_from_slice(&byte);
     }

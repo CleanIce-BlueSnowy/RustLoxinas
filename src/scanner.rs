@@ -256,7 +256,6 @@ impl<'a> TokenScanner<'a> {
         match word {
             "if" => Some(If),
             "else" => Some(Else),
-            "elif" => Some(Elif),
             "for" => Some(For),
             "while" => Some(While),
             "func" => Some(Func),

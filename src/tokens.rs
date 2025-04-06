@@ -75,7 +75,6 @@ pub enum TokenOperator {
 pub enum TokenKeyword {
     If,
     Else,
-    Elif,
     For,
     While,
     Func,

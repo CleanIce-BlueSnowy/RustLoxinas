@@ -10,7 +10,7 @@ mod ast_printer_expr;
 mod ast_printer_stmt;
 
 /// 语法树子树节点
-pub enum TreeChildren<'a> {
+pub enum TreeChild<'a> {
     Expr(&'a Expr),
     Stmt(&'a Stmt),
     StmtList(&'a [Stmt]),
@@ -73,30 +73,30 @@ impl AstPrinter {
     }
 
     /// 为语法树节点添加括号并格式化
-    pub fn parenthesize(&mut self, name: &str, exprs: IndexMap<&str, TreeChildren>) -> String {
+    pub fn parenthesize(&mut self, name: &str, exprs: IndexMap<&str, TreeChild>) -> String {
         let mut res = String::new();
         res.push_str("( ");
         res.push_str(name);
         res.push('\n');
         for (name, child) in exprs {
             let str: String = match child {
-                TreeChildren::Expr(expr) => expr.accept(self),
-                TreeChildren::Stmt(stmt) => stmt.accept(self),
-                TreeChildren::StmtList(list) => {
+                TreeChild::Expr(expr) => expr.accept(self),
+                TreeChild::Stmt(stmt) => stmt.accept(self),
+                TreeChild::StmtList(list) => {
                     let mut res = String::new();
                     for stmt in list {
                         res.push_str(&format!("{}, ", stmt.accept(self)));
                     }
                     res
                 }
-                TreeChildren::ExprList(list) => {
+                TreeChild::ExprList(list) => {
                     let mut res = String::new();
                     for expr in list {
                         res.push_str(&format!("{}, ", expr.accept(self)));
                     }
                     res
                 }
-                TreeChildren::Identifier(identifier) => identifier.to_string(),
+                TreeChild::Identifier(identifier) => identifier.to_string(),
             };
             res.push_str(&format!("    {name}: "));
             let mut first_line = true;

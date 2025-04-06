@@ -36,7 +36,7 @@ fn disassemble_chunk(name: &str, chunk: &[u8]) {
                 match disassemble_instruction(instr, chunk, offset) {  // 反编译单条指令
                     Ok((result, new_offset)) => {
                         offset = new_offset;
-                        println!("{:06X} | {}", old_offset, result);  // 打印指令
+                        println!("{:08X} | {}", old_offset, result);  // 打印指令
                     }
                     Err(err) => {
                         eprintln!("Disassemble Error: {}", err);
@@ -62,6 +62,11 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
+        OpJump => jump("Jump", "", chunk, offset),
+        OpJumpTrue => jump("Jump", "True", chunk, offset),
+        OpJumpTruePop => jump("Jump", "True & Pop", chunk, offset),
+        OpJumpFalse => jump("Jump", "False", chunk, offset),
+        OpJumpFalsePop => jump("Jump", "False & Pop", chunk, offset),
         OpLoadConstByte => const_byte("LoadConst", "Byte", chunk, offset),
         OpLoadConstWord => const_word("LoadConst", "Word", chunk, offset),
         OpLoadConstDword => const_dword("LoadConst", "Dword", chunk, offset),
@@ -309,8 +314,17 @@ fn simple(instr: &str, info: &str, _chunk: &[u8], offset: usize) -> (String, usi
     (format!(fmt_str!(), instr, info, ""), offset)
 }
 
+fn jump(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+    if let Ok((res_goto, res_offset)) = read_dword(chunk, offset) {
+        let goto = i32::from_le_bytes(res_goto);
+        let location = res_offset as isize + goto as isize;
+        Ok((format!(fmt_str!(), instr, info, format!("{} (at {:08X})", goto, location)), res_offset))
+    } else {
+        Err("Not enough bytes to read: need 4 bytes.".to_string())
+    }
+}
+
 /// 常数字节指令
-#[inline]
 fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_byte, res_offset)) = read_byte(chunk, offset) {
         let byte = u8::from_le_bytes(res_byte);
@@ -322,7 +336,6 @@ fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
 }
 
 /// 常数单字指令
-#[inline]
 fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_word, res_offset)) = read_word(chunk, offset) {
         let word = u16::from_le_bytes(res_word);
@@ -334,7 +347,6 @@ fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(S
 }
 
 /// 常数双字指令
-#[inline]
 fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_dword, res_offset)) = read_dword(chunk, offset) {
         let dword = u32::from_le_bytes(res_dword);
@@ -347,7 +359,6 @@ fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
 }
 
 /// 常数四字指令
-#[inline]
 fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_qword, res_offset)) = read_qword(chunk, offset) {
         let qword = u64::from_le_bytes(res_qword);
@@ -360,7 +371,6 @@ fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
 }
 
 /// 常数扩展整数指令
-#[inline]
 fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_oword, res_offset)) = read_oword(chunk, offset) {
         let oword = u128::from_le_bytes(res_oword);
@@ -372,18 +382,16 @@ fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(
 }
 
 /// 获取局部变量指令
-#[inline]
 fn local(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
-    if let Ok((res_slot, new_offset)) = read_word(chunk, offset) {
-        let slot = u16::from_le_bytes(res_slot);
-        Ok((format!(fmt_str!(), instr, info, format!("{:04X}", slot)), new_offset))
+    if let Ok((res_slot, new_offset)) = read_dword(chunk, offset) {
+        let slot = u32::from_le_bytes(res_slot);
+        Ok((format!(fmt_str!(), instr, info, format!("{:08X}", slot)), new_offset))
     } else {
-        Err("Not enough bytes to read: need 2 bytes.".to_string())
+        Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
 }
 
 /// 特殊功能指令
-#[inline]
 fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     if let Ok((res_func, new_offset)) = read_byte(chunk, offset) {
         if let Ok(special_func) = SpecialFunction::try_from(u8::from_le_bytes(res_func)) {
@@ -397,6 +405,7 @@ fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String,
     }
 }
 
+/// 解析特殊功能
 #[inline]
 fn parse_special_function(instr: &str, special_func: SpecialFunction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     use crate::instr::SpecialFunction::*;

@@ -4,7 +4,7 @@ use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr_get_pos;
 use crate::resolver::{ExprResolveRes, Resolver, Variable};
-use crate::stmt::{StmtAssign, StmtInit, StmtLet};
+use crate::stmt::{StmtAssign, StmtIf, StmtInit, StmtLet};
 use crate::types::ValueType;
 
 impl Resolver {
@@ -101,7 +101,7 @@ impl Resolver {
         
         // 上一个 variable 的作用域在此截止
         
-        self.get_current_scope().init_vars.push(ptr);
+        self.get_current_scope().init_vars.insert(ptr);
         
         // 避免多次 self 可变引用
         let variable = self.find_variable(&stmt.name).unwrap();
@@ -131,6 +131,30 @@ impl Resolver {
         }
         
         return Ok(());
+    }
+
+    /// 分析条件判断语句
+    pub fn resolve_if_stmt(&mut self,
+                           stmt: &StmtIf,
+                           if_expr_res: &ExprResolveRes,
+                           else_if_expr_res: &[ExprResolveRes]) -> Result<(), Vec<CompileError>> {
+        let mut errors = vec![];
+
+        if !matches!(if_expr_res.res_type, ValueType::Bool) {
+            errors.push(CompileError::new(&expr_get_pos!(&stmt.if_case.0), "The expression must return a bool value.".to_string()));
+        }
+
+        for ((expr, _chunk), expr_res) in stmt.else_if_cases.iter().zip(else_if_expr_res.iter()) {
+            if !matches!(expr_res.res_type, ValueType::Bool) {
+                errors.push(CompileError::new(&expr_get_pos!(expr), "The expression must return a bool value".to_string()));
+            }
+        }
+        
+        return if !errors.is_empty() {
+            Err(errors)
+        } else {
+            Ok(())
+        };
     }
     
     /// 临时辅助功能：分析打印语句

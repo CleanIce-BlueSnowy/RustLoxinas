@@ -97,7 +97,7 @@ impl Compiler {
                 DataSize::Oword => OpSetLocalOword,
             }
         );
-        self.write_arg_word((slot as u16).to_le_bytes());
+        self.write_arg_dword((slot as u32).to_le_bytes());
         
         self.append_temp_chunk(&mut target);
         

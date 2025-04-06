@@ -50,7 +50,7 @@ impl<'a> VM<'a> {
             {
                 self.print_stack();
                 match disassemble_instruction(instr.clone(), self.chunk, old_ip + 1) {
-                    Ok(temp) => println!("{}", temp.0),
+                    Ok(temp) => println!("{:08X} {}", old_ip, temp.0),
                     Err(err) => return Err(RuntimeError::new(format!("Disassembler threw an error: {}", err))),
                 }
             }
@@ -88,8 +88,40 @@ impl<'a> VM<'a> {
                 
                 self.run_special_function(special_func)?;
             }
-            OpReturn => {
-                return Err(RuntimeError::new("Return instruction".to_string()));
+            OpReturn => {  // 临时充当结束程序的作用
+                return Ok(());
+            }
+            OpJump => {
+                let goto = i32::from_le_bytes(self.read_arg_dword());
+                self.jump(goto);
+            }
+            OpJumpTrue => {
+                let goto = i32::from_le_bytes(self.read_arg_dword());
+                let condition = self.peek_bool();
+                if condition {
+                    self.jump(goto);
+                }
+            }
+            OpJumpTruePop => {
+                let goto = i32::from_le_bytes(self.read_arg_dword());
+                let condition = self.pop_bool();
+                if condition {
+                    self.jump(goto);
+                }
+            }
+            OpJumpFalse => {
+                let goto = i32::from_le_bytes(self.read_arg_dword());
+                let condition = self.peek_bool();
+                if !condition {
+                    self.jump(goto);
+                }
+            }
+            OpJumpFalsePop => {
+                let goto = i32::from_le_bytes(self.read_arg_dword());
+                let condition = self.pop_bool();
+                if !condition {
+                    self.jump(goto);
+                }
             }
             OpLoadConstByte => {
                 let byte = self.read_arg_byte();
@@ -1247,112 +1279,112 @@ impl<'a> VM<'a> {
                 self.push_oword(oword);
             }
             OpGetLocalByte => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let byte = self.get_frame_slot_byte(slot as usize);
                 self.push_byte(byte);
             }
             OpGetLocalWord => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let word = self.get_frame_slot_word(slot as usize);
                 self.push_word(word);
             }
             OpGetLocalDword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let dword = self.get_frame_slot_dword(slot as usize);
                 self.push_dword(dword);
             }
             OpGetLocalQword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let qword = self.get_frame_slot_qword(slot as usize);
                 self.push_qword(qword);
             }
             OpGetLocalOword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let oword = self.get_frame_slot_oword(slot as usize);
                 self.push_oword(oword);
             }
             OpSetLocalByte => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let byte = self.pop_byte();
                 self.set_frame_slot_byte(slot as usize, byte);
             }
             OpSetLocalWord => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let word = self.pop_word();
                 self.set_frame_slot_word(slot as usize, word);
             }
             OpSetLocalDword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let dword = self.pop_dword();
                 self.set_frame_slot_dword(slot as usize, dword);
             }
             OpSetLocalQword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let qword = self.pop_qword();
                 self.set_frame_slot_qword(slot as usize, qword);
             }
             OpSetLocalOword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
+                let slot = u32::from_le_bytes(self.read_arg_dword());
                 let oword = self.pop_oword();
                 self.set_frame_slot_oword(slot as usize, oword);
             }
             OpGetReferenceByte => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let byte = self.get_frame_slot_byte(ref_slot as usize);
                 self.push_byte(byte);
             }
             OpGetReferenceWord => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let word = self.get_frame_slot_word(ref_slot as usize);
                 self.push_word(word);
             }
             OpGetReferenceDword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let dword = self.get_frame_slot_dword(ref_slot as usize);
                 self.push_dword(dword);
             }
             OpGetReferenceQword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let qword = self.get_frame_slot_qword(ref_slot as usize);
                 self.push_qword(qword);
             }
             OpGetReferenceOword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let oword = self.get_frame_slot_oword(ref_slot as usize);
                 self.push_oword(oword);
             }
             OpSetReferenceByte => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let byte = self.pop_byte();
                 self.set_frame_slot_byte(ref_slot as usize, byte);
             }
             OpSetReferenceWord => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let word = self.pop_word();
                 self.set_frame_slot_word(ref_slot as usize, word);
             }
             OpSetReferenceDword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let dword = self.pop_dword();
                 self.set_frame_slot_dword(ref_slot as usize, dword);
             }
             OpSetReferenceQword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let qword = self.pop_qword();
                 self.set_frame_slot_qword(ref_slot as usize, qword);
             }
             OpSetReferenceOword => {
-                let slot = u16::from_le_bytes(self.read_arg_word());
-                let ref_slot = u16::from_le_bytes(self.get_frame_slot_word(slot as usize));
+                let slot = u32::from_le_bytes(self.read_arg_dword());
+                let ref_slot = u32::from_le_bytes(self.get_frame_slot_dword(slot as usize));
                 let oword = self.pop_oword();
                 self.set_frame_slot_oword(ref_slot as usize, oword);
             }

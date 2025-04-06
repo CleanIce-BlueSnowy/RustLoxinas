@@ -35,6 +35,24 @@ impl Compiler {
             return Ok(target);
         }
         
+        // 逻辑运算符需要短路求值，走单独路线
+        if let TokenType::Keyword(TokenKeyword::And | TokenKeyword::Or) = &expr.operator.token_type {
+            target.append(left_code);
+            if let TokenType::Keyword(TokenKeyword::And) = &expr.operator.token_type {
+                // 如果第一个表达式为 false，则整体为 false，短路跳过第二条
+                self.write_code(OpJumpFalse);
+                self.write_arg_dword((right_code.len() as u32 + 1).to_le_bytes());  // 记得留一个 OpPopByte 的位置
+            } else {
+                // 如果第一个表达式为 true，则整体为 true，短路跳过第二条
+                self.write_code(OpJumpTrue);
+                self.write_arg_dword((right_code.len() as u32 + 1).to_le_bytes());
+            }
+            self.write_code(OpPopByte);
+            self.append_temp_chunk(&mut target);
+            target.append(right_code);
+            return Ok(target);
+        }
+        
         // 获取类型并粘合代码
         let this_type = &resolve_res.ope_type;
         let left_type = &left_res.res_type;
@@ -183,6 +201,10 @@ impl Compiler {
                 self.write_code(OpLoadConstDword);
                 self.write_arg_dword((*char as u32).to_le_bytes());
             }
+            Bool(bool) => {
+                self.write_code(OpLoadConstByte);
+                self.write_arg_byte((if *bool { 1u8 } else { 0u8 }).to_le_bytes());
+            }
             _ => unimplemented!("Unsupported literal"),
         }
         
@@ -289,7 +311,7 @@ impl Compiler {
                     }
                 }
             );
-            self.write_arg_word((slot as u16).to_le_bytes());
+            self.write_arg_dword((slot as u32).to_le_bytes());
         }
         
         self.append_temp_chunk(&mut target);

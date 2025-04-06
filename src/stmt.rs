@@ -20,6 +20,8 @@ pub enum Stmt {
     Assign(StmtAssign),
     /// 块语句
     Block(StmtBlock),
+    /// 条件判断语句
+    If(StmtIf),
     /// 临时辅助功能：打印语句
     Print(StmtPrint),
 }
@@ -85,6 +87,15 @@ pub struct StmtBlock {
     pub statements: Vec<Stmt>,
 }
 
+/// 条件判断语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtIf {
+    pub pos: Position,
+    pub if_case: (Expr, Box<Stmt>),
+    pub else_if_cases: Vec<(Expr, Stmt)>,
+    pub else_case: Option<Box<Stmt>>,
+}
+
 /// 临时辅助功能：打印语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtPrint {
@@ -110,6 +121,8 @@ pub trait StmtVisitor<RetType> {
     #[must_use]
     fn visit_block_stmt(&mut self, this: *const Stmt, stmt: &StmtBlock) -> RetType;
     #[must_use]
+    fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> RetType;
+    #[must_use]
     fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> RetType;
 }
 
@@ -124,6 +137,7 @@ impl Stmt {
             Stmt::Init(stmt) => visitor.visit_init_stmt(ptr, stmt),
             Stmt::Assign(stmt) => visitor.visit_assign_stmt(ptr, stmt),
             Stmt::Block(stmt) => visitor.visit_block_stmt(ptr, stmt),
+            Stmt::If(stmt) => visitor.visit_if_stmt(ptr, stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
         };
     }
@@ -141,6 +155,7 @@ macro_rules! stmt_get_pos {
                 Stmt::Init(stmt) => stmt.pos.clone(),
                 Stmt::Assign(stmt) => stmt.pos.clone(),
                 Stmt::Block(stmt) => stmt.pos.clone(),
+                Stmt::If(stmt) => stmt.pos.clone(),
                 Stmt::Print(stmt) => stmt.pos.clone(),
             }
         }

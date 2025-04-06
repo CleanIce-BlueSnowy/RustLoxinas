@@ -1,8 +1,11 @@
 use std::collections::LinkedList;
-use crate::front_compiler::FrontCompiler;
+
+use crate::byte_handler::byte_writer::write_dword;
 use crate::errors::error_types::CompileError;
 use crate::expr_get_pos;
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtInit, StmtLet, StmtPrint, StmtVisitor};
+use crate::front_compiler::FrontCompiler;
+use crate::instr::Instruction;
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor};
 
 impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompiler<'a> {
     fn visit_expr_stmt(&mut self, _this: *const Stmt, stmt: &StmtExpr) -> Result<LinkedList<u8>, Vec<CompileError>> {
@@ -71,6 +74,95 @@ impl<'a> StmtVisitor<Result<LinkedList<u8>, Vec<CompileError>>> for FrontCompile
             Err(errors)
         } else {
             Ok(codes)
+        };
+    }
+
+    fn visit_if_stmt(&mut self, _this: *const Stmt, stmt: &StmtIf) -> Result<LinkedList<u8>, Vec<CompileError>> {
+        let (if_expr_res, if_expr_code) = stmt.if_case.0.accept(self)?;
+        let else_if_expr: Vec<_> = stmt.else_if_cases.iter().map(|(expr, _chunk)| expr.accept(self)).collect::<Result<_, _>>()?;
+        let (else_if_expr_res, mut branch_expr_codes): (Vec<_>, Vec<_>) = else_if_expr.into_iter().unzip();
+
+        self.resolver.resolve_if_stmt(stmt, &if_expr_res, &else_if_expr_res)?;
+
+        // if 语句的编译和分析交替进行（需要调用 self.compile_scope 和 self.resolver 的 enter_scope 与 leave_scope），因此直接在此处编译
+        // 倒序编译技术，方便填写跳转指令的相对跳转参数
+
+        let mut target = LinkedList::new();
+        let mut errors = vec![];
+        let mut end_cnt: u32 = 0;
+        let mut compare_target = None;
+
+        if let Some(else_chunk) = &stmt.else_case {
+            let block_chunk = if let Stmt::Block(temp) = else_chunk.as_ref() { temp } else { panic!("Invalid.") };
+            let mut codes = LinkedList::new();
+
+            self.resolver.enter_scope();
+
+            self.compile_scope(&mut errors, &mut codes, &block_chunk.statements);
+
+            let scope = self.resolver.leave_scope();
+            compare_target = Some(scope.init_vars);
+
+            end_cnt += codes.len() as u32;
+
+            // 在前端插入，并避免复制
+            codes.append(&mut target);
+            target = codes;
+        }
+
+        // 倒序生成，将 if 分支也加入进去，避免重复代码
+        let mut branch_chunks: Vec<_> = stmt.else_if_cases.iter().map(|(_expr, chunk)| chunk).collect();
+        branch_chunks.reverse();
+        branch_chunks.push(stmt.if_case.1.as_ref());
+        branch_expr_codes.reverse();
+        branch_expr_codes.push(if_expr_code);
+        for (expr, chunk) in branch_expr_codes.into_iter().zip(branch_chunks.into_iter()) {
+            let mut expr_code: LinkedList<u8> = expr;  // 避免 building 导致的错误
+            let block_chunk = if let Stmt::Block(temp) = chunk { temp } else { panic!("Invalid.") };
+            let mut codes = LinkedList::new();
+
+            self.resolver.enter_scope();
+
+            self.compile_scope(&mut errors, &mut codes, &block_chunk.statements);
+
+            let scope = self.resolver.leave_scope();
+            if let Some(compare) = &compare_target {  // 判断子代码块一致性
+                if compare != &scope.init_vars {
+                    errors.push(CompileError::new(&block_chunk.pos, "Mismatched initialization across branches.".to_string()));
+                }
+            } else {
+                compare_target = Some(scope.init_vars);
+            }
+            
+            // 分支结尾跳转
+            if end_cnt != 0 {
+                codes.push_back(Instruction::OpJump.into());
+                write_dword(&mut codes, end_cnt.to_le_bytes());
+            }
+            
+            // 分支不符合时跳转
+            let else_cnt = codes.len() as u32;
+            let mut temp: LinkedList<_> = [Instruction::OpJumpFalsePop.into()].into_iter().collect();
+            write_dword(&mut temp, else_cnt.to_le_bytes());
+            temp.append(&mut codes);
+            codes = temp;
+            
+            // 写入判断条件
+            expr_code.append(&mut codes);
+            codes = expr_code;
+            
+            // 更新结尾跳转
+            end_cnt += codes.len() as u32;
+            
+            // 写入代码
+            codes.append(&mut target);
+            target = codes;
+        }
+
+        return if !errors.is_empty() {
+            Err(errors)
+        } else {
+            Ok(target)
         };
     }
 
