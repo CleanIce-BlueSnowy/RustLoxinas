@@ -25,6 +25,7 @@ pub enum TokenType {
     Operator(TokenOperator),
     Keyword(TokenKeyword),
     Identifier(String),
+    Tag(String),
     Integer(TokenInteger),
     Float(TokenFloat),
     String(String),
@@ -91,6 +92,7 @@ pub enum TokenKeyword {
     Print,
     Shl,
     Shr,
+    Break,
 }
 
 /// 整型令牌

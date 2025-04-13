@@ -1,7 +1,5 @@
 //! 编译器——辅助功能模块
 
-use std::collections::LinkedList;
-
 use crate::byte_handler::byte_writer::{write_byte, write_dword, write_oword, write_qword, write_word};
 use crate::compiler::Compiler;
 use crate::instr::{Instruction, SpecialFunction};
@@ -468,7 +466,7 @@ impl Compiler {
         write_qword(&mut self.temp_chunk, qword);
     }
     
-    /// 添加扩展整数参数
+    /// 添加八字参数
     #[inline]
     pub fn write_arg_oword(&mut self, oword: [u8; 16]) {
         write_oword(&mut self.temp_chunk, oword);
@@ -481,7 +479,7 @@ impl Compiler {
     }
     
     /// 附加临时代码
-    pub fn append_temp_chunk(&mut self, target: &mut LinkedList<u8>) {
+    pub fn append_temp_chunk(&mut self, target: &mut Vec<u8>) {
         target.append(&mut self.temp_chunk);
     }
 }

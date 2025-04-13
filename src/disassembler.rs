@@ -1,12 +1,13 @@
 //! 反汇编模块
 
 use std::fs::File;
-use std::io::Read;
+use std::{io, process};
+use std::io::{Read, Write};
 use crate::byte_handler::byte_reader::{read_byte, read_dword, read_oword, read_qword, read_word};
 use crate::instr::{Instruction, SpecialFunction};
 
 /// 反汇编字节码文件
-pub fn disassemble_file(path: &str) -> Result<(), String> {
+pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), String> {
     let mut file;
     match File::open(path) {
         Ok(temp) => file = temp,
@@ -18,14 +19,17 @@ pub fn disassemble_file(path: &str) -> Result<(), String> {
     }
     
     // 反汇编字节码
-    disassemble_chunk("<main>", &buffer);
+    if let Err(err) = disassemble_chunk("<main>", &buffer, output_file) {
+        eprintln!("Cannot write to file: {}", err);
+        process::exit(1);
+    }
     
     return Ok(());
 }
 
 /// 反汇编代码块
-fn disassemble_chunk(name: &str, chunk: &[u8]) {
-    println!("====== Chunk {} ======", name);
+fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> io::Result<()> {
+    writeln!(output_file, "====== Chunk {} ======", name)?;
     let mut offset = 0usize;  // 之后打印指令地址使用
     while offset < chunk.len() {
         let old_offset = offset;
@@ -36,24 +40,26 @@ fn disassemble_chunk(name: &str, chunk: &[u8]) {
                 match disassemble_instruction(instr, chunk, offset) {  // 反编译单条指令
                     Ok((result, new_offset)) => {
                         offset = new_offset;
-                        println!("{:08X} | {}", old_offset, result);  // 打印指令
+                        writeln!(output_file, "{:08X} | {}", old_offset, result)?;  // 打印指令
                     }
                     Err(err) => {
                         eprintln!("Disassemble Error: {}", err);
-                        return;
+                        return Ok(());
                     }
                 }
             } else {
                 eprintln!("Disassemble Error: Invalid instruction '{:02X}'", instr_byte);
-                return;
+                return Ok(());
             }
         }
     }
-    print!("======");
+    write!(output_file, "======")?;
     for _i in 0..(name.len() + 8) {
-        print!("=");
+        write!(output_file, "=")?;
     }
-    println!("======");
+    writeln!(output_file, "======")?;
+    
+    return Ok(());
 }
 
 /// 反汇编指令
@@ -62,6 +68,7 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
+        OpStackExtend => with_dword("StackExtend", "", chunk, offset),
         OpStackShrink => with_dword("StackShrink", "", chunk, offset),
         OpJump => jump("Jump", "", chunk, offset),
         OpJumpTrue => jump("Jump", "True", chunk, offset),

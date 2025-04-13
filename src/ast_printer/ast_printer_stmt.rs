@@ -3,7 +3,7 @@
 use indexmap::indexmap;
 
 use crate::ast_printer::{AstPrinter, TreeChild};
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor, StmtWhile};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtBreak, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtVisitor, StmtWhile};
 
 #[cfg(debug_assertions)]
 impl StmtVisitor<String> for AstPrinter {
@@ -103,16 +103,16 @@ impl StmtVisitor<String> for AstPrinter {
 
     fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> String {
         let mut children = indexmap! {
-            "if_expr" => TreeChild::Expr(&stmt.if_case.0),
-            "if_chunk" => TreeChild::Stmt(&stmt.if_case.1),
+            "if_expr" => TreeChild::Expr(&stmt.if_branch.0),
+            "if_chunk" => TreeChild::Stmt(&stmt.if_branch.1),
         };
 
-        for (expr, chunk) in &stmt.else_if_cases {
+        for (expr, chunk) in &stmt.else_if_branch {
             children.insert("else_if_expr", TreeChild::Expr(expr));
             children.insert("else_if_chunk", TreeChild::Stmt(chunk));
         }
         
-        if let Some(chunk) = &stmt.else_case {
+        if let Some(chunk) = &stmt.else_branch {
             children.insert("else_chunk", TreeChild::Stmt(chunk));
         }
         
@@ -127,16 +127,39 @@ impl StmtVisitor<String> for AstPrinter {
     }
 
     fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> String {
-        let children = indexmap! {
+        let mut children = indexmap! {
             "condition" => TreeChild::Expr(&stmt.condition),
             "chunk" => TreeChild::Stmt(&stmt.chunk),
         };
+        
+        if let Some(tag_name) = &stmt.tag {
+            children.insert("tag", TreeChild::Tag(&tag_name));
+        }
         
         return format!(
             "STMT {:?} {}",
             this,
             self.parenthesize(
                 "While",
+                children,
+            )
+        );
+    }
+
+    fn visit_break_stmt(&mut self, this: *const Stmt, stmt: &StmtBreak) -> String {
+        let children = if let Some(tag_name) = &stmt.tag {
+            indexmap! {
+                "tag" => TreeChild::Tag(&tag_name),
+            }
+        } else {
+            indexmap!()
+        };
+        
+        return format!(
+            "STMT {:?} {}",
+            this,
+            self.parenthesize(
+                "Break",
                 children,
             )
         );

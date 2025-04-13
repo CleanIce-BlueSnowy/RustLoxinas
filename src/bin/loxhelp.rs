@@ -23,7 +23,7 @@ fn main() {
             }
         }
     );
-    command.arg("help");
+    command.arg("--help");
     
     if args.len() >= 3 {
         command.args(&args[2..]);

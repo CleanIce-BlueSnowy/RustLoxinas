@@ -23,18 +23,26 @@ fn main() {
     }
 
     if args.len() < 2 {
-        println!("Usage: loxinas compile (or loxc) <source file> [other args]");
+        println!("Usage: loxinas compile (or loxc) <source file> [arguments]");
         println!("[help: Type 'loxinas help compile' or 'loxc --help' to get more help information]");
         return;
     }
 
     if "--help" == &args[1] {
-        unimplemented!("Help information is not implemented!");
+        println!("HELP: The compiler of Loxinas. It can compile the source code to Loxinas byte-code.");
+        println!("Usage: loxinas compile (or loxc) <source file> [arguments]");
+        println!("---------------");
+        println!("<source file>: Loxinas source code file (.lox file)");
+        println!("Arguments:");
+        println!("    --output | -o <output file> : Write the byte-code to <output file> (.loxc file by default).");
+        println!("        If you don't set this argument, the compiler will write the byte-code to the file whose stem name is the same as <source file> with extension '.loxc'.");
+        return;
     }
 
     let source_path: &str = &args[1];
     let mut output_path: Option<&str> = None;
     let mut i = 2usize;
+
     while i < args.len() {
         let arg: &str = &args[i];
         match arg {
@@ -80,7 +88,12 @@ fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
 
     // 写入目标文件
     let output_file_path = if let Some(output_path) = output_path {  // 用户提供了输出文件
-        output_path
+        let file_path = Path::new(output_path);
+        if let None = file_path.extension() {
+            &format!("{}.loxc", output_path)
+        } else {
+            output_path
+        }
     } else {  // 默认输出文件
         let file_path = Path::new(path);
         let parent = file_path.parent().unwrap_or(Path::new("."));
@@ -131,7 +144,7 @@ fn compile_code(source: String) -> Result<Vec<u8>, String> {
     }
 
     // 前端编译
-    let mut front_compiler = FrontCompiler::new(&statements);
+    let front_compiler = FrontCompiler::new(&statements);
 
     return match front_compiler.compile() {
         Ok(codes) => Ok(codes),

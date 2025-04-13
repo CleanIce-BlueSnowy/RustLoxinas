@@ -16,6 +16,7 @@ pub enum TreeChild<'a> {
     StmtList(&'a [Stmt]),
     ExprList(&'a [Expr]),
     Identifier(&'a str),
+    Tag(&'a str),
 }
 
 /// 打印表达式的抽象语法树
@@ -97,6 +98,7 @@ impl AstPrinter {
                     res
                 }
                 TreeChild::Identifier(identifier) => identifier.to_string(),
+                TreeChild::Tag(tag_name) => format!("@{}", tag_name),
             };
             res.push_str(&format!("    {name}: "));
             let mut first_line = true;

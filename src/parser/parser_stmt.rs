@@ -5,7 +5,7 @@ use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::expr::Expr;
 use crate::parser::Parser;
 use crate::position::Position;
-use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtWhile};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtBreak, StmtExpr, StmtIf, StmtInit, StmtLet, StmtPrint, StmtWhile};
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenParen::*;
@@ -22,6 +22,8 @@ impl Parser {
             self.if_stmt()
         } else if parser_can_match!(self, Keyword(While)) {
             self.while_stmt()
+        } else if parser_can_match!(self, Keyword(Break)) {
+            self.break_stmt()
         } else if parser_can_match!(self, Keyword(Print)) {
             self.print_stmt()
         } else if parser_can_match!(self, Paren(LeftBrace)) {
@@ -155,15 +157,15 @@ impl Parser {
                 
                 let else_if_stmt = self.if_stmt()?;  // 递归解析，但线性拼接
                 let mut else_if = if let Stmt::If(temp) = else_if_stmt { temp } else { panic!("Invalid.") };
-                else_if_cases.push((else_if.if_case.0, *else_if.if_case.1));
-                else_if_cases.append(&mut else_if.else_if_cases);
+                else_if_cases.push((else_if.if_branch.0, *else_if.if_branch.1));
+                else_if_cases.append(&mut else_if.else_if_branch);
                 let final_pos = self.get_final_pos();
                 
                 Ok(Stmt::If(StmtIf {
                     pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
-                    if_case: (if_expr, Box::new(if_chunk)),
-                    else_if_cases,
-                    else_case: else_if.else_case,
+                    if_branch: (if_expr, Box::new(if_chunk)),
+                    else_if_branch: else_if_cases,
+                    else_branch: else_if.else_branch,
                 }))
             } else {
                 let keyword_else = self.previous();
@@ -174,9 +176,9 @@ impl Parser {
                 
                 Ok(Stmt::If(StmtIf {
                     pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
-                    if_case: (if_expr, Box::new(if_chunk)),
-                    else_if_cases: vec![],
-                    else_case: Some(Box::new(else_chunk)),
+                    if_branch: (if_expr, Box::new(if_chunk)),
+                    else_if_branch: vec![],
+                    else_branch: Some(Box::new(else_chunk)),
                 }))
             }
         } else {
@@ -184,9 +186,9 @@ impl Parser {
             
             Ok(Stmt::If(StmtIf {
                 pos: Position::new(if_pos.start_line, if_pos.start_idx, final_pos.end_line, final_pos.end_idx),
-                if_case: (if_expr, Box::new(if_chunk)),
-                else_if_cases: vec![],
-                else_case: None,
+                if_branch: (if_expr, Box::new(if_chunk)),
+                else_if_branch: vec![],
+                else_branch: None,
             }))
         };
     }
@@ -194,6 +196,14 @@ impl Parser {
     fn while_stmt(&mut self) -> SyntaxResult<Stmt> {
         let keyword_while = self.previous();
         let while_pos = Position::new(keyword_while.line, keyword_while.start, keyword_while.line, keyword_while.end);
+        
+        // 处理标记
+        let tag = if let Tag(tag_name) = &self.peek().token_type {
+            self.advance();
+            Some(tag_name.clone())
+        } else {
+            None
+        };
         
         let condition = self.parse_expression()?;
         let condition_pos = expr_get_pos!(&condition);
@@ -207,6 +217,29 @@ impl Parser {
             pos: Position::new(while_pos.start_line, while_pos.start_idx, final_pos.end_line, final_pos.end_idx),
             condition,
             chunk: Box::new(chunk),
+            tag,
+        }));
+    }
+    
+    fn break_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let keyword_break = self.previous();
+        let break_pos = Position::new(keyword_break.line, keyword_break.start, keyword_break.line, keyword_break.end);
+
+        // 处理标记
+        let (tag, err_pos) = if let Tag(tag_name) = &self.peek().token_type {
+            let token = self.advance();
+            (Some(tag_name.clone()), Position::new(token.line, token.end, token.line, token.end + 1))
+        } else {
+            (None, Position::new(break_pos.end_line, break_pos.end_idx, break_pos.end_line, break_pos.end_idx + 1))
+        };
+        
+        parser_consume!(self, Operator(Semicolon), &err_pos, "Expect ';' after 'break.".to_string())?;
+        
+        let final_pos = self.get_final_pos();
+        
+        return Ok(Stmt::Break(StmtBreak {
+            pos: Position::new(break_pos.start_line, break_pos.start_idx, final_pos.end_line, final_pos.end_idx),
+            tag,
         }));
     }
     

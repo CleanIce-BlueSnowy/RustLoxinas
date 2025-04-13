@@ -24,6 +24,8 @@ pub enum Stmt {
     If(StmtIf),
     /// 条件循环语句
     While(StmtWhile),
+    /// 退出循环语句
+    Break(StmtBreak),
     /// 临时辅助功能：打印语句
     Print(StmtPrint),
 }
@@ -93,9 +95,9 @@ pub struct StmtBlock {
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtIf {
     pub pos: Position,
-    pub if_case: (Expr, Box<Stmt>),
-    pub else_if_cases: Vec<(Expr, Stmt)>,
-    pub else_case: Option<Box<Stmt>>,
+    pub if_branch: (Expr, Box<Stmt>),
+    pub else_if_branch: Vec<(Expr, Stmt)>,
+    pub else_branch: Option<Box<Stmt>>,
 }
 
 /// 条件循环语句
@@ -104,6 +106,14 @@ pub struct StmtWhile {
     pub pos: Position,
     pub condition: Expr,
     pub chunk: Box<Stmt>,
+    pub tag: Option<String>,
+}
+
+/// 退出循环语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtBreak {
+    pub pos: Position,
+    pub tag: Option<String>,
 }
 
 /// 临时辅助功能：打印语句
@@ -135,6 +145,8 @@ pub trait StmtVisitor<RetType> {
     #[must_use]
     fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> RetType;
     #[must_use]
+    fn visit_break_stmt(&mut self, this: *const Stmt, stmt: &StmtBreak) -> RetType;
+    #[must_use]
     fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> RetType;
 }
 
@@ -151,6 +163,7 @@ impl Stmt {
             Stmt::Block(stmt) => visitor.visit_block_stmt(ptr, stmt),
             Stmt::If(stmt) => visitor.visit_if_stmt(ptr, stmt),
             Stmt::While(stmt) => visitor.visit_while_stmt(ptr, stmt),
+            Stmt::Break(stmt) => visitor.visit_break_stmt(ptr, stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
         };
     }
@@ -170,6 +183,7 @@ macro_rules! stmt_get_pos {
                 Stmt::Block(stmt) => stmt.pos.clone(),
                 Stmt::If(stmt) => stmt.pos.clone(),
                 Stmt::While(stmt) => stmt.pos.clone(),
+                Stmt::Break(stmt) => stmt.pos.clone(),
                 Stmt::Print(stmt) => stmt.pos.clone(),
             }
         }

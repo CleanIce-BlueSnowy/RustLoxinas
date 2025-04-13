@@ -2,6 +2,7 @@
 
 use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
+use crate::expr::Expr;
 use crate::expr_get_pos;
 use crate::resolver::{ExprResolveRes, Resolver, Variable};
 use crate::stmt::{StmtAssign, StmtIf, StmtInit, StmtLet, StmtWhile};
@@ -16,7 +17,7 @@ impl Resolver {
     /// 分析变量定义语句
     pub fn resolve_let_stmt(&mut self,
                             stmt: &StmtLet,
-                            init_expr_res: Option<&ExprResolveRes>) -> CompileResult<ValueType> {
+                            init_expr_res: Option<&ExprResolveRes>) -> CompileResult<(ValueType, usize)> {
         // 定义变量，赋值以避免多次可变引用
         let mut variable = self.find_variable(&stmt.name).unwrap().clone();
         variable.defined = true;
@@ -49,7 +50,7 @@ impl Resolver {
         variable.slot = self.now_slot;
         let temp_size = &variable.var_type.as_ref().unwrap().get_size();
         self.update_slot(if stmt.is_ref {
-            &DataSize::Word
+            &DataSize::Dword
         } else {
             temp_size
         });
@@ -67,19 +68,17 @@ impl Resolver {
                 if !Self::check_left_value(expr) {
                     return Err(CompileError::new(&expr_get_pos!(expr), "Expect a left value expression.".to_string()));
                 }
-            } else {
-                return Err(CompileError::new(&stmt.name_pos, "Must provide an initialization expression.".to_string()));
             }
         }
         
-        return Ok(target_variable.var_type.clone().unwrap());
+        return Ok((target_variable.var_type.clone().unwrap(), variable.slot));
     }
     
     /// 分析变量延迟初始化语句
     pub fn resolve_init_stmt(&mut self, 
                              stmt: &StmtInit, 
                              init_expr_res: &ExprResolveRes,
-                             in_loop: bool) -> CompileResult<(ValueType, usize)> {
+                             in_loop: bool) -> CompileResult<(ValueType, usize, Option<usize>)> {
         if let None = self.find_variable(&stmt.name) {
             return Err(CompileError::new(&stmt.name_pos, "Undefined variable.".to_string()));
         };
@@ -103,6 +102,18 @@ impl Resolver {
         variable.initialized = true;
         let ptr = variable as *mut Variable;
         // 上一个 variable 的作用域在此截止
+
+        // 引用变量的初始化，需要写入左值的偏移地址
+        let right_slot = if variable.is_ref {
+            if let Expr::Variable(var) = &stmt.init {
+                let right_var = self.find_variable(&var.name).unwrap();
+                Some(right_var.slot)
+            } else {
+                return Err(CompileError::new(&expr_get_pos!(&stmt.init), "Expect a lvalue.".to_string()));
+            }
+        } else {
+            None
+        };
         
         // 只记录外部作用域的
         if let None = self.find_variable_in_current_scope(&stmt.name) {
@@ -116,7 +127,7 @@ impl Resolver {
         if !Self::check_type_convert(&init_expr_res.res_type, &variable.var_type.as_ref().unwrap()) {
             return Err(CompileError::new(&expr_get_pos!(&stmt.init), format!("Cannot use 'as' to convert '{}' to '{}'.", init_expr_res.res_type, variable.var_type.as_ref().unwrap())));
         }
-        return Ok((variable.var_type.as_ref().unwrap().clone(), variable.slot));
+        return Ok((variable.var_type.as_ref().unwrap().clone(), variable.slot, right_slot));
     }
     
     /// 分析变量赋值语句
@@ -147,10 +158,10 @@ impl Resolver {
         let mut errors = vec![];
 
         if !matches!(if_expr_res.res_type, ValueType::Bool) {
-            errors.push(CompileError::new(&expr_get_pos!(&stmt.if_case.0), "The expression must return a bool value.".to_string()));
+            errors.push(CompileError::new(&expr_get_pos!(&stmt.if_branch.0), "The expression must return a bool value.".to_string()));
         }
 
-        for ((expr, _chunk), expr_res) in stmt.else_if_cases.iter().zip(else_if_expr_res.iter()) {
+        for ((expr, _chunk), expr_res) in stmt.else_if_branch.iter().zip(else_if_expr_res.iter()) {
             if !matches!(expr_res.res_type, ValueType::Bool) {
                 errors.push(CompileError::new(&expr_get_pos!(expr), "The expression must return a bool value".to_string()));
             }

@@ -139,6 +139,7 @@ impl<'a> TokenScanner<'a> {
             '%' => self.add_token(TokenType::Operator(Mod)),
             '"' => self.scan_string(false)?,
             '\'' => self.scan_char()?,
+            '@' => self.scan_tag()?,
             _ if self.is_identifier_char(ch, true) => {  // 标识符、关键字、字符串前缀
                 while self.is_identifier_char(self.peek(), false) {
                     self.advance();
@@ -272,6 +273,7 @@ impl<'a> TokenScanner<'a> {
             "print" => Some(Print),
             "shl" => Some(Shl),
             "shr" => Some(Shr),
+            "break" => Some(Break),
             _ => None,
         }
     }
@@ -502,6 +504,24 @@ impl<'a> TokenScanner<'a> {
         } else {
             self.throw_error("Unterminated character.")
         }
+    }
+    
+    /// 扫描标签
+    fn scan_tag(&mut self) -> LexicalResult<()> {
+        self.advance();  // '@'
+        let mut ch = self.peek();
+        if !self.is_identifier_char(ch, true) {
+            self.throw_error("Expect a tag name.")?;
+        }
+        self.advance();
+        ch = self.peek();
+        while self.is_identifier_char(ch, false) {
+            self.advance();
+            ch = self.peek();
+        }
+        let tag = self.get_whole_word();
+        self.add_token(TokenType::Tag(tag[1..].to_string()));
+        return Ok(());
     }
 
     /// 转义字符串

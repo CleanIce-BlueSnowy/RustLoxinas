@@ -91,6 +91,10 @@ impl<'a> VM<'a> {
             OpReturn => {  // 临时充当结束程序的作用
                 return Ok(());
             }
+            OpStackExtend => {
+                let length = u32::from_le_bytes(self.read_arg_dword());
+                self.stack_extend(length);
+            }
             OpStackShrink => {
                 let length = u32::from_le_bytes(self.read_arg_dword());
                 self.stack_shrink(length);

@@ -14,6 +14,12 @@ impl<'a> VM<'a> {
         let old_length = self.vm_stack.len();
         self.vm_stack.truncate(old_length - length as usize);
     }
+
+    #[inline]
+    pub fn stack_extend(&mut self, length: u32) {
+        let old_length = self.vm_stack.len();
+        self.vm_stack.resize(old_length + length as usize, 0x00);
+    }
     
     #[inline]
     pub fn push_byte(&mut self, byte: [u8; 1]) {

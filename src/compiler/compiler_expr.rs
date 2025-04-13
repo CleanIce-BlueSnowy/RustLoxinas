@@ -1,7 +1,5 @@
 //! 编译器——表达式模块
 
-use std::collections::LinkedList;
-
 use crate::compiler::Compiler;
 use crate::data::DataSize;
 use crate::errors::error_types::CompileResult;
@@ -15,11 +13,11 @@ impl Compiler {
     pub fn compile_binary_expr(&mut self, 
                                expr: &ExprBinary,
                                resolve_res: &ExprResolveRes,
-                               left_code: &mut LinkedList<u8>,
+                               left_code: &mut Vec<u8>,
                                left_res: &ExprResolveRes,
-                               right_code: &mut LinkedList<u8>,
-                               right_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
-        let mut target = LinkedList::new();
+                               right_code: &mut Vec<u8>,
+                               right_res: &ExprResolveRes) -> CompileResult<Vec<u8>> {
+        let mut target = vec![];
         
         // 位移走单独路线
         if let TokenType::Keyword(TokenKeyword::Shl | TokenKeyword::Shr) = &expr.operator.token_type {
@@ -126,17 +124,17 @@ impl Compiler {
 
     /// 编译分组表达式
     pub fn compile_grouping_expr(&mut self,
-                                 inside_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
-        let mut target = LinkedList::new();
+                                 inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
+        let mut target = vec![];
         target.append(inside_code);
         return Ok(target);
     }
 
     /// 编译字面量表达式
     pub fn compile_literal_expr(&mut self,
-                                expr: &ExprLiteral) -> CompileResult<LinkedList<u8>> {
+                                expr: &ExprLiteral) -> CompileResult<Vec<u8>> {
         use crate::data::Data::*;
-        let mut target = LinkedList::new();
+        let mut target = vec![];
         
         match &expr.value {
             Integer(integer) => {
@@ -216,9 +214,9 @@ impl Compiler {
     /// 编译单元运算表达式
     pub fn compile_unary_expr(&mut self,
                               expr: &ExprUnary,
-                              right_code: &mut LinkedList<u8>,
-                              right_res: &ExprResolveRes) -> CompileResult<LinkedList<u8>> {
-        let mut target = LinkedList::new();
+                              right_code: &mut Vec<u8>,
+                              right_res: &ExprResolveRes) -> CompileResult<Vec<u8>> {
+        let mut target = vec![];
         
         let expr_type = &right_res.res_type;
         target.append(right_code);
@@ -247,9 +245,9 @@ impl Compiler {
     /// 编译转换表达式
     pub fn compile_as_expr(&mut self,
                            resolve_res: &ExprResolveRes,
-                           inside_code: &mut LinkedList<u8>) -> CompileResult<LinkedList<u8>> {
+                           inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
         // 直接计算并转换
-        let mut target = LinkedList::new();
+        let mut target = vec![];
         let ope_type = &resolve_res.ope_type;
         let res_type = &resolve_res.res_type;
         target.append(inside_code);
@@ -265,8 +263,8 @@ impl Compiler {
                                  slot: usize, 
                                  in_assign: bool,
                                  in_ref_let: bool,
-                                 is_ref: bool) -> CompileResult<LinkedList<u8>> {
-        let mut target = LinkedList::new();
+                                 is_ref: bool) -> CompileResult<Vec<u8>> {
+        let mut target = vec![];
         
         // 引用中，直接返回偏移量
         if in_ref_let {

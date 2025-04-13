@@ -3,6 +3,7 @@
 use std::{env, process};
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use RustLoxinas::errors::print_runtime_error;
 use RustLoxinas::vm::VM;
 
@@ -15,16 +16,30 @@ fn main() {
     }
 
     if args.len() < 2 {
-        println!("Usage: loxinas run (or loxr) <byte code file> [other args]");
+        println!("Usage: loxinas run (or loxr) <source file> [other args]");
         println!("[help: Type 'loxinas help run' or 'loxr --help' to get more help information]");
         return;
     }
 
     if "--help" == &args[1] {
-        unimplemented!("Help information is not implemented!");
+        println!("Usage: loxinas run (or loxr) <source file> [other args]");
+        println!("---------------");
+        println!("<source file>: Loxinas byte-code file (.loxc file)");
+        println!("    If you only type the stem name, the extension name is '.loxc' by default.");
+        println!("Arguments:");
+        println!("    (None Yet)");
+        return;
     }
     
-    let file_path: &str = &args[1];
+    let file_path: &str = {
+        let path = Path::new(&args[1]);
+        if let None = path.extension() {
+            &format!("{}.loxc", args[1])
+        } else {
+            &args[1]
+        }
+    };
+    
     // 启动虚拟机运行
     if let Err(err) = run_file(file_path) {
         eprintln!("{}", err);
