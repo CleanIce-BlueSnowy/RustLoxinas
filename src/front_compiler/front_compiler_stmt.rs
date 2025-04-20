@@ -313,6 +313,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
 
     fn visit_for_stmt(&mut self, _this: *const Stmt, stmt: &StmtFor) -> CompileResultList<()> {
         self.resolver.enter_scope();  // 保护作用域
+        let protect_scope_before_slot = self.resolver.now_slot;  // 保护作用域的
         self.resolver.predefine(slice::from_ref(&stmt.init))?;
 
         stmt.init.accept(self)?;  // 编译初始化语句
@@ -384,9 +385,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
 
         // 分配与释放循环空间
         let memory_used = after_slot - before_slot;
+        let protect_scope_after_slot = self.resolver.now_slot;
+        let protect_scope_memory_used = protect_scope_after_slot - protect_scope_before_slot;  // 保护作用于使用的空间
 
         self.write_code(OpStackShrink);
-        self.write_arg_dword((memory_used as u32).to_le_bytes());
+        self.write_arg_dword(((memory_used + protect_scope_memory_used) as u32).to_le_bytes());
         self.codes[alloc_location..(alloc_location + 4)].copy_from_slice(&(memory_used as u32).to_le_bytes());
 
         self.resolver.leave_scope();  // 保护作用域
