@@ -13,6 +13,7 @@ pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), S
         Ok(temp) => file = temp,
         Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
     }
+    
     let mut buffer = vec![];
     if let Err(err) = file.read_to_end(&mut buffer) {
         return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
@@ -31,11 +32,13 @@ pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), S
 fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> io::Result<()> {
     writeln!(output_file, "====== Chunk {} ======", name)?;
     let mut offset = 0usize;  // 之后打印指令地址使用
+    
     while offset < chunk.len() {
         let old_offset = offset;
         if let Ok((new_instr, new_offset)) = read_byte(chunk, offset) {  // 读取下一个字节码指令
             offset = new_offset;
             let instr_byte = u8::from_le_bytes(new_instr);
+            
             if let Ok(instr) = Instruction::try_from(instr_byte) {
                 match disassemble_instruction(instr, chunk, offset) {  // 反编译单条指令
                     Ok((result, new_offset)) => {
@@ -53,6 +56,7 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
             }
         }
     }
+    
     write!(output_file, "======")?;
     for _i in 0..(name.len() + 8) {
         write!(output_file, "=")?;
@@ -65,6 +69,7 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
 /// 反汇编指令
 pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     use crate::instr::Instruction::*;
+    
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
@@ -75,11 +80,6 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
         OpJumpTruePop => jump("Jump", "True & Pop", chunk, offset),
         OpJumpFalse => jump("Jump", "False", chunk, offset),
         OpJumpFalsePop => jump("Jump", "False & Pop", chunk, offset),
-        OpLoadConstByte => const_byte("LoadConst", "Byte", chunk, offset),
-        OpLoadConstWord => const_word("LoadConst", "Word", chunk, offset),
-        OpLoadConstDword => const_dword("LoadConst", "Dword", chunk, offset),
-        OpLoadConstQword => const_qword("LoadConst", "Qword", chunk, offset),
-        OpLoadConstOword => const_oword("LoadConst", "Oword", chunk, offset),
         OpSignExtendByteToWord => Ok(simple("SignExtend", "Byte -> Word", chunk, offset)),
         OpSignExtendWordToDword => Ok(simple("SignExtend", "Word -> Dword", chunk, offset)),
         OpSignExtendDwordToQword => Ok(simple("SignExtend", "Dword -> Qword", chunk, offset)),
@@ -417,6 +417,7 @@ fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String,
 #[inline]
 fn parse_special_function(instr: &str, special_func: SpecialFunction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
     use crate::instr::SpecialFunction::*;
+    
     match special_func {
         PrintByte => Ok(simple(instr, "Print Byte", chunk, offset)),
         PrintSByte => Ok(simple(instr, "Print SByte", chunk, offset)),

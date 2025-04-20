@@ -11,6 +11,7 @@ use RustLoxinas::disassembler::disassemble_file;
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Loxinas 1.0.0 alpha [Developing] {{Disassembler}}");
+    
     #[cfg(debug_assertions)]
     {
         println!("--- Debug Mode ---");
@@ -47,19 +48,20 @@ fn main() {
                 }
                 i += 1;
                 let file_path = Path::new(&args[i]);
-                file = Some(match File::create(
-                    if let None = file_path.extension() {
-                        format!("{}.loxa", &args[i])
-                    } else {
-                        args[i].clone()
-                    }
-                ) {
-                    Ok(temp) => temp,
-                    Err(err) => {
-                        eprintln!("Cannot open output file '{}'! Error message: {}", args[i], err);
-                        process::exit(1);
-                    }
-                });
+                file = Some(
+                    match File::create(
+                        if let None = file_path.extension() {
+                            format!("{}.loxa", &args[i])
+                        } else {
+                            args[i].clone()
+                        }
+                    ) {
+                        Ok(temp) => temp,
+                        Err(err) => {
+                            eprintln!("Cannot open output file '{}'! Error message: {}", args[i], err);
+                            process::exit(1);
+                        }
+                    });
             }
             _ => {
                 eprintln!("Unknown arg: '{}'", arg);

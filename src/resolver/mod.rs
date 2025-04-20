@@ -36,6 +36,7 @@ impl Resolver {
     fn init_types() -> HashMap<String, ValueType> {
         use crate::types::ValueIntegerType::*;
         use crate::types::ValueFloatType::*;
+        
         hashmap! {
             "char".to_string() => ValueType::Char,
             "bool".to_string() => ValueType::Bool,
@@ -64,6 +65,7 @@ impl Resolver {
             match &token.token_type {
                 TokenType::Operator(operator) => {
                     use crate::tokens::TokenOperator::*;
+                    
                     match operator {
                         Plus => "+",
                         Minus => "-",
@@ -87,6 +89,14 @@ impl Resolver {
                         Caret => "^",
                         Mod => "%",
                         DoubleColon => "::",
+                        PlusEqual => "+=",
+                        MinusEqual => "-=",
+                        StarEqual => "*=",
+                        SlashEqual => "/=",
+                        AndEqual => "&=",
+                        PipeEqual => "|=",
+                        CaretEqual => "^=",
+                        ModEqual => "%=",
                     }
                 }
                 TokenType::Keyword(operator) => {
@@ -97,10 +107,10 @@ impl Resolver {
                         Not => "not",
                         Shl => "shl",
                         Shr => "shr",
-                        _ => panic!("Invalid operator"),
+                        _ => unreachable!("Invalid operator"),
                     }
                 }
-                _ => panic!("Invalid operator"),
+                _ => unreachable!("Invalid operator"),
             }
         )
     }
@@ -119,7 +129,10 @@ pub struct ExprResolveRes {
 impl ExprResolveRes {
     #[must_use]
     pub fn new(expr_type: ValueType, ope_type: ValueType) -> Self {
-        Self { res_type: expr_type, ope_type }
+        Self { 
+            res_type: expr_type, 
+            ope_type,
+        }
     }
 }
 
@@ -144,7 +157,14 @@ pub struct Variable {
 impl Variable {
     #[must_use]
     pub fn new(define_stmt: *const Stmt, defined: bool, initialized: bool, slot: usize, var_type: Option<ValueType>, is_ref: bool) -> Self {
-        Self { define_stmt, defined, initialized, slot, var_type, is_ref }
+        Self { 
+            define_stmt, 
+            defined, 
+            initialized, 
+            slot, 
+            var_type, 
+            is_ref,
+        }
     }
 }
 
@@ -162,7 +182,7 @@ pub struct Scope {
 impl Scope {
     #[must_use]
     fn new(now_slot: usize) -> Self {
-        Scope {
+        Self {
             variables: hashmap!(),
             top_slot: now_slot,
             init_vars: BTreeSet::new(),

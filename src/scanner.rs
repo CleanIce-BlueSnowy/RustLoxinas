@@ -2,7 +2,7 @@
 
 use std::num;
 use std::rc::Rc;
-use crate::errors::error_types::{LexicalError, LexicalResult};
+use crate::errors::error_types::{LexicalError, LexicalResult, LexicalResultList};
 use crate::position::Position;
 use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
 use crate::tokens::TokenParen::*;
@@ -33,14 +33,22 @@ pub struct TokenScanner<'a> {
 impl<'a> TokenScanner<'a> {
     #[must_use]
     pub fn new(source: &'a str) -> Self {
-        Self { source, tokens: vec![], start: 0, current: 0, line: 1, scanned_chars: 0, chars: vec![] }
+        Self {
+            source,
+            tokens: vec![],
+            start: 0,
+            current: 0,
+            line: 1,
+            scanned_chars: 0,
+            chars: vec![],
+        }
     }
 
     /** 扫描所有令牌并获取令牌
     # 警告
     这个函数将会移动 `self`！
      */
-    pub fn scan_tokens(mut self) -> Result<Vec<Rc<Token>>, Vec<LexicalError>> {
+    pub fn scan_tokens(mut self) -> LexicalResultList<Vec<Rc<Token>>> {
         self.chars = self.source.chars().collect();  // 获取字符
         let mut errors: Vec<LexicalError> = vec![];
 
@@ -65,6 +73,7 @@ impl<'a> TokenScanner<'a> {
     /// 扫描单个令牌
     fn scan_token(&mut self) -> LexicalResult<()> {
         let ch = self.advance();  // 消耗字符
+        
         match ch {
             '\n' => {
                 self.line += 1;
@@ -76,14 +85,28 @@ impl<'a> TokenScanner<'a> {
             ']' => self.add_token(TokenType::Paren(RightSqrBracket)),
             '{' => self.add_token(TokenType::Paren(LeftBrace)),
             '}' => self.add_token(TokenType::Paren(RightBrace)),
-            '+' => self.add_token(TokenType::Operator(Plus)),
-            '-' => self.add_token(TokenType::Operator(Minus)),
+            '+' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(PlusEqual));
+                } else {
+                    self.add_token(TokenType::Operator(Plus));
+                }
+            }
+            '-' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(MinusEqual));
+                } else {
+                    self.add_token(TokenType::Operator(Minus));
+                }
+            }
             '/' => {
                 if self.can_match('/') {
                     // 忽略注释后的内容
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
+                } else if self.can_match('=') {
+                    self.add_token(TokenType::Operator(SlashEqual));
                 } else {
                     self.add_token(TokenType::Operator(Slash));
                 }
@@ -91,13 +114,27 @@ impl<'a> TokenScanner<'a> {
             '*' => {
                 if self.can_match('*') {
                     self.add_token(TokenType::Operator(Power));  // 幂运算符
+                } else if self.can_match('=') {
+                    self.add_token(TokenType::Operator(StarEqual));
                 } else {
                     self.add_token(TokenType::Operator(Star));
                 }
             }
             '\\' => self.add_token(TokenType::Operator(Backslash)),
-            '&' => self.add_token(TokenType::Operator(TokenOperator::And)),
-            '|' => self.add_token(TokenType::Operator(Pipe)),
+            '&' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(AndEqual));
+                } else {
+                    self.add_token(TokenType::Operator(TokenOperator::And));
+                }
+            }
+            '|' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(PipeEqual));
+                } else {
+                    self.add_token(TokenType::Operator(Pipe));
+                }
+            }
             '~' => self.add_token(TokenType::Operator(Tilde)),
             ':' => {
                 if self.can_match(':') {
@@ -135,8 +172,20 @@ impl<'a> TokenScanner<'a> {
                     self.add_token(TokenType::Operator(Bang));
                 }
             }
-            '^' => self.add_token(TokenType::Operator(Caret)),
-            '%' => self.add_token(TokenType::Operator(Mod)),
+            '^' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(CaretEqual));
+                } else {
+                    self.add_token(TokenType::Operator(Caret));
+                }
+            }
+            '%' => {
+                if self.can_match('=') {
+                    self.add_token(TokenType::Operator(ModEqual));
+                } else {
+                    self.add_token(TokenType::Operator(Mod));
+                }
+            }
             '"' => self.scan_string(false)?,
             '\'' => self.scan_char()?,
             '@' => self.scan_tag()?,
@@ -274,6 +323,8 @@ impl<'a> TokenScanner<'a> {
             "shl" => Some(Shl),
             "shr" => Some(Shr),
             "break" => Some(Break),
+            "continue" => Some(Continue),
+            "loop" => Some(Loop),
             _ => None,
         }
     }
@@ -401,14 +452,14 @@ impl<'a> TokenScanner<'a> {
                 match number_type {
                     NumberType::Float => Ok(Float(to_parse.parse::<f32>()?)),
                     NumberType::Double => Ok(Double(to_parse.parse::<f64>()?)),
-                    NumberType::NoneForDebug => panic!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
-                    _ => panic!("Logical Error! Invalid number type."),  // 其他值
+                    NumberType::NoneForDebug => unreachable!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
+                    _ => unreachable!("Logical Error! Invalid number type."),  // 其他值
                 }
             }
 
             match parse_float(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Float(res)),
-                Err(err) => panic!("Logical Error! Unexpected error: {}", err),  // 浮点数转换错误只可能是解析器内部问题
+                Err(err) => unreachable!("Logical Error! Unexpected error: {}", err),  // 浮点数转换错误只可能是解析器内部问题
             }
         } else {
             let literal = &self.chars[self.start..end];
@@ -431,19 +482,18 @@ impl<'a> TokenScanner<'a> {
                     NumberType::ULong => Ok(ULong(to_parse.parse::<u64>()?)),
                     NumberType::ExtInt => Ok(ExtInt(to_parse.parse::<i128>()?)),
                     NumberType::UExtInt => Ok(UExtInt(to_parse.parse::<u128>()?)),
-                    NumberType::NoneForDebug => panic!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
-                    _ => panic!("Logical Error! Invalid number type."),  // 其他值
+                    NumberType::NoneForDebug => unreachable!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
+                    _ => unreachable!("Logical Error! Invalid number type."),  // 其他值
                 }
             }
 
             match parse_int(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Integer(res)),
-                Err(err) => {
+                Err(err) =>
                     match err.kind() {
                         num::IntErrorKind::PosOverflow => self.throw_error("Numer is too large.")?,  // 整型溢出应该是用户代码的问题，因此返回词法错误
-                        _ => panic!("Logical Error! Unexpected error: {err}."),  // 其余转换错误是解析器的问题
-                    }
-                }
+                        _ => unreachable!("Logical Error! Unexpected error: {err}."),  // 其余转换错误是解析器的问题
+                    },
             }
         }
         return Ok(());

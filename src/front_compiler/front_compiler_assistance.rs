@@ -1,8 +1,10 @@
 //! 前端编译器辅助模块
 
 use crate::byte_handler::byte_writer::{write_byte, write_dword, write_oword, write_qword, write_word};
+use crate::errors::error_types::{CompileError, CompileResult};
 use crate::front_compiler::FrontCompiler;
 use crate::instr::{Instruction, SpecialFunction};
+use crate::position::Position;
 use crate::resolver::Scope;
 
 impl<'a> FrontCompiler<'a> {
@@ -70,6 +72,28 @@ impl<'a> FrontCompiler<'a> {
             unsafe {
                 (*var).initialized = true;
             }
+        }
+    }
+    
+    /// 检查标记
+    pub fn check_tag(&self, tag: &Option<String>, pos: &Position) -> CompileResult<()> {
+        if let Some(tag_name) = tag {
+            let mut found_tag = false;
+            for tag in &self.context.loop_tags {
+                if let Some(loop_tag) = tag {
+                    if loop_tag == tag_name {
+                        found_tag = true;
+                        break;
+                    }
+                }
+            }
+            if !found_tag {
+                Err(CompileError::new(pos, format!("Undefined tag: @{}", tag_name)))
+            } else {
+                Ok(())
+            }
+        } else {
+            Ok(())
         }
     }
 }

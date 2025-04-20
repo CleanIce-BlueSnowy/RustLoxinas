@@ -12,6 +12,7 @@ impl Compiler {
         use crate::types::ValueType::*;
         use crate::types::ValueIntegerType::*;
         use crate::types::ValueFloatType::*;
+        
         match (from, to) {
             (Char, Integer(to)) => {
                 self.convert_types(&Integer(UInt), &Integer(to.clone()))
@@ -335,7 +336,7 @@ impl Compiler {
             }
             (Bool, Bool) |
             (Char, Char) => (),
-            _ => panic!("Invalid convert!"),
+            _ => unreachable!("Invalid convert."),
         }
     }
     
@@ -350,15 +351,17 @@ impl Compiler {
                         oword: Instruction) {
         use crate::types::ValueIntegerType::*;
         if let ValueType::Integer(res_type) = this_type {
-            match res_type {
-                Byte | SByte => self.write_code(byte),
-                Short | UShort => self.write_code(word),
-                Int | UInt => self.write_code(dword),
-                Long | ULong => self.write_code(qword),
-                ExtInt | UExtInt => self.write_code(oword),
-            }
+            self.write_code(
+                match res_type {
+                    Byte | SByte => byte,
+                    Short | UShort => word,
+                    Int | UInt => dword,
+                    Long | ULong => qword,
+                    ExtInt | UExtInt => oword,
+                }
+            );
         } else {
-            panic!("Unexpected result type!");
+            unreachable!("Unexpected result type!");
         }
     }
     
@@ -373,20 +376,22 @@ impl Compiler {
                              signed_oword: Instruction, unsigned_oword: Instruction) {
         use crate::types::ValueIntegerType::*;
         if let ValueType::Integer(res_type) = this_type {
-            match res_type {
-                Byte => self.write_code(unsigned_byte),
-                SByte => self.write_code(signed_byte),
-                Short => self.write_code(signed_word),
-                UShort => self.write_code(unsigned_word),
-                Int => self.write_code(signed_dword),
-                UInt => self.write_code(unsigned_dword),
-                Long => self.write_code(signed_qword),
-                ULong => self.write_code(unsigned_qword),
-                ExtInt => self.write_code(signed_oword),
-                UExtInt => self.write_code(unsigned_oword),
-            }
+            self.write_code(
+                match res_type {
+                    Byte => unsigned_byte,
+                    SByte => signed_byte,
+                    Short => signed_word,
+                    UShort => unsigned_word,
+                    Int => signed_dword,
+                    UInt => unsigned_dword,
+                    Long => signed_qword,
+                    ULong => unsigned_qword,
+                    ExtInt => signed_oword,
+                    UExtInt => unsigned_oword,
+                }
+            );
         } else {
-            panic!("Unexpected result type!");
+            unreachable!("Unexpected result type!");
         }
     }
     
@@ -395,12 +400,14 @@ impl Compiler {
     pub fn float_code(&mut self, this_type: &ValueType, float: Instruction, double: Instruction) {
         use crate::types::ValueFloatType::*;
         if let ValueType::Float(res_type) = this_type {
-            match res_type {
-                Float => self.write_code(float),
-                Double => self.write_code(double),
-            }
+            self.write_code(
+                match res_type {
+                    Float => float,
+                    Double => double,
+                }
+            );
         } else {
-            panic!("Unexpected result type!");
+            unreachable!("Unexpected result type!");
         }
     }
     
@@ -410,23 +417,27 @@ impl Compiler {
         match src_type {
             ValueType::Integer(integer) => {
                 use crate::types::ValueIntegerType::*;
-                match integer {
-                    SByte => self.write_code(OpINegByte),
-                    Short => self.write_code(OpINegWord),
-                    Int => self.write_code(OpINegDword),
-                    Long => self.write_code(OpINegQword),
-                    ExtInt => self.write_code(OpINegOword),
-                    _ => panic!("Unexpected result integer type!"),
-                }
+                self.write_code(
+                    match integer {
+                        SByte => OpINegByte,
+                        Short => OpINegWord,
+                        Int => OpINegDword,
+                        Long => OpINegQword,
+                        ExtInt => OpINegOword,
+                        _ => unreachable!("Unexpected result integer type!"),
+                    }
+                );
             }
             ValueType::Float(float) => {
                 use crate::types::ValueFloatType::*;
-                match float {
-                    Float => self.write_code(OpFNegFloat),
-                    Double => self.write_code(OpFNegDouble),
-                }
+                self.write_code(
+                    match float {
+                        Float => OpFNegFloat,
+                        Double => OpFNegDouble,
+                    }
+                );
             }
-            _ => panic!("Unexpected result type!"),
+            _ => unreachable!("Unexpected result type!"),
         }
     }
     

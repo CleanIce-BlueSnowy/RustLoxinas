@@ -30,62 +30,46 @@ pub enum Expr {
 /// 二元操作表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprBinary {
-    /// 位置信息
     pub pos: Position,
-    /// 左操作数
     pub left: Expr,
-    /// 操作符
     pub operator: Rc<Token>,
-    /// 右操作数
     pub right: Expr,
 }
 
 /// 分组表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprGrouping {
-    /// 位置信息
     pub pos: Position,
-    /// 组内的表达式
     pub expression: Expr,
 }
 
 /// 字面量表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprLiteral {
-    /// 位置信息
     pub pos: Position,
-    /// 字面量的值
     pub value: Data,
 }
 
 /// 一元操作表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprUnary {
-    /// 位置信息
     pub pos: Position,
-    /// 操作符
     pub operator: Rc<Token>,
-    /// 操作数
     pub right: Expr,
 }
 
 /// 类型转换表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprAs {
-    /// 位置信息
     pub pos: Position,
-    /// 操作数
     pub expression: Expr,
-    /// 目标类型
     pub target: TypeTag,
 }
 
 /// 变量表达式
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ExprVariable {
-    /// 位置信息
     pub pos: Position,
-    /// 变量名称
     pub name: String,
 }
 
@@ -111,7 +95,7 @@ pub trait ExprVisitor<RetType> {
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
     #[must_use]
-    pub fn accept<RetType>(&self, visitor: &mut dyn ExprVisitor<RetType>) -> RetType {
+    pub fn accept<RetType>(&self, visitor: &mut impl ExprVisitor<RetType>) -> RetType {
         let ptr = self as *const Expr;
         return match self {
             Expr::Binary(expr) => visitor.visit_binary_expr(ptr, expr),

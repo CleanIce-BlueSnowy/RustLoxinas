@@ -16,15 +16,17 @@ impl Compiler {
         let mut target = vec![];
         target.append(expr_code);
 
-        self.write_code(match expr_res.res_type.get_size() {  // 弹出结果
-            DataSize::Byte => OpPopByte,
-            DataSize::Word => OpPopWord,
-            DataSize::Dword => OpPopDword,
-            DataSize::Qword => OpPopQword,
-            DataSize::Oword => OpPopOword,
-        });
+        self.write_code(
+            match expr_res.res_type.get_size() {  // 弹出结果
+                DataSize::Byte => OpPopByte,
+                DataSize::Word => OpPopWord,
+                DataSize::Dword => OpPopDword,
+                DataSize::Qword => OpPopQword,
+                DataSize::Oword => OpPopOword,
+            }
+        );
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 
@@ -35,18 +37,19 @@ impl Compiler {
                             target_type: ValueType,
                             slot: usize,
                             in_loop: bool) -> CompileResult<Vec<u8>> {
-        let init_type = if let Some(res) = init_res {
-            Some(&res.res_type)
-        } else {
-            None
-        };
-        
+        let init_type =
+            if let Some(res) = init_res {
+                Some(&res.res_type)
+            } else {
+                None
+            };
+
         // 当前栈顶就是变量的偏移位置
         let mut target = vec![];
         if let Some(code) = init_code {
             target.append(code);
             self.convert_types(init_type.as_ref().unwrap(), &target_type);
-            
+
             // 循环已预分配内存，只需写入
             if in_loop {
                 self.write_code(
@@ -60,7 +63,7 @@ impl Compiler {
                 );
                 self.write_arg_dword((slot as u32).to_le_bytes());
             }
-            
+
             self.append_temp_chunk(&mut target);
         } else {
             // 填充占位符（循环中已预分配内存，不需要填充）
@@ -90,7 +93,7 @@ impl Compiler {
             }
             self.append_temp_chunk(&mut target);
         }
-        
+
         return Ok(target);
     }
     
@@ -136,33 +139,35 @@ impl Compiler {
                                right_code: &mut Vec<u8>,
                                right_res: &ExprResolveRes) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
-        
+
         // 写入赋值源
         target.append(right_code);
-        
+
         // 除第一个，其他的赋值源需要复制
         for i in (1..vars_code.len()).rev() {
             let var_code = &mut vars_code[i];
             let var_res = &vars_res[i];
-            self.write_code(match var_res.res_type.get_size() {
-                DataSize::Byte => OpCopyByte,
-                DataSize::Word => OpCopyWord,
-                DataSize::Dword => OpCopyDword,
-                DataSize::Qword => OpCopyQword,
-                DataSize::Oword => OpCopyOword,
-            });
+            self.write_code(
+                match var_res.res_type.get_size() {
+                    DataSize::Byte => OpCopyByte,
+                    DataSize::Word => OpCopyWord,
+                    DataSize::Dword => OpCopyDword,
+                    DataSize::Qword => OpCopyQword,
+                    DataSize::Oword => OpCopyOword,
+                }
+            );
             self.convert_types(&right_res.res_type, &var_res.res_type);
             self.append_temp_chunk(&mut target);
             target.append(var_code);
         }
-        
+
         // 第一个直接赋值
         let var_code = &mut vars_code[0];
         let var_res = &vars_res[0];
         self.convert_types(&right_res.res_type, &var_res.res_type);
         self.append_temp_chunk(&mut target);
         target.append(var_code);
-        
+
         return Ok(target);
     }
     
@@ -172,45 +177,47 @@ impl Compiler {
                               expr_res: Option<ExprResolveRes>,
                               expr_pos: Option<Position>) -> CompileResult<Vec<u8>> {
         use crate::instr::SpecialFunction::*;
-        
+
         let mut target = vec![];
 
         self.write_code(OpSpecialFunction);
         if let Some(mut code) = expr_code {
             target.append(&mut code);
-            self.write_special_func(match &expr_res.as_ref().unwrap().res_type {
-                ValueType::Integer(integer) => {
-                    use crate::types::ValueIntegerType::*;
-                    match integer {
-                        Byte => PrintByte,
-                        SByte => PrintSByte,
-                        Short => PrintShort,
-                        UShort => PrintUShort,
-                        Int => PrintInt,
-                        UInt => PrintUInt,
-                        Long => PrintLong,
-                        ULong => PrintULong,
-                        ExtInt => PrintExtInt,
-                        UExtInt => PrintUExtInt,
+            self.write_special_func(
+                match &expr_res.as_ref().unwrap().res_type {
+                    ValueType::Integer(integer) => {
+                        use crate::types::ValueIntegerType::*;
+                        match integer {
+                            Byte => PrintByte,
+                            SByte => PrintSByte,
+                            Short => PrintShort,
+                            UShort => PrintUShort,
+                            Int => PrintInt,
+                            UInt => PrintUInt,
+                            Long => PrintLong,
+                            ULong => PrintULong,
+                            ExtInt => PrintExtInt,
+                            UExtInt => PrintUExtInt,
+                        }
                     }
-                }
-                ValueType::Float(float) => {
-                    use crate::types::ValueFloatType::*;
-                    match float {
-                        Float => PrintFloat,
-                        Double => PrintDouble,
+                    ValueType::Float(float) => {
+                        use crate::types::ValueFloatType::*;
+                        match float {
+                            Float => PrintFloat,
+                            Double => PrintDouble,
+                        }
                     }
+                    ValueType::Bool => PrintBool,
+                    ValueType::Char => PrintChar,
+                    _ => return Err(CompileError::new(&expr_pos.unwrap(), format!("Cannot print the value of type '{}'.", expr_res.unwrap().res_type))),
                 }
-                ValueType::Bool => PrintBool,
-                ValueType::Char => PrintChar,
-                _ => return Err(CompileError::new(&expr_pos.unwrap(), format!("Cannot print the value of type '{}'.", expr_res.unwrap().res_type))),
-            });
+            );
         } else {
             self.write_special_func(PrintNewLine);
         }
-        
+
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 }

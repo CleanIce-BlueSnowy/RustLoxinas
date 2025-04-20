@@ -23,9 +23,14 @@ pub struct VM<'a> {
 impl<'a> VM<'a> {
     #[must_use]
     pub fn new(chunk: &'a [u8]) -> Self {
-        Self { vm_stack: vec![], chunk, ip: 0, frame_start: 0 }
+        Self {
+            vm_stack: vec![],
+            chunk,
+            ip: 0,
+            frame_start: 0,
+        }
     }
-    
+
     /// 运行字节码
     pub fn run(&mut self) -> RuntimeResult<()> {
         while self.ip < self.chunk.len() {
@@ -40,11 +45,12 @@ impl<'a> VM<'a> {
 
             self.ip += 1;
 
-            let instr = if let Ok(temp) = Instruction::try_from(instr_byte) {
-                temp
-            } else {
-                return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", instr_byte)));
-            };
+            let instr =
+                if let Ok(temp) = Instruction::try_from(instr_byte) {
+                    temp
+                } else {
+                    return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", instr_byte)));
+                };
 
             #[cfg(debug_assertions)]
             {
@@ -57,7 +63,7 @@ impl<'a> VM<'a> {
 
             self.run_code(instr)?;
         }
-        
+
         #[cfg(debug_assertions)]
         {
             print!("FINALLY ");
@@ -66,7 +72,7 @@ impl<'a> VM<'a> {
 
         return Ok(());
     }
-    
+
     /// 运行单条指令
     #[inline]
     fn run_code(&mut self, instr: Instruction) -> RuntimeResult<()> {
@@ -80,12 +86,13 @@ impl<'a> VM<'a> {
 
                 self.ip += 1;
 
-                let special_func = if let Ok(temp) = SpecialFunction::try_from(func_byte) {
-                    temp
-                } else {
-                    return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", func_byte)));
-                };
-                
+                let special_func =
+                    if let Ok(temp) = SpecialFunction::try_from(func_byte) {
+                        temp
+                    } else {
+                        return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", func_byte)));
+                    };
+
                 self.run_special_function(special_func)?;
             }
             OpReturn => {  // 临时充当结束程序的作用
@@ -130,26 +137,6 @@ impl<'a> VM<'a> {
                 if !condition {
                     self.jump(goto);
                 }
-            }
-            OpLoadConstByte => {
-                let byte = self.read_arg_byte();
-                self.push_byte(byte);
-            }
-            OpLoadConstWord => {
-                let word = self.read_arg_word();
-                self.push_word(word);
-            }
-            OpLoadConstDword => {
-                let dword = self.read_arg_dword();
-                self.push_dword(dword);
-            }
-            OpLoadConstQword => {
-                let qword = self.read_arg_qword();
-                self.push_qword(qword);
-            }
-            OpLoadConstOword => {
-                let oword = self.read_arg_oword();
-                self.push_oword(oword);
             }
             OpSignExtendByteToWord => {
                 let high_byte = self.peek_byte()[0];
@@ -1400,7 +1387,7 @@ impl<'a> VM<'a> {
 
         return Ok(());
     }
-    
+
     /// 运行特殊功能
     #[inline]
     fn run_special_function(&mut self, special_func: SpecialFunction) -> RuntimeResult<()> {
@@ -1461,11 +1448,12 @@ impl<'a> VM<'a> {
             PrintChar => {
                 #[cfg(debug_assertions)]
                 {
-                    let ch = if let Some(temp) = char::from_u32(u32::from_le_bytes(self.pop_dword())) {
-                        temp
-                    } else {
-                        panic!("Invalid Unicode point code.")
-                    };
+                    let ch =
+                        if let Some(temp) = char::from_u32(u32::from_le_bytes(self.pop_dword())) {
+                            temp
+                        } else {
+                            panic!("Invalid Unicode point code.")
+                        };
                     Self::stdout_print_char(ch);
                 }
                 #[cfg(not(debug_assertions))]
@@ -1478,7 +1466,7 @@ impl<'a> VM<'a> {
                 Self::stdout_print_new_line();
             }
         }
-        
+
         return Ok(());
     }
 }

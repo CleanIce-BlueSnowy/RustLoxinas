@@ -56,25 +56,23 @@ impl ValueType {
         use ValueType::*;
         use ValueIntegerType::*;
         use ValueFloatType::*;
-        
+
         match self {
             Char => DataSize::Dword,
             Bool => DataSize::Byte,
-            Integer(integer) => {
+            Integer(integer) =>
                 match integer {
                     SByte | Byte => DataSize::Byte,
                     Short | UShort => DataSize::Word,
                     Int | UInt => DataSize::Dword,
                     Long | ULong => DataSize::Qword,
                     ExtInt | UExtInt => DataSize::Oword,
-                }
-            }
-            ValueType::Float(float) => {
+                },
+            ValueType::Float(float) =>
                 match float {
                     ValueFloatType::Float => DataSize::Dword,
                     Double => DataSize::Qword,
-                }
-            }
+                },
             Object(_) => DataSize::Qword,
         }
     }
@@ -83,9 +81,11 @@ impl ValueType {
 impl Display for ValueType {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use ValueType::*;
+        
         let str = match self {
             Integer(integer) => {
                 use ValueIntegerType::*;
+                
                 match integer {
                     Byte => "byte",
                     SByte => "sbyte",
@@ -101,6 +101,7 @@ impl Display for ValueType {
             }
             Float(float) => {
                 use ValueFloatType::*;
+                
                 match float {
                     Float => "float",
                     Double => "double",
@@ -110,6 +111,7 @@ impl Display for ValueType {
             Bool => "bool",
             Object(object) => object.get_name(),
         }.to_string();
+        
         return write!(formatter, "{}", str);
     }
 }
@@ -126,7 +128,10 @@ pub struct TypeTag {
 impl TypeTag {
     #[must_use]
     pub fn new() -> Self {
-        Self { pos: Position::new(0, 0, 0, 0), chain: LinkedList::new() }
+        Self {
+            pos: Position::new(0, 0, 0, 0),
+            chain: LinkedList::new(),
+        }
     }
 }
 
@@ -134,6 +139,7 @@ impl Display for TypeTag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut res = String::new();
         let mut first_type = true;
+        
         for type_name in &self.chain {
             res.push_str(
                 if first_type {
@@ -145,6 +151,7 @@ impl Display for TypeTag {
             );
             res.push_str(&type_name);
         }
+        
         return write!(f, "{}", res);
     }
 }

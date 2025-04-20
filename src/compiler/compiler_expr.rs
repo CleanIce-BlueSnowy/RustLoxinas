@@ -85,10 +85,10 @@ impl Compiler {
                             LessEqual => self.sign_integer_code(this_type, OpICmpLessEqualSByte, OpICmpLessEqualUByte, OpICmpLessEqualSWord, OpICmpLessEqualUWord, OpICmpLessEqualSDword, OpICmpLessEqualUDword, OpICmpLessEqualSQword, OpICmpLessEqualUQword, OpICmpLessEqualSOword, OpICmpLessEqualUOword),
                             Greater => self.sign_integer_code(this_type, OpICmpGreaterSByte, OpICmpGreaterUByte, OpICmpGreaterSWord, OpICmpGreaterUWord, OpICmpGreaterSDword, OpICmpGreaterUDword, OpICmpGreaterSQword, OpICmpGreaterUQword, OpICmpGreaterSOword, OpICmpGreaterUOword),
                             GreaterEqual => self.sign_integer_code(this_type, OpICmpGreaterEqualSByte, OpICmpGreaterEqualUByte, OpICmpGreaterEqualSWord, OpICmpGreaterEqualUWord, OpICmpGreaterEqualSDword, OpICmpGreaterEqualUDword, OpICmpGreaterEqualSQword, OpICmpGreaterEqualUQword, OpICmpGreaterEqualSOword, OpICmpGreaterEqualUOword),
-                            _ => unimplemented!("Unsupported operation"),
+                            _ => unreachable!("Unsupported operation"),
                         }
                     }
-                    _ => unimplemented!("Unsupported operation"),
+                    _ => unreachable!("Unsupported operation"),
                 }
             }
             (Float(_), Float(_)) | (Integer(_), Float(_)) | (Float(_), Integer(_)) => {
@@ -108,13 +108,13 @@ impl Compiler {
                             LessEqual => self.float_code(this_type, OpFCmpLessEqualFloat, OpFCmpLessEqualDouble),
                             Greater => self.float_code(this_type, OpFCmpGreaterFloat, OpFCmpGreaterDouble),
                             GreaterEqual => self.float_code(this_type, OpFCmpGreaterEqualFloat, OpFCmpGreaterEqualDouble),
-                            _ => unimplemented!("Unsupported operation"),
+                            _ => unreachable!("Unsupported operation"),
                         }
                     }
-                    _ => unimplemented!("Unsupported operation"),
+                    _ => unreachable!("Unsupported operation"),
                 }
             }
-            _ => unimplemented!("Unsupported operation"),
+            _ => unreachable!("Unsupported operation"),
         }
         
         self.append_temp_chunk(&mut target);
@@ -139,71 +139,73 @@ impl Compiler {
         match &expr.value {
             Integer(integer) => {
                 use crate::data::DataInteger::*;
+                
                 match integer {
                     Byte(data) => {
-                        self.write_code(OpLoadConstByte);
+                        self.write_code(OpPushByte);
                         self.write_arg_byte(data.to_le_bytes());
                     }
                     SByte(data) => {
-                        self.write_code(OpLoadConstByte);
+                        self.write_code(OpPushByte);
                         self.write_arg_byte(data.to_le_bytes());
                     }
                     Short(data) => {
-                        self.write_code(OpLoadConstWord);
+                        self.write_code(OpPushWord);
                         self.write_arg_word(data.to_le_bytes());
                     }
                     UShort(data) => {
-                        self.write_code(OpLoadConstWord);
+                        self.write_code(OpPushWord);
                         self.write_arg_word(data.to_le_bytes());
                     }
                     Int(data) => {
-                        self.write_code(OpLoadConstDword);
+                        self.write_code(OpPushDword);
                         self.write_arg_dword(data.to_le_bytes());
                     }
                     UInt(data) => {
-                        self.write_code(OpLoadConstDword);
+                        self.write_code(OpPushDword);
                         self.write_arg_dword(data.to_le_bytes());
                     }
                     Long(data) => {
-                        self.write_code(OpLoadConstQword);
+                        self.write_code(OpPushQword);
                         self.write_arg_qword(data.to_le_bytes());
                     }
                     ULong(data) => {
-                        self.write_code(OpLoadConstQword);
+                        self.write_code(OpPushQword);
                         self.write_arg_qword(data.to_le_bytes());
                     }
                     ExtInt(data) => {
-                        self.write_code(OpLoadConstOword);
+                        self.write_code(OpPushOword);
                         self.write_arg_oword(data.to_le_bytes());
                     }
                     UExtInt(data) => {
-                        self.write_code(OpLoadConstOword);
+                        self.write_code(OpPushOword);
                         self.write_arg_oword(data.to_le_bytes());
                     }
                 }
             }
             Float(float) => {
                 use crate::data::DataFloat::*;
+                
                 match float {
                     Float(data) => {
-                        self.write_code(OpLoadConstDword);
+                        self.write_code(OpPushDword);
                         self.write_arg_dword(data.to_le_bytes());
                     }
                     Double(data) => {
-                        self.write_code(OpLoadConstQword);
+                        self.write_code(OpPushQword);
                         self.write_arg_qword(data.to_le_bytes());
                     }
                 }
             }
             Char(char) => {
-                self.write_code(OpLoadConstDword);
+                self.write_code(OpPushDword);
                 self.write_arg_dword((*char as u32).to_le_bytes());
             }
             Bool(bool) => {
-                self.write_code(OpLoadConstByte);
+                self.write_code(OpPushByte);
                 self.write_arg_byte((if *bool { 1u8 } else { 0u8 }).to_le_bytes());
             }
-            _ => unimplemented!("Unsupported literal"),
+            _ => unreachable!("Unsupported literal"),
         }
         
         self.append_temp_chunk(&mut target);
@@ -226,15 +228,17 @@ impl Compiler {
             Integer(_) | Float(_) => {
                 use crate::tokens::TokenType::*;
                 use crate::tokens::TokenOperator::*;
-                if let Operator(Minus) = &expr.operator.token_type {
+                if let Operator(Plus) = &expr.operator.token_type {
+                    ()
+                } else if let Operator(Minus) = &expr.operator.token_type {
                     self.neg_ope_code(&expr_type);
                 } else if let Operator(Tilde) = &expr.operator.token_type {
                     self.integer_code(&expr_type, OpBitNotByte, OpBitNotWord, OpBitNotDword, OpBitNotQword, OpBitNotOword);
                 } else {
-                    unimplemented!("Unsupported operation");
+                    unreachable!("Unsupported operation");
                 }
             }
-            _ => unimplemented!("Unsupported operation"),
+            _ => unreachable!("Unsupported operation"),
         }
         
         self.append_temp_chunk(&mut target);

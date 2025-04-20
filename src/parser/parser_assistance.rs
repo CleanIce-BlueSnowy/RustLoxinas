@@ -1,7 +1,7 @@
 //! 语法分析——辅助功能模块
 
 use std::rc::Rc;
-use crate::errors::error_types::SyntaxError;
+use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::parser::Parser;
 use crate::position::Position;
 use crate::tokens::{Token, TokenOperator, TokenType};
@@ -46,21 +46,21 @@ impl Parser {
     #[inline]
     #[must_use]
     pub fn is_at_end(&self) -> bool {
-        return matches!(self.peek().token_type, TokenType::EOF);
+        matches!(self.peek().token_type, TokenType::EOF)
     }
 
     /// 下一个令牌，不消耗
     #[inline]
     #[must_use]
     pub fn peek(&self) -> Rc<Token> {
-        return Rc::clone(&self.tokens[self.current]);
+        Rc::clone(&self.tokens[self.current])
     }
 
     /// 当前令牌
     #[inline]
     #[must_use]
     pub fn previous(&self) -> Rc<Token> {
-        return Rc::clone(&self.tokens[self.current - 1]);
+        Rc::clone(&self.tokens[self.current - 1])
     }
 
     /// 消耗令牌并返回下一个令牌
@@ -73,10 +73,12 @@ impl Parser {
     }
 
     /// 解析类型标识符
-    pub fn parse_type_tag(&mut self) -> Result<TypeTag, SyntaxError> {
+    pub fn parse_type_tag(&mut self) -> SyntaxResult<TypeTag> {
         use crate::tokens::TokenType::*;
         use crate::tokens::TokenOperator::*;
+        
         let next_token = self.advance().clone();
+        
         return if let Identifier(name) = &next_token.token_type {
             let mut tag = TypeTag::new();
             tag.pos.start_line = next_token.line;
@@ -84,6 +86,7 @@ impl Parser {
             tag.pos.end_line = next_token.line;
             tag.pos.end_idx = next_token.end;
             tag.chain.push_back(name.clone());
+            
             while parser_can_match!(self, Operator(DoubleColon)) {
                 let token = self.advance().clone();
                 if let Identifier(name) = &token.token_type {
@@ -99,10 +102,7 @@ impl Parser {
             }
             Ok(tag)
         } else {
-            Err(SyntaxError::new(
-                &Position::new(next_token.line, next_token.start, next_token.line, next_token.end),
-                "Expect type name".to_string()
-            ))
+            Err(SyntaxError::new(&Position::new(next_token.line, next_token.start, next_token.line, next_token.end), "Expect type name".to_string()))
         }
     }
     
@@ -122,7 +122,8 @@ impl Parser {
                 return;
             } else if let TokenType::Keyword(keyword) = &self.peek().token_type {
                 use crate::tokens::TokenKeyword::*;
-                if let If | Else | For | While | Let | Init = keyword {
+                
+                if let If | Else | For | While | Let | Init | Loop | Break | Continue | Print = keyword {
                     return;
                 }
             }

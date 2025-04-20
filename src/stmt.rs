@@ -10,84 +10,80 @@ use crate::types::TypeTag;
  */
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum Stmt {
+    /// 空语句
+    Empty(Box<StmtEmpty>),
     /// 表达式
-    Expr(StmtExpr),
+    Expr(Box<StmtExpr>),
     /// 变量定义
-    Let(StmtLet),
+    Let(Box<StmtLet>),
     /// 变量延迟初始化
-    Init(StmtInit),
+    Init(Box<StmtInit>),
     /// 变量赋值
-    Assign(StmtAssign),
+    Assign(Box<StmtAssign>),
     /// 块语句
-    Block(StmtBlock),
+    Block(Box<StmtBlock>),
     /// 条件判断语句
-    If(StmtIf),
+    If(Box<StmtIf>),
+    /// 无限循环语句
+    Loop(Box<StmtLoop>),
     /// 条件循环语句
-    While(StmtWhile),
+    While(Box<StmtWhile>),
+    /// 迭代循环语句
+    For(Box<StmtFor>),
     /// 退出循环语句
-    Break(StmtBreak),
+    Break(Box<StmtBreak>),
+    /// 继续循环语句
+    Continue(Box<StmtContinue>),
     /// 临时辅助功能：打印语句
-    Print(StmtPrint),
+    Print(Box<StmtPrint>),
+}
+
+/// 空语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtEmpty {
+    pub pos: Position,
 }
 
 /// 表达式语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtExpr {
-    /// 位置信息
     pub pos: Position,
-    /// 表达式
     pub expression: Expr,
 }
 
 /// 变量定义语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtLet {
-    /// 位置信息
     pub pos: Position,
-    /// `let` 关键字所在位置
     pub let_pos: Position,
-    /// 名称位置信息
     pub name_pos: Position,
-    /// 变量名称
     pub name: String,
-    /// 变量类型
     pub var_type: Option<TypeTag>,
-    /// 初始化表达式
     pub init: Option<Expr>,
-    /// 是否为引用
     pub is_ref: bool,
 }
 
 /// 变量延迟初始化语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtInit {
-    /// 位置信息
     pub pos: Position,
-    /// 名称位置信息
     pub name_pos: Position,
-    /// 变量名称
     pub name: String,
-    /// 初始化表达式
     pub init: Expr,
 }
 
 /// 变量赋值语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtAssign {
-    /// 位置信息
     pub pos: Position,
-    /// 赋值变量
     pub assign_vars: Vec<Expr>,
-    /// 赋值源表达式
     pub right_expr: Expr,
 }
 
 /// 块语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtBlock {
-    /// 位置信息
     pub pos: Position,
-    /// 子句
     pub statements: Vec<Stmt>,
 }
 
@@ -95,9 +91,17 @@ pub struct StmtBlock {
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtIf {
     pub pos: Position,
-    pub if_branch: (Expr, Box<Stmt>),
+    pub if_branch: (Expr, Stmt),
     pub else_if_branch: Vec<(Expr, Stmt)>,
-    pub else_branch: Option<Box<Stmt>>,
+    pub else_branch: Option<Stmt>,
+}
+
+/// 无限循环语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtLoop {
+    pub pos: Position,
+    pub chunk: Stmt,
+    pub tag: Option<String>,
 }
 
 /// 条件循环语句
@@ -105,7 +109,18 @@ pub struct StmtIf {
 pub struct StmtWhile {
     pub pos: Position,
     pub condition: Expr,
-    pub chunk: Box<Stmt>,
+    pub chunk: Stmt,
+    pub tag: Option<String>,
+}
+
+/// 迭代循环语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtFor {
+    pub pos: Position,
+    pub init: Stmt,
+    pub condition: Expr,
+    pub update: Stmt,
+    pub chunk: Stmt,
     pub tag: Option<String>,
 }
 
@@ -116,12 +131,17 @@ pub struct StmtBreak {
     pub tag: Option<String>,
 }
 
+/// 继续循环语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtContinue {
+    pub pos: Position,
+    pub tag: Option<String>,
+}
+
 /// 临时辅助功能：打印语句
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct StmtPrint {
-    /// 位置信息
     pub pos: Position,
-    /// 源表达式
     pub expr: Option<Expr>,
 }
 
@@ -130,6 +150,8 @@ pub struct StmtPrint {
 `RetType` 是返回类型
  */
 pub trait StmtVisitor<RetType> {
+    #[must_use]
+    fn visit_empty_stmt(&mut self, this: *const Stmt, stmt: &StmtEmpty) -> RetType;
     #[must_use]
     fn visit_expr_stmt(&mut self, this: *const Stmt, stmt: &StmtExpr) -> RetType;
     #[must_use]
@@ -143,9 +165,15 @@ pub trait StmtVisitor<RetType> {
     #[must_use]
     fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> RetType;
     #[must_use]
+    fn visit_loop_stmt(&mut self, this: *const Stmt, stmt: &StmtLoop) -> RetType;
+    #[must_use]
     fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> RetType;
     #[must_use]
+    fn visit_for_stmt(&mut self, this: *const Stmt, stmt: &StmtFor) -> RetType;
+    #[must_use]
     fn visit_break_stmt(&mut self, this: *const Stmt, stmt: &StmtBreak) -> RetType;
+    #[must_use]
+    fn visit_continue_stmt(&mut self, this: *const Stmt, stmt: &StmtContinue) -> RetType;
     #[must_use]
     fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> RetType;
 }
@@ -153,17 +181,21 @@ pub trait StmtVisitor<RetType> {
 impl Stmt {
     /// 访问自己，通过模式匹配具体的枚举值
     #[must_use]
-    pub fn accept<RetType>(&self, visitor: &mut dyn StmtVisitor<RetType>) -> RetType {
+    pub fn accept<RetType>(&self, visitor: &mut impl StmtVisitor<RetType>) -> RetType {
         let ptr = self as *const Stmt;
         return match self {
+            Stmt::Empty(stmt) => visitor.visit_empty_stmt(ptr, stmt),
             Stmt::Expr(stmt) => visitor.visit_expr_stmt(ptr, stmt),
             Stmt::Let(stmt) => visitor.visit_let_stmt(ptr, stmt),
             Stmt::Init(stmt) => visitor.visit_init_stmt(ptr, stmt),
             Stmt::Assign(stmt) => visitor.visit_assign_stmt(ptr, stmt),
             Stmt::Block(stmt) => visitor.visit_block_stmt(ptr, stmt),
             Stmt::If(stmt) => visitor.visit_if_stmt(ptr, stmt),
+            Stmt::Loop(stmt) => visitor.visit_loop_stmt(ptr, stmt),
             Stmt::While(stmt) => visitor.visit_while_stmt(ptr, stmt),
+            Stmt::For(stmt) => visitor.visit_for_stmt(ptr, stmt),
             Stmt::Break(stmt) => visitor.visit_break_stmt(ptr, stmt),
+            Stmt::Continue(stmt) => visitor.visit_continue_stmt(ptr, stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
         };
     }
@@ -176,14 +208,18 @@ macro_rules! stmt_get_pos {
         {
             use crate::stmt::Stmt;
             match $expression {
+                Stmt::Empty(stmt) => stmt.pos.clone(),
                 Stmt::Expr(stmt) => stmt.pos.clone(),
                 Stmt::Let(stmt) => stmt.pos.clone(),
                 Stmt::Init(stmt) => stmt.pos.clone(),
                 Stmt::Assign(stmt) => stmt.pos.clone(),
                 Stmt::Block(stmt) => stmt.pos.clone(),
                 Stmt::If(stmt) => stmt.pos.clone(),
+                Stmt::Loop(stmt) => stmt.pos.clone(),
                 Stmt::While(stmt) => stmt.pos.clone(),
+                Stmt::For(stmt) => stmt.pos.clone(),
                 Stmt::Break(stmt) => stmt.pos.clone(),
+                Stmt::Continue(stmt) => stmt.pos.clone(),
                 Stmt::Print(stmt) => stmt.pos.clone(),
             }
         }

@@ -25,16 +25,6 @@ pub enum Instruction {
     OpJumpFalse,
     /// 为假时跳转并弹出数值
     OpJumpFalsePop,
-    /// 常数加载字节
-    OpLoadConstByte,
-    /// 常数加载单字
-    OpLoadConstWord,
-    /// 常数加载双字
-    OpLoadConstDword,
-    /// 常数加载四字
-    OpLoadConstQword,
-    /// 常数加载八字
-    OpLoadConstOword,
     /// 有符号位扩展，字节到单字
     OpSignExtendByteToWord,
     /// 有符号位扩展，单字到双字

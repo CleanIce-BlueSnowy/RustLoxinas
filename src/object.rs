@@ -57,6 +57,9 @@ pub struct UserClass {
 impl UserClass {
     #[must_use]
     pub fn new(name: String) -> Self {
-        Self { name, contain_types: hashmap!{} }
+        Self { 
+            name, 
+            contain_types: hashmap!{},
+        }
     }
 }

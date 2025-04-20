@@ -11,6 +11,7 @@ impl Resolver {
     pub fn predefine(&mut self, statements: &[Stmt]) -> Result<(), Vec<CompileError>> {
         let current = self.get_current_scope();
         let mut errors = Vec::new();
+        
         for statement in statements {
             match statement {
                 Stmt::Let(stmt) => {
@@ -29,6 +30,7 @@ impl Resolver {
                 _ => (),
             }
         }
+        
         return if errors.is_empty() {
             Ok(())
         } else {
@@ -41,6 +43,7 @@ impl Resolver {
         let mut res_type: Option<ValueType> = None;
         let mut search_map = self.global_types.clone();
         let mut in_global = true;
+
         for name in &type_tag.chain {
             if let Some(temp_ty) = &res_type {
                 if let Object(object) = temp_ty {
@@ -50,16 +53,19 @@ impl Resolver {
                     return Err(CompileError::new(&type_tag.pos, format!("Unknown type '{}' in '{}'.", name, temp_ty)));
                 }
             }
-            let ty = if let Some(temp) = search_map.get(name) {
-                temp
-            } else {
-                return Err(CompileError::new(&type_tag.pos,
-                                             if in_global {
-                                                 format!("Unknown type '{}' in global.", name)
-                                             } else {
-                                                 format!("Unknown type '{}' in '{}'.", name, res_type.as_ref().unwrap())
-                                             }));
-            };
+            let ty =
+                if let Some(temp) = search_map.get(name) {
+                    temp
+                } else {
+                    return Err(CompileError::new(
+                        &type_tag.pos,
+                        if in_global {
+                            format!("Unknown type '{}' in global.", name)
+                        } else {
+                            format!("Unknown type '{}' in '{}'.", name, res_type.as_ref().unwrap())
+                        }
+                    ));
+                };
             res_type = Some(ty.clone());
         }
 
@@ -67,7 +73,7 @@ impl Resolver {
         if let Some(Object(_)) = res_type {
             return Err(CompileError::new(&type_tag.pos, "Cannot convert a value to an object by using 'as'.".to_string()));
         }
-        
+
         return Ok(res_type.unwrap());
     }
     

@@ -5,7 +5,7 @@ use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::Expr;
 use crate::expr_get_pos;
 use crate::resolver::{ExprResolveRes, Resolver, Variable};
-use crate::stmt::{StmtAssign, StmtIf, StmtInit, StmtLet, StmtWhile};
+use crate::stmt::{StmtAssign, StmtFor, StmtIf, StmtInit, StmtLet, StmtWhile};
 use crate::types::ValueType;
 
 impl Resolver {
@@ -40,7 +40,7 @@ impl Resolver {
                 variable.var_type = Some(expr_res.res_type.clone());
             }
         }
-        
+
         // 处理无法推断类型的情况
         if let (None, None) = (&variable.var_type, init_expr_res) {
             return Err(CompileError::new(&stmt.let_pos, "Must provide at least one of the type identifier and initialization expression.".to_string()));
@@ -49,19 +49,21 @@ impl Resolver {
         // 填写栈偏移量
         variable.slot = self.now_slot;
         let temp_size = &variable.var_type.as_ref().unwrap().get_size();
-        self.update_slot(if stmt.is_ref {
-            &DataSize::Dword
-        } else {
-            temp_size
-        });
-        
+        self.update_slot(
+            if stmt.is_ref {
+                &DataSize::Dword
+            } else {
+                temp_size
+            }
+        );
+
         // 重写变量
         let target_variable = self.find_variable(&stmt.name).unwrap();
         target_variable.defined = variable.defined;
         target_variable.initialized = variable.initialized;
         target_variable.slot = variable.slot;
         target_variable.var_type = variable.var_type;
-        
+
         // 如果是引用，判断左值表达式
         if stmt.is_ref {
             if let Some(expr) = &stmt.init {
@@ -70,7 +72,7 @@ impl Resolver {
                 }
             }
         }
-        
+
         return Ok((target_variable.var_type.clone().unwrap(), variable.slot));
     }
     
@@ -90,39 +92,40 @@ impl Resolver {
         }
 
         let variable = self.find_variable(&stmt.name).unwrap();
-        
+
         if !variable.defined {
             return Err(CompileError::new(&stmt.name_pos, "Initialize a variable before it's defined.".to_string()));
         }
-        
+
         if variable.initialized {
             return Err(CompileError::new(&stmt.name_pos, "Variable has already been initialized.".to_string()));
         }
-        
+
         variable.initialized = true;
         let ptr = variable as *mut Variable;
         // 上一个 variable 的作用域在此截止
 
         // 引用变量的初始化，需要写入左值的偏移地址
-        let right_slot = if variable.is_ref {
-            if let Expr::Variable(var) = &stmt.init {
-                let right_var = self.find_variable(&var.name).unwrap();
-                Some(right_var.slot)
+        let right_slot =
+            if variable.is_ref {
+                if let Expr::Variable(var) = &stmt.init {
+                    let right_var = self.find_variable(&var.name).unwrap();
+                    Some(right_var.slot)
+                } else {
+                    return Err(CompileError::new(&expr_get_pos!(&stmt.init), "Expect a lvalue.".to_string()));
+                }
             } else {
-                return Err(CompileError::new(&expr_get_pos!(&stmt.init), "Expect a lvalue.".to_string()));
-            }
-        } else {
-            None
-        };
-        
+                None
+            };
+
         // 只记录外部作用域的
         if let None = self.find_variable_in_current_scope(&stmt.name) {
             self.get_current_scope().init_vars.insert(ptr);
         }
-        
+
         // 避免多次 self 可变引用
         let variable = self.find_variable(&stmt.name).unwrap();
-        
+
         // 检查类型转换
         if !Self::check_type_convert(&init_expr_res.res_type, &variable.var_type.as_ref().unwrap()) {
             return Err(CompileError::new(&expr_get_pos!(&stmt.init), format!("Cannot use 'as' to convert '{}' to '{}'.", init_expr_res.res_type, variable.var_type.as_ref().unwrap())));
@@ -177,6 +180,16 @@ impl Resolver {
     pub fn resolve_while_stmt(&mut self,
                               stmt: &StmtWhile,
                               condition_res: &ExprResolveRes) -> CompileResult<()> {
+        if !matches!(condition_res.res_type, ValueType::Bool) {
+            Err(CompileError::new(&expr_get_pos!(&stmt.condition), "The expression must return a bool value.".to_string()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn resolve_for_stmt(&mut self,
+                            stmt: &StmtFor,
+                            condition_res: &ExprResolveRes) -> CompileResult<()> {
         if !matches!(condition_res.res_type, ValueType::Bool) {
             Err(CompileError::new(&expr_get_pos!(&stmt.condition), "The expression must return a bool value.".to_string()))
         } else {

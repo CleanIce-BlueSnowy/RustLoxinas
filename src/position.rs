@@ -16,6 +16,11 @@ pub struct Position {
 impl Position {
     #[must_use]
     pub fn new(start_line: usize, start_idx: usize, end_line: usize, end_idx: usize) -> Self {
-        Self { start_line, start_idx, end_line, end_idx }
+        Self {
+            start_line,
+            start_idx,
+            end_line,
+            end_idx,
+        }
     }
 }

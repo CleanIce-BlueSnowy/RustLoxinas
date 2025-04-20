@@ -10,14 +10,17 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!("Loxinas 1.0.0 alpha [Developing]");
+        
         #[cfg(debug_assertions)]
         {
             println!("--- Debug Mode ---");
         }
+        
         println!("Usage: loxinas <operation> [other args]");
         println!("[help: Type 'loxinas help' to get more help information]");
         return;
     }
+    
     let operation: &str = &args[1];
     let mut command = Command::new(
         match operation {
@@ -31,9 +34,11 @@ fn main() {
             }
         }
     );
+    
     if args.len() >= 3 {
         command.args(&args[2..]);
     }
+    
     let mut child = command.spawn().expect("Failed to spawn the process.");
     let status = child.wait().expect("Failed to wait the process.");
     if status.success() {

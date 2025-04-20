@@ -9,6 +9,7 @@ use RustLoxinas::vm::VM;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    
     #[cfg(debug_assertions)]
     {
         println!("Loxinas 1.0.0 alpha [Developing] {{Runner}}");

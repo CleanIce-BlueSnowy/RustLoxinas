@@ -1,7 +1,7 @@
 //! 前端编译器模块
 
 use crate::compiler::Compiler;
-use crate::errors::error_types::CompileError;
+use crate::errors::error_types::{CompileError, CompileResultList};
 use crate::instr::Instruction;
 use crate::resolver::Resolver;
 use crate::stmt::Stmt;
@@ -18,6 +18,7 @@ pub struct FrontCompiler<'a> {
     statements: &'a [Stmt],
     context: Context,
     break_patches: Vec<BreakPatch>,
+    continue_patches: Vec<ContinuePatch>,
     codes: Vec<u8>,
 }
 
@@ -30,12 +31,13 @@ impl<'a> FrontCompiler<'a> {
             statements, 
             context: Context::init(),
             break_patches: vec![],
+            continue_patches: vec![],
             codes: vec![],
         }
     }
     
     /// 启动编译
-    pub fn compile(mut self) -> Result<Vec<u8>, Vec<CompileError>> {
+    pub fn compile(mut self) -> CompileResultList<Vec<u8>> {
         let mut errors = vec![];
         
         self.resolver.enter_scope();
@@ -100,6 +102,22 @@ impl BreakPatch {
         Self {
             loop_tag,
             patch_pos: break_pos,
+        }
+    }
+}
+
+/// 继续循环补丁
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct ContinuePatch {
+    loop_tag: Option<String>,
+    patch_pos: u32,
+}
+
+impl ContinuePatch {
+    pub fn new(loop_tag: Option<String>, continue_pos: u32) -> Self {
+        Self {
+            loop_tag,
+            patch_pos: continue_pos,
         }
     }
 }

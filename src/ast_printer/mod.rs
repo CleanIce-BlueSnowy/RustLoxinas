@@ -69,17 +69,18 @@ impl AstPrinter {
             Keyword(Or) => "or",
             Keyword(Shl) => "shl",
             Keyword(Shr) => "shr",
-            _ => panic!("Invalid token: {token:?}"),  // 不合法的运算符令牌，在解析表达式时就应该去除
+            _ => unreachable!(),  // 不合法的运算符令牌，在解析表达式时就应该去除
         }.to_string()
     }
 
     /// 为语法树节点添加括号并格式化
-    pub fn parenthesize(&mut self, name: &str, exprs: IndexMap<&str, TreeChild>) -> String {
+    pub fn parenthesize(&mut self, name: &str, children: IndexMap<&str, TreeChild>) -> String {
         let mut res = String::new();
         res.push_str("( ");
         res.push_str(name);
         res.push('\n');
-        for (name, child) in exprs {
+        
+        for (name, child) in children {
             let str: String = match child {
                 TreeChild::Expr(expr) => expr.accept(self),
                 TreeChild::Stmt(stmt) => stmt.accept(self),

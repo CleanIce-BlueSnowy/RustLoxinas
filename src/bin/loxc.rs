@@ -17,6 +17,7 @@ use RustLoxinas::scanner::TokenScanner;
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Loxinas 1.0.0 alpha [Developing] {{Compiler}}");
+    
     #[cfg(debug_assertions)]
     {
         println!("--- Debug Mode ---");
@@ -61,6 +62,7 @@ fn main() {
         }
         i += 1;
     }
+    
     // 启动编译
     println!("Compiling...");
     if let Err(err) = compile_file(source_path, output_path) {
@@ -78,6 +80,7 @@ fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
         Ok(temp) => file = temp,
         Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
     }
+
     let mut source = String::new();
     if let Err(err) = file.read_to_string(&mut source) {
         return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
@@ -87,19 +90,21 @@ fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
     let chunk = compile_code(source)?;
 
     // 写入目标文件
-    let output_file_path = if let Some(output_path) = output_path {  // 用户提供了输出文件
-        let file_path = Path::new(output_path);
-        if let None = file_path.extension() {
-            &format!("{}.loxc", output_path)
-        } else {
-            output_path
-        }
-    } else {  // 默认输出文件
-        let file_path = Path::new(path);
-        let parent = file_path.parent().unwrap_or(Path::new("."));
-        let stem = file_path.file_stem().unwrap_or(OsStr::new("main"));
-        &format!("{}/{}.loxc", parent.to_str().unwrap(), stem.to_str().unwrap())
-    };
+    let output_file_path =
+        if let Some(output_path) = output_path {  // 用户提供了输出文件
+            let file_path = Path::new(output_path);
+            if let None = file_path.extension() {
+                &format!("{}.loxc", output_path)
+            } else {
+                output_path
+            }
+        } else {  // 默认输出文件
+            let file_path = Path::new(path);
+            let parent = file_path.parent().unwrap_or(Path::new("."));
+            let stem = file_path.file_stem().unwrap_or(OsStr::new("main"));
+            &format!("{}/{}.loxc", parent.to_str().unwrap(), stem.to_str().unwrap())
+        };
+
     let mut file;
     match File::create(output_file_path) {
         Ok(temp) => file = temp,
@@ -117,10 +122,11 @@ fn compile_code(source: String) -> Result<Vec<u8>, String> {
     let lines: Vec<&str> = source.lines().collect();
 
     let scanner = TokenScanner::new(&source);  // 词法分析
-    let tokens = match scanner.scan_tokens() {
-        Ok(temp) => temp,
-        Err(errs) => return Err(print_all_errors(&lines, ErrorList::LexicalErrors(&errs))),
-    };
+    let tokens =
+        match scanner.scan_tokens() {
+            Ok(temp) => temp,
+            Err(errs) => return Err(print_all_errors(&lines, ErrorList::LexicalErrors(&errs))),
+        };
 
     #[cfg(debug_assertions)]
     {
@@ -131,10 +137,11 @@ fn compile_code(source: String) -> Result<Vec<u8>, String> {
     }
 
     let mut parser = Parser::new(tokens);  // 语法分析
-    let statements = match parser.parse() {
-        Ok(temp) => temp,
-        Err(errs) => return Err(print_all_errors(&lines, ErrorList::SyntaxErrors(&errs))),
-    };
+    let statements =
+        match parser.parse() {
+            Ok(temp) => temp,
+            Err(errs) => return Err(print_all_errors(&lines, ErrorList::SyntaxErrors(&errs))),
+        };
 
     #[cfg(debug_assertions)]
     {

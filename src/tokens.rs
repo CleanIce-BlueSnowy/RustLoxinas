@@ -15,7 +15,12 @@ pub struct Token {
 
 impl Token {
     pub fn new(token_type: TokenType, line: usize, start: usize, end: usize) -> Self {
-        Self { token_type, line, start, end }
+        Self {
+            token_type,
+            line,
+            start,
+            end,
+        }
     }
 }
 
@@ -69,6 +74,14 @@ pub enum TokenOperator {
     Caret,  // ^
     Mod,  // %
     DoubleColon,  // ::
+    PlusEqual,  // +=
+    MinusEqual,  // -=
+    StarEqual,  // *=
+    SlashEqual,  // /=
+    AndEqual,  // &=
+    PipeEqual,  // |=
+    CaretEqual,  // ^=
+    ModEqual,  // %=
 }
 
 /// 关键字令牌
@@ -93,6 +106,8 @@ pub enum TokenKeyword {
     Shl,
     Shr,
     Break,
+    Continue,
+    Loop,
 }
 
 /// 整型令牌
