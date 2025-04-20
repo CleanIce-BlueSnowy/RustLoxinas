@@ -3,41 +3,40 @@ use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::Expr;
 use crate::resolver::{Resolver, Scope, Variable};
 use crate::stmt::Stmt;
-use crate::types::{TypeTag, ValueType};
 use crate::types::ValueType::Object;
+use crate::types::{TypeTag, ValueType};
 
 impl Resolver {
     /// 预定义
     pub fn predefine(&mut self, statements: &[Stmt]) -> Result<(), Vec<CompileError>> {
         let current = self.get_current_scope();
         let mut errors = Vec::new();
-        
+
         for statement in statements {
             match statement {
                 Stmt::Let(stmt) => {
                     if current.variables.contains_key(&stmt.name) {
-                        errors.push(CompileError::new(&stmt.name_pos, format!("Redefine variable '{}'.", &stmt.name)));
+                        errors.push(CompileError::new(
+                            &stmt.name_pos,
+                            format!("Redefine variable '{}'.", &stmt.name),
+                        ));
                     }
-                    current.variables.insert(stmt.name.clone(), Variable::new(
-                        statement,
-                        false,
-                        false,
-                        0,
-                        None,
-                        stmt.is_ref,
-                    ));
+                    current.variables.insert(
+                        stmt.name.clone(),
+                        Variable::new(statement, false, false, 0, None, stmt.is_ref),
+                    );
                 }
                 _ => (),
             }
         }
-        
+
         return if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
         };
     }
-    
+
     /// 解析类型标识符
     pub fn parse_value_type(&mut self, type_tag: &TypeTag) -> CompileResult<ValueType> {
         let mut res_type: Option<ValueType> = None;
@@ -50,44 +49,53 @@ impl Resolver {
                     search_map = object.get_contain_types().clone();
                     in_global = false;
                 } else {
-                    return Err(CompileError::new(&type_tag.pos, format!("Unknown type '{}' in '{}'.", name, temp_ty)));
-                }
-            }
-            let ty =
-                if let Some(temp) = search_map.get(name) {
-                    temp
-                } else {
                     return Err(CompileError::new(
                         &type_tag.pos,
-                        if in_global {
-                            format!("Unknown type '{}' in global.", name)
-                        } else {
-                            format!("Unknown type '{}' in '{}'.", name, res_type.as_ref().unwrap())
-                        }
+                        format!("Unknown type '{}' in '{}'.", name, temp_ty),
                     ));
-                };
+                }
+            }
+            let ty = if let Some(temp) = search_map.get(name) {
+                temp
+            } else {
+                return Err(CompileError::new(
+                    &type_tag.pos,
+                    if in_global {
+                        format!("Unknown type '{}' in global.", name)
+                    } else {
+                        format!(
+                            "Unknown type '{}' in '{}'.",
+                            name,
+                            res_type.as_ref().unwrap()
+                        )
+                    },
+                ));
+            };
             res_type = Some(ty.clone());
         }
 
         // 不允许转换为对象
         if let Some(Object(_)) = res_type {
-            return Err(CompileError::new(&type_tag.pos, "Cannot convert a value to an object by using 'as'.".to_string()));
+            return Err(CompileError::new(
+                &type_tag.pos,
+                "Cannot convert a value to an object by using 'as'.".to_string(),
+            ));
         }
 
         return Ok(res_type.unwrap());
     }
-    
+
     /// 进入作用域
     #[inline]
     pub fn enter_scope(&mut self) {
         self.scopes.push(Scope::new(self.now_slot));
     }
-    
+
     /// 离开作用域
     #[inline]
     pub fn leave_scope(&mut self) -> Scope {
         let scope = self.scopes.pop().unwrap();
-        
+
         // 重置初始化变量
         // 当某个语句有多个子语句块时，分析器需要检查每个子语句块的初始化变量是否一致，然后选择性地确认初始化
         for &variable in &scope.init_vars {
@@ -96,9 +104,9 @@ impl Resolver {
                 (*variable).initialized = false;
             }
         }
-        
+
         self.now_slot = scope.top_slot;
-        
+
         return scope;
     }
 
@@ -125,7 +133,7 @@ impl Resolver {
         }
         return None;
     }
-    
+
     /// 在当前作用域寻找变量
     #[inline]
     #[must_use]
@@ -133,7 +141,7 @@ impl Resolver {
         let current = self.get_current_scope();
         return current.variables.get_mut(name);
     }
-    
+
     /// 检查类型转换
     #[must_use]
     pub fn check_type_convert(from: &ValueType, to: &ValueType) -> bool {
@@ -142,13 +150,13 @@ impl Resolver {
         }
         return true;
     }
-    
+
     /// 更新当前栈偏移量
     #[inline]
     pub fn update_slot(&mut self, data_size: &DataSize) {
         self.now_slot += data_size.get_bytes_cnt();
     }
-    
+
     /// 检查左值
     #[inline]
     #[must_use]

@@ -10,4 +10,4 @@ path = "src/main.rs"
 [dependencies]
 num_enum = { version = "0.7.3" }
 lazy_static = { version = "1.4.0" }
-indexmap = { version = "2.7.1" }
+indexmap = { version = "2.9.0" }

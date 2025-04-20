@@ -1,15 +1,15 @@
 //! 词法解析扫描模块
 
-use std::num;
-use std::rc::Rc;
 use crate::errors::error_types::{LexicalError, LexicalResult, LexicalResultList};
 use crate::position::Position;
-use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
-use crate::tokens::TokenParen::*;
-use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenFloat::*;
-use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenInteger::*;
+use crate::tokens::TokenKeyword::*;
+use crate::tokens::TokenOperator::*;
+use crate::tokens::TokenParen::*;
+use crate::tokens::{Token, TokenFloat, TokenInteger, TokenKeyword, TokenOperator, TokenType};
+use std::num;
+use std::rc::Rc;
 
 /// 词法扫描解析器
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -49,11 +49,11 @@ impl<'a> TokenScanner<'a> {
     这个函数将会移动 `self`！
      */
     pub fn scan_tokens(mut self) -> LexicalResultList<Vec<Rc<Token>>> {
-        self.chars = self.source.chars().collect();  // 获取字符
+        self.chars = self.source.chars().collect(); // 获取字符
         let mut errors: Vec<LexicalError> = vec![];
 
         while !self.is_at_end() {
-            self.start = self.current;  // 设置新的令牌开头
+            self.start = self.current; // 设置新的令牌开头
             if let Err(err) = self.scan_token() {
                 errors.push(err);
                 self.synchronize();
@@ -61,23 +61,28 @@ impl<'a> TokenScanner<'a> {
         }
 
         // 结尾令牌，方便语法分析
-        self.tokens.push(Rc::new(Token::new(TokenType::EOF, self.line, self.chars.len(), self.chars.len() + 1)));
-        
+        self.tokens.push(Rc::new(Token::new(
+            TokenType::EOF,
+            self.line,
+            self.chars.len(),
+            self.chars.len() + 1,
+        )));
+
         return if errors.is_empty() {
             Ok(self.tokens)
         } else {
             Err(errors)
-        }
+        };
     }
 
     /// 扫描单个令牌
     fn scan_token(&mut self) -> LexicalResult<()> {
-        let ch = self.advance();  // 消耗字符
-        
+        let ch = self.advance(); // 消耗字符
+
         match ch {
             '\n' => {
                 self.line += 1;
-                self.scanned_chars = self.current;  // 更新已扫描的字符
+                self.scanned_chars = self.current; // 更新已扫描的字符
             }
             '(' => self.add_token(TokenType::Paren(LeftParen)),
             ')' => self.add_token(TokenType::Paren(RightParen)),
@@ -113,7 +118,7 @@ impl<'a> TokenScanner<'a> {
             }
             '*' => {
                 if self.can_match('*') {
-                    self.add_token(TokenType::Operator(Power));  // 幂运算符
+                    self.add_token(TokenType::Operator(Power)); // 幂运算符
                 } else if self.can_match('=') {
                     self.add_token(TokenType::Operator(StarEqual));
                 } else {
@@ -189,17 +194,19 @@ impl<'a> TokenScanner<'a> {
             '"' => self.scan_string(false)?,
             '\'' => self.scan_char()?,
             '@' => self.scan_tag()?,
-            _ if self.is_identifier_char(ch, true) => {  // 标识符、关键字、字符串前缀
+            _ if self.is_identifier_char(ch, true) => {
+                // 标识符、关键字、字符串前缀
                 while self.is_identifier_char(self.peek(), false) {
                     self.advance();
                 }
 
-                if self.peek() == '"' {  // 识别为字符串前缀
-                    self.advance();  // 消耗引号
+                if self.peek() == '"' {
+                    // 识别为字符串前缀
+                    self.advance(); // 消耗引号
                     self.scan_string(true)?;
                 } else {
-                    let word = self.get_whole_word();  // 完整令牌
-                    let res = self.check_keyword(&word);  // 检查关键字
+                    let word = self.get_whole_word(); // 完整令牌
+                    let res = self.check_keyword(&word); // 检查关键字
                     match res {
                         Some(token) => self.add_token(TokenType::Keyword(token)),
                         None => self.add_token(TokenType::Identifier(word)),
@@ -220,7 +227,12 @@ impl<'a> TokenScanner<'a> {
     /// 添加令牌并自动填写位置信息
     #[inline]
     fn add_token(&mut self, token_type: TokenType) {
-        self.tokens.push(Rc::new(Token::new(token_type, self.line, self.start - self.scanned_chars, self.current - self.scanned_chars)));
+        self.tokens.push(Rc::new(Token::new(
+            token_type,
+            self.line,
+            self.start - self.scanned_chars,
+            self.current - self.scanned_chars,
+        )));
     }
 
     /// 消耗字符
@@ -266,11 +278,15 @@ impl<'a> TokenScanner<'a> {
     #[inline]
     #[must_use]
     fn peek(&self) -> char {
-        if self.is_at_end() { '\0' } else { self.chars[self.current] }
+        if self.is_at_end() {
+            '\0'
+        } else {
+            self.chars[self.current]
+        }
     }
 
     /** 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    
+
     自动调用 `throw_error_at()` 并填写位置信息
      */
     #[inline]
@@ -279,13 +295,18 @@ impl<'a> TokenScanner<'a> {
     }
 
     /** 返回错误，包含错误类型、行数、位置、错误信息、行内容、位置提示
-    
+
     需要手动传入位置信息
      */
     #[inline]
     fn throw_error_at(&self, msg: &str, start: usize, end: usize) -> LexicalResult<()> {
         Err(LexicalError::new(
-            &Position::new(self.line, start - self.scanned_chars, self.line, end - self.scanned_chars),
+            &Position::new(
+                self.line,
+                start - self.scanned_chars,
+                self.line,
+                end - self.scanned_chars,
+            ),
             msg.to_string(),
         ))
     }
@@ -331,27 +352,29 @@ impl<'a> TokenScanner<'a> {
 
     /// 扫描数字
     fn scan_number(&mut self) -> LexicalResult<()> {
-        let mut has_dot = false;  // 是否含有 `.`（是否为浮点数）
-        let mut ch = self.chars[self.current - 1];  // 获取当前字符
+        let mut has_dot = false; // 是否含有 `.`（是否为浮点数）
+        let mut ch = self.chars[self.current - 1]; // 获取当前字符
 
         if ch == '.' {
             has_dot = true;
         }
 
         ch = self.peek();
-        while ch == '.' || ch.is_numeric() {  // 符合条件
-            self.advance();  // 消耗
+        while ch == '.' || ch.is_numeric() {
+            // 符合条件
+            self.advance(); // 消耗
             if ch == '.' {
-                if has_dot {  // 多余的点
+                if has_dot {
+                    // 多余的点
                     self.throw_error("Invalid number.")?;
                 } else {
                     has_dot = true;
                 }
             }
-            ch = self.peek();  // 下一个
+            ch = self.peek(); // 下一个
         }
 
-        let end = self.current;  // 标记数字结尾。此后的都是数字标记
+        let end = self.current; // 标记数字结尾。此后的都是数字标记
 
         /// 所有数字类型
         enum NumberType {
@@ -369,21 +392,24 @@ impl<'a> TokenScanner<'a> {
             ExtInt,
             UExtInt,
             Float,
-            Double
+            Double,
         }
 
         let mut number_type = NumberType::NoneForDebug;
 
-        if ch.is_alphabetic() {  // 确实存在数字标记。注意，`ch` 已经是下一个字符了（循环末尾的 `self.peek()`）
-            self.advance();  // 消耗
+        if ch.is_alphabetic() {
+            // 确实存在数字标记。注意，`ch` 已经是下一个字符了（循环末尾的 `self.peek()`）
+            self.advance(); // 消耗
 
-            if has_dot {  // 浮点数
+            if has_dot {
+                // 浮点数
                 match ch {
                     'd' => number_type = NumberType::Double,
                     'f' => number_type = NumberType::Float,
                     _ => self.throw_error(&format!("Unexpected floating number tag `{}`.", ch))?,
                 }
-            } else {  // 整数
+            } else {
+                // 整数
                 match ch {
                     'b' => number_type = NumberType::Byte,
                     's' => {
@@ -414,22 +440,41 @@ impl<'a> TokenScanner<'a> {
                                 number_type = NumberType::UExtInt;
                                 self.advance();
                             }
-                            _ if !self.peek().is_alphanumeric() => number_type = NumberType::UInt,  // 若后面没有更多合法的标记字符
-                            _ => self.throw_error_at(&format!("Unexpected integer number tag `{}`.", ch), self.current, self.current + 1)?,
+                            _ if !self.peek().is_alphanumeric() => number_type = NumberType::UInt, // 若后面没有更多合法的标记字符
+                            _ => self.throw_error_at(
+                                &format!("Unexpected integer number tag `{}`.", ch),
+                                self.current,
+                                self.current + 1,
+                            )?,
                         }
                     }
-                    _ => self.throw_error_at(&format!("Unexpected integer number tag `{}`.", ch), self.current - 1, self.current)?,
+                    _ => self.throw_error_at(
+                        &format!("Unexpected integer number tag `{}`.", ch),
+                        self.current - 1,
+                        self.current,
+                    )?,
                 }
             }
-        } else {  // 提供默认类型
-            number_type = if has_dot { NumberType::Double } else { NumberType::Int };
+        } else {
+            // 提供默认类型
+            number_type = if has_dot {
+                NumberType::Double
+            } else {
+                NumberType::Int
+            };
         }
 
-        if self.peek().is_alphanumeric() {  // 还有更多字符
-            self.throw_error_at(&format!("Unexpected character `{}`.", self.peek()), self.current, self.current + 1)?;
+        if self.peek().is_alphanumeric() {
+            // 还有更多字符
+            self.throw_error_at(
+                &format!("Unexpected character `{}`.", self.peek()),
+                self.current,
+                self.current + 1,
+            )?;
         }
 
-        if has_dot {  // 解析浮点数
+        if has_dot {
+            // 解析浮点数
             let literal = &self.chars[self.start..end];
             let mut to_parse = String::new();
 
@@ -448,18 +493,23 @@ impl<'a> TokenScanner<'a> {
             }
 
             /// 用于解析浮点数并捕获错误
-            fn parse_float(to_parse: String, number_type: NumberType) -> Result<TokenFloat, num::ParseFloatError> {
+            fn parse_float(
+                to_parse: String,
+                number_type: NumberType,
+            ) -> Result<TokenFloat, num::ParseFloatError> {
                 match number_type {
                     NumberType::Float => Ok(Float(to_parse.parse::<f32>()?)),
                     NumberType::Double => Ok(Double(to_parse.parse::<f64>()?)),
-                    NumberType::NoneForDebug => unreachable!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
-                    _ => unreachable!("Logical Error! Invalid number type."),  // 其他值
+                    NumberType::NoneForDebug => {
+                        unreachable!("Logical Error! Checked NoneForDebug.")
+                    } // 不应出现的值
+                    _ => unreachable!("Logical Error! Invalid number type."), // 其他值
                 }
             }
 
             match parse_float(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Float(res)),
-                Err(err) => unreachable!("Logical Error! Unexpected error: {}", err),  // 浮点数转换错误只可能是解析器内部问题
+                Err(err) => unreachable!("Logical Error! Unexpected error: {}", err), // 浮点数转换错误只可能是解析器内部问题
             }
         } else {
             let literal = &self.chars[self.start..end];
@@ -470,7 +520,10 @@ impl<'a> TokenScanner<'a> {
             }
 
             /// 用于解析整数并捕获错误
-            fn parse_int(to_parse: String, number_type: NumberType) -> Result<TokenInteger, num::ParseIntError> {
+            fn parse_int(
+                to_parse: String,
+                number_type: NumberType,
+            ) -> Result<TokenInteger, num::ParseIntError> {
                 match number_type {
                     NumberType::Byte => Ok(Byte(to_parse.parse::<u8>()?)),
                     NumberType::SByte => Ok(SByte(to_parse.parse::<i8>()?)),
@@ -482,18 +535,19 @@ impl<'a> TokenScanner<'a> {
                     NumberType::ULong => Ok(ULong(to_parse.parse::<u64>()?)),
                     NumberType::ExtInt => Ok(ExtInt(to_parse.parse::<i128>()?)),
                     NumberType::UExtInt => Ok(UExtInt(to_parse.parse::<u128>()?)),
-                    NumberType::NoneForDebug => unreachable!("Logical Error! Checked NoneForDebug."),  // 不应出现的值
-                    _ => unreachable!("Logical Error! Invalid number type."),  // 其他值
+                    NumberType::NoneForDebug => {
+                        unreachable!("Logical Error! Checked NoneForDebug.")
+                    } // 不应出现的值
+                    _ => unreachable!("Logical Error! Invalid number type."), // 其他值
                 }
             }
 
             match parse_int(to_parse, number_type) {
                 Ok(res) => self.add_token(TokenType::Integer(res)),
-                Err(err) =>
-                    match err.kind() {
-                        num::IntErrorKind::PosOverflow => self.throw_error("Numer is too large.")?,  // 整型溢出应该是用户代码的问题，因此返回词法错误
-                        _ => unreachable!("Logical Error! Unexpected error: {err}."),  // 其余转换错误是解析器的问题
-                    },
+                Err(err) => match err.kind() {
+                    num::IntErrorKind::PosOverflow => self.throw_error("Numer is too large.")?, // 整型溢出应该是用户代码的问题，因此返回词法错误
+                    _ => unreachable!("Logical Error! Unexpected error: {err}."), // 其余转换错误是解析器的问题
+                },
             }
         }
         return Ok(());
@@ -501,13 +555,14 @@ impl<'a> TokenScanner<'a> {
 
     /// 扫描字符串
     fn scan_string(&mut self, has_pref: bool) -> LexicalResult<()> {
-        let mut raw_string = false;  // 原始字符串
+        let mut raw_string = false; // 原始字符串
 
-        if has_pref {  // 含有前缀
-            let pref = &self.chars[self.start..(self.current - 1)];  // 获取字符串前缀
+        if has_pref {
+            // 含有前缀
+            let pref = &self.chars[self.start..(self.current - 1)]; // 获取字符串前缀
             for &ch in pref {
                 match ch {
-                    'r' => raw_string = true,  // 原始字符串
+                    'r' => raw_string = true, // 原始字符串
                     _ => self.throw_error(&format!("Invalid string prefix: `{ch}`"))?,
                 }
             }
@@ -515,11 +570,12 @@ impl<'a> TokenScanner<'a> {
 
         let mut res = String::new();
         let mut ch = self.peek();
-        while ch != '"' && ch != '\n' && ch != '\0' {  // 注意边界处理
-            self.advance();  // 消耗
+        while ch != '"' && ch != '\n' && ch != '\0' {
+            // 注意边界处理
+            self.advance(); // 消耗
             if !raw_string && ch == '\\' {
                 res.push(self.escape_char(self.peek())?);
-                self.advance();  // 消耗转义符
+                self.advance(); // 消耗转义符
             } else {
                 res.push(ch);
             }
@@ -527,9 +583,9 @@ impl<'a> TokenScanner<'a> {
         }
 
         if ch == '"' {
-            self.advance();  // 消耗引号
+            self.advance(); // 消耗引号
         } else {
-            self.throw_error("Unterminated string.")?;  // 未闭合的字符串
+            self.throw_error("Unterminated string.")?; // 未闭合的字符串
         }
 
         self.add_token(TokenType::String(res));
@@ -538,27 +594,29 @@ impl<'a> TokenScanner<'a> {
 
     /// 扫描字符
     fn scan_char(&mut self) -> LexicalResult<()> {
-        if self.can_match('\'') {  // 空字符
+        if self.can_match('\'') {
+            // 空字符
             self.throw_error("Empty character.")?;
         }
 
-        let mut ch = self.advance();  // 获取字符
+        let mut ch = self.advance(); // 获取字符
         if ch == '\\' {
             let esc = self.advance();
-            ch = self.escape_char(esc)?;  // 转义
+            ch = self.escape_char(esc)?; // 转义
         }
 
-        return if self.can_match('\'') {  // 结束引号
+        return if self.can_match('\'') {
+            // 结束引号
             self.add_token(TokenType::Char(ch));
             Ok(())
         } else {
             self.throw_error("Unterminated character.")
-        }
+        };
     }
-    
+
     /// 扫描标签
     fn scan_tag(&mut self) -> LexicalResult<()> {
-        self.advance();  // '@'
+        self.advance(); // '@'
         let mut ch = self.peek();
         if !self.is_identifier_char(ch, true) {
             self.throw_error("Expect a tag name.")?;
@@ -585,11 +643,15 @@ impl<'a> TokenScanner<'a> {
             '\\' => res = Ok('\\'),
             '\'' => res = Ok('\''),
             '"' => res = Ok('"'),
-            _ => self.throw_error_at(&format!("Unknown escape character: `\\{ch}`"), self.current, self.current + 1)?,
+            _ => self.throw_error_at(
+                &format!("Unknown escape character: `\\{ch}`"),
+                self.current,
+                self.current + 1,
+            )?,
         }
         return res;
     }
-    
+
     /// 同步错误
     fn synchronize(&mut self) {
         let mut ch = self.advance();

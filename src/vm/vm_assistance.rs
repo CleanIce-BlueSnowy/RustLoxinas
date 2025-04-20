@@ -8,7 +8,7 @@ impl<'a> VM<'a> {
     pub fn jump(&mut self, goto: i32) {
         self.ip = (self.ip as isize + goto as isize) as usize;
     }
-    
+
     #[inline]
     pub fn stack_shrink(&mut self, length: u32) {
         let old_length = self.vm_stack.len();
@@ -20,7 +20,7 @@ impl<'a> VM<'a> {
         let old_length = self.vm_stack.len();
         self.vm_stack.resize(old_length + length as usize, 0x00);
     }
-    
+
     #[inline]
     pub fn push_byte(&mut self, byte: [u8; 1]) {
         self.vm_stack.extend_from_slice(&byte);
@@ -45,16 +45,10 @@ impl<'a> VM<'a> {
     pub fn push_oword(&mut self, oword: [u8; 16]) {
         self.vm_stack.extend_from_slice(&oword);
     }
-    
+
     #[inline]
     pub fn push_bool(&mut self, value: bool) {
-        self.vm_stack.push(
-            if value {
-                0x01
-            } else {
-                0x00
-            }
-        );
+        self.vm_stack.push(if value { 0x01 } else { 0x00 });
     }
 
     #[inline]
@@ -75,7 +69,12 @@ impl<'a> VM<'a> {
     #[must_use]
     pub fn peek_dword(&self) -> [u8; 4] {
         let top = self.vm_stack.len() - 1;
-        return [self.vm_stack[top - 3], self.vm_stack[top - 2], self.vm_stack[top - 1], self.vm_stack[top]];
+        return [
+            self.vm_stack[top - 3],
+            self.vm_stack[top - 2],
+            self.vm_stack[top - 1],
+            self.vm_stack[top],
+        ];
     }
 
     #[inline]
@@ -83,8 +82,14 @@ impl<'a> VM<'a> {
     pub fn peek_qword(&self) -> [u8; 8] {
         let top = self.vm_stack.len() - 1;
         return [
-            self.vm_stack[top - 7], self.vm_stack[top - 6], self.vm_stack[top - 5], self.vm_stack[top - 4],
-            self.vm_stack[top - 3], self.vm_stack[top - 2], self.vm_stack[top - 1], self.vm_stack[top]
+            self.vm_stack[top - 7],
+            self.vm_stack[top - 6],
+            self.vm_stack[top - 5],
+            self.vm_stack[top - 4],
+            self.vm_stack[top - 3],
+            self.vm_stack[top - 2],
+            self.vm_stack[top - 1],
+            self.vm_stack[top],
         ];
     }
 
@@ -93,13 +98,25 @@ impl<'a> VM<'a> {
     pub fn peek_oword(&self) -> [u8; 16] {
         let top = self.vm_stack.len() - 1;
         return [
-            self.vm_stack[top - 15], self.vm_stack[top - 14], self.vm_stack[top - 13], self.vm_stack[top - 12],
-            self.vm_stack[top - 11], self.vm_stack[top - 10], self.vm_stack[top - 9], self.vm_stack[top - 8],
-            self.vm_stack[top - 7], self.vm_stack[top - 6], self.vm_stack[top - 5], self.vm_stack[top - 4],
-            self.vm_stack[top - 3], self.vm_stack[top - 2], self.vm_stack[top - 1], self.vm_stack[top]
+            self.vm_stack[top - 15],
+            self.vm_stack[top - 14],
+            self.vm_stack[top - 13],
+            self.vm_stack[top - 12],
+            self.vm_stack[top - 11],
+            self.vm_stack[top - 10],
+            self.vm_stack[top - 9],
+            self.vm_stack[top - 8],
+            self.vm_stack[top - 7],
+            self.vm_stack[top - 6],
+            self.vm_stack[top - 5],
+            self.vm_stack[top - 4],
+            self.vm_stack[top - 3],
+            self.vm_stack[top - 2],
+            self.vm_stack[top - 1],
+            self.vm_stack[top],
         ];
     }
-    
+
     #[inline]
     #[must_use]
     pub fn peek_bool(&self) -> bool {
@@ -141,7 +158,7 @@ impl<'a> VM<'a> {
         self.vm_stack.truncate(self.vm_stack.len() - 16);
         return res;
     }
-    
+
     #[inline]
     pub fn pop_bool(&mut self) -> bool {
         let res = self.peek_bool();
@@ -203,7 +220,7 @@ impl<'a> VM<'a> {
             panic!("Data not enough: need 16 byte.");
         }
     }
-    
+
     #[inline]
     #[must_use]
     pub fn get_frame_slot_byte(&mut self, slot: usize) -> [u8; 1] {
@@ -256,26 +273,31 @@ impl<'a> VM<'a> {
 
     #[inline]
     pub fn set_frame_slot_byte(&mut self, slot: usize, byte: [u8; 1]) {
-        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 1)].copy_from_slice(&byte);
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 1)]
+            .copy_from_slice(&byte);
     }
 
     #[inline]
     pub fn set_frame_slot_word(&mut self, slot: usize, word: [u8; 2]) {
-        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 2)].copy_from_slice(&word);
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 2)]
+            .copy_from_slice(&word);
     }
 
     #[inline]
     pub fn set_frame_slot_dword(&mut self, slot: usize, dword: [u8; 4]) {
-        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 4)].copy_from_slice(&dword);
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 4)]
+            .copy_from_slice(&dword);
     }
 
     #[inline]
     pub fn set_frame_slot_qword(&mut self, slot: usize, qword: [u8; 8]) {
-        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 8)].copy_from_slice(&qword);
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 8)]
+            .copy_from_slice(&qword);
     }
 
     #[inline]
     pub fn set_frame_slot_oword(&mut self, slot: usize, oword: [u8; 16]) {
-        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 16)].copy_from_slice(&oword);
+        self.vm_stack[(self.frame_start + slot)..(self.frame_start + slot + 16)]
+            .copy_from_slice(&oword);
     }
 }

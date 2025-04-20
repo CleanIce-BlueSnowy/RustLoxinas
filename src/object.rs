@@ -1,10 +1,10 @@
 //! 对象模块
 
-use std::collections::HashMap;
-use std::rc::Rc;
-use lazy_static::lazy_static;
 use crate::hashmap;
 use crate::types::ValueType;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -35,7 +35,7 @@ impl LoxinasClass {
             LoxinasClass::UserDefined(class) => &class.contain_types,
         }
     }
-    
+
     /// 获取名称
     #[must_use]
     pub fn get_name(&self) -> &str {
@@ -57,9 +57,9 @@ pub struct UserClass {
 impl UserClass {
     #[must_use]
     pub fn new(name: String) -> Self {
-        Self { 
-            name, 
-            contain_types: hashmap!{},
+        Self {
+            name,
+            contain_types: hashmap! {},
         }
     }
 }

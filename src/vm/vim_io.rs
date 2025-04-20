@@ -8,7 +8,7 @@ macro_rules! stdout_debug_info {
         {
             print!(" <-|---- DEBUG MODE PROGRAM STDOUT ----|-> ");
         }
-    }
+    };
 }
 
 impl<'a> VM<'a> {
@@ -102,7 +102,7 @@ impl<'a> VM<'a> {
         stdout_debug_info!();
         print!("{}", if value { "true" } else { "false" });
     }
-    
+
     /// 标准输出打印字符
     #[inline]
     pub fn stdout_print_char(ch: char) {

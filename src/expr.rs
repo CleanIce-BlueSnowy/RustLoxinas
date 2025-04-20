@@ -111,17 +111,15 @@ impl Expr {
 /// 获取表达式的位置信息
 #[macro_export]
 macro_rules! expr_get_pos {
-    ( $expression:expr ) => {
-        {
-            use crate::expr::Expr;
-            match $expression {
-                Expr::Binary(expr) => expr.pos.clone(),
-                Expr::Grouping(expr) => expr.pos.clone(),
-                Expr::Literal(expr) => expr.pos.clone(),
-                Expr::Unary(expr) => expr.pos.clone(),
-                Expr::As(expr) => expr.pos.clone(),
-                Expr::Variable(expr) => expr.pos.clone(), 
-            }
+    ( $expression:expr ) => {{
+        use crate::expr::Expr;
+        match $expression {
+            Expr::Binary(expr) => expr.pos.clone(),
+            Expr::Grouping(expr) => expr.pos.clone(),
+            Expr::Literal(expr) => expr.pos.clone(),
+            Expr::Unary(expr) => expr.pos.clone(),
+            Expr::As(expr) => expr.pos.clone(),
+            Expr::Variable(expr) => expr.pos.clone(),
         }
-    }
+    }};
 }

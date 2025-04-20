@@ -6,12 +6,12 @@ use crate::byte_handler::byte_reader::read_byte;
 use crate::disassembler::disassemble_instruction;
 
 use crate::errors::error_types::{RuntimeError, RuntimeResult};
-use crate::instr::{Instruction, SpecialFunction};
 use crate::instr::Instruction::*;
+use crate::instr::{Instruction, SpecialFunction};
 
+mod vim_io;
 mod vm_assistance;
 mod vm_debug;
-mod vim_io;
 
 pub struct VM<'a> {
     pub vm_stack: Vec<u8>,
@@ -45,19 +45,26 @@ impl<'a> VM<'a> {
 
             self.ip += 1;
 
-            let instr =
-                if let Ok(temp) = Instruction::try_from(instr_byte) {
-                    temp
-                } else {
-                    return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", instr_byte)));
-                };
+            let instr = if let Ok(temp) = Instruction::try_from(instr_byte) {
+                temp
+            } else {
+                return Err(RuntimeError::new(format!(
+                    "Unknown instruction: {:02x}",
+                    instr_byte
+                )));
+            };
 
             #[cfg(debug_assertions)]
             {
                 self.print_stack();
                 match disassemble_instruction(instr.clone(), self.chunk, old_ip + 1) {
                     Ok(temp) => println!("{:08X} {}", old_ip, temp.0),
-                    Err(err) => return Err(RuntimeError::new(format!("Disassembler threw an error: {}", err))),
+                    Err(err) => {
+                        return Err(RuntimeError::new(format!(
+                            "Disassembler threw an error: {}",
+                            err
+                        )))
+                    }
                 }
             }
 
@@ -86,16 +93,19 @@ impl<'a> VM<'a> {
 
                 self.ip += 1;
 
-                let special_func =
-                    if let Ok(temp) = SpecialFunction::try_from(func_byte) {
-                        temp
-                    } else {
-                        return Err(RuntimeError::new(format!("Unknown instruction: {:02x}", func_byte)));
-                    };
+                let special_func = if let Ok(temp) = SpecialFunction::try_from(func_byte) {
+                    temp
+                } else {
+                    return Err(RuntimeError::new(format!(
+                        "Unknown instruction: {:02x}",
+                        func_byte
+                    )));
+                };
 
                 self.run_special_function(special_func)?;
             }
-            OpReturn => {  // 临时充当结束程序的作用
+            OpReturn => {
+                // 临时充当结束程序的作用
                 return Ok(());
             }
             OpStackExtend => {

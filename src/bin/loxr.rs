@@ -1,15 +1,15 @@
 // RustLoxinas 虚拟机运行
 
-use std::{env, process};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::{env, process};
 use RustLoxinas::errors::print_runtime_error;
 use RustLoxinas::vm::VM;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     #[cfg(debug_assertions)]
     {
         println!("Loxinas 1.0.0 alpha [Developing] {{Runner}}");
@@ -31,7 +31,7 @@ fn main() {
         println!("    (None Yet)");
         return;
     }
-    
+
     let file_path: &str = {
         let path = Path::new(&args[1]);
         if let None = path.extension() {
@@ -40,7 +40,7 @@ fn main() {
             &args[1]
         }
     };
-    
+
     // 启动虚拟机运行
     if let Err(err) = run_file(file_path) {
         eprintln!("{}", err);
@@ -53,11 +53,19 @@ fn run_file(path: &str) -> Result<(), String> {
     let mut file;
     match File::open(path) {
         Ok(temp) => file = temp,
-        Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
+        Err(err) => {
+            return Err(format!(
+                "Cannot open file '{}'! Error message: {}",
+                path, err
+            ))
+        }
     }
     let mut buffer: Vec<u8> = vec![];
     if let Err(err) = file.read_to_end(&mut buffer) {
-        return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
+        return Err(format!(
+            "Cannot read file '{}'! Error message: {}",
+            path, err
+        ));
     }
 
     // 运行代码
@@ -78,4 +86,3 @@ fn run_code(code: &[u8]) -> Result<(), String> {
 
     return Ok(());
 }
-

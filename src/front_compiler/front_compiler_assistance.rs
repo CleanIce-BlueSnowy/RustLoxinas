@@ -1,6 +1,8 @@
 //! 前端编译器辅助模块
 
-use crate::byte_handler::byte_writer::{write_byte, write_dword, write_oword, write_qword, write_word};
+use crate::byte_handler::byte_writer::{
+    write_byte, write_dword, write_oword, write_qword, write_word,
+};
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::front_compiler::FrontCompiler;
 use crate::instr::{Instruction, SpecialFunction};
@@ -10,13 +12,15 @@ use crate::resolver::Scope;
 impl<'a> FrontCompiler<'a> {
     /// 打包错误到错误列表
     #[inline]
-    pub fn pack_error<OkType, ErrType>(result: Result<OkType, ErrType>) -> Result<OkType, Vec<ErrType>> {
+    pub fn pack_error<OkType, ErrType>(
+        result: Result<OkType, ErrType>,
+    ) -> Result<OkType, Vec<ErrType>> {
         match result {
             Ok(ok) => Ok(ok),
             Err(err) => Err(vec![err]),
         }
     }
-    
+
     /// 添加新指令
     #[inline]
     pub fn write_code(&mut self, instr: Instruction) {
@@ -58,13 +62,13 @@ impl<'a> FrontCompiler<'a> {
     pub fn write_arg_oword(&mut self, oword: [u8; 16]) {
         write_oword(&mut self.codes, oword);
     }
-    
+
     /// 检查作用域初始变量是否相同
     #[inline]
     pub fn scopes_same_inits(scope1: &Scope, scope2: &Scope) -> bool {
         scope1.init_vars == scope2.init_vars
     }
-    
+
     /// 初始化作用域中的变量
     #[inline]
     pub fn scope_init_vars(scope: &Scope) {
@@ -74,7 +78,7 @@ impl<'a> FrontCompiler<'a> {
             }
         }
     }
-    
+
     /// 检查标记
     pub fn check_tag(&self, tag: &Option<String>, pos: &Position) -> CompileResult<()> {
         if let Some(tag_name) = tag {
@@ -88,7 +92,10 @@ impl<'a> FrontCompiler<'a> {
                 }
             }
             if !found_tag {
-                Err(CompileError::new(pos, format!("Undefined tag: @{}", tag_name)))
+                Err(CompileError::new(
+                    pos,
+                    format!("Undefined tag: @{}", tag_name),
+                ))
             } else {
                 Ok(())
             }

@@ -204,24 +204,22 @@ impl Stmt {
 /// 获取语句的位置信息
 #[macro_export]
 macro_rules! stmt_get_pos {
-    ( $expression:expr ) => {
-        {
-            use crate::stmt::Stmt;
-            match $expression {
-                Stmt::Empty(stmt) => stmt.pos.clone(),
-                Stmt::Expr(stmt) => stmt.pos.clone(),
-                Stmt::Let(stmt) => stmt.pos.clone(),
-                Stmt::Init(stmt) => stmt.pos.clone(),
-                Stmt::Assign(stmt) => stmt.pos.clone(),
-                Stmt::Block(stmt) => stmt.pos.clone(),
-                Stmt::If(stmt) => stmt.pos.clone(),
-                Stmt::Loop(stmt) => stmt.pos.clone(),
-                Stmt::While(stmt) => stmt.pos.clone(),
-                Stmt::For(stmt) => stmt.pos.clone(),
-                Stmt::Break(stmt) => stmt.pos.clone(),
-                Stmt::Continue(stmt) => stmt.pos.clone(),
-                Stmt::Print(stmt) => stmt.pos.clone(),
-            }
+    ( $expression:expr ) => {{
+        use crate::stmt::Stmt;
+        match $expression {
+            Stmt::Empty(stmt) => stmt.pos.clone(),
+            Stmt::Expr(stmt) => stmt.pos.clone(),
+            Stmt::Let(stmt) => stmt.pos.clone(),
+            Stmt::Init(stmt) => stmt.pos.clone(),
+            Stmt::Assign(stmt) => stmt.pos.clone(),
+            Stmt::Block(stmt) => stmt.pos.clone(),
+            Stmt::If(stmt) => stmt.pos.clone(),
+            Stmt::Loop(stmt) => stmt.pos.clone(),
+            Stmt::While(stmt) => stmt.pos.clone(),
+            Stmt::For(stmt) => stmt.pos.clone(),
+            Stmt::Break(stmt) => stmt.pos.clone(),
+            Stmt::Continue(stmt) => stmt.pos.clone(),
+            Stmt::Print(stmt) => stmt.pos.clone(),
         }
-    }
+    }};
 }

@@ -46,8 +46,8 @@ pub struct CompileError {
 
 impl CompileError {
     pub fn new(pos: &Position, message: String) -> Self {
-        Self { 
-            pos: pos.clone(), 
+        Self {
+            pos: pos.clone(),
             message,
         }
     }
@@ -61,9 +61,7 @@ pub struct RuntimeError {
 
 impl RuntimeError {
     pub fn new(message: String) -> Self {
-        Self { 
-            message,
-        }
+        Self { message }
     }
 }
 

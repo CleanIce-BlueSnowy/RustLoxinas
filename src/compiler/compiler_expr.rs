@@ -10,36 +10,61 @@ use crate::tokens::{TokenKeyword, TokenType};
 
 impl Compiler {
     /// 编译二元运算表达式
-    pub fn compile_binary_expr(&mut self, 
-                               expr: &ExprBinary,
-                               resolve_res: &ExprResolveRes,
-                               left_code: &mut Vec<u8>,
-                               left_res: &ExprResolveRes,
-                               right_code: &mut Vec<u8>,
-                               right_res: &ExprResolveRes) -> CompileResult<Vec<u8>> {
+    pub fn compile_binary_expr(
+        &mut self,
+        expr: &ExprBinary,
+        resolve_res: &ExprResolveRes,
+        left_code: &mut Vec<u8>,
+        left_res: &ExprResolveRes,
+        right_code: &mut Vec<u8>,
+        right_res: &ExprResolveRes,
+    ) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
-        
+
         // 位移走单独路线
-        if let TokenType::Keyword(TokenKeyword::Shl | TokenKeyword::Shr) = &expr.operator.token_type {
+        if let TokenType::Keyword(TokenKeyword::Shl | TokenKeyword::Shr) = &expr.operator.token_type
+        {
             target.append(left_code);
             target.append(right_code);
             let this_type = &resolve_res.ope_type;
             if let TokenType::Keyword(TokenKeyword::Shl) = &expr.operator.token_type {
-                self.integer_code(this_type, OpShiftLeftByte, OpShiftLeftWord, OpShiftLeftDword, OpShiftLeftQword, OpShiftLeftOword);
-            } else {  // TokenType::Keyword(TokenKeyword::Rsh)
-                self.sign_integer_code(this_type, OpSignShiftRightByte, OpZeroShiftRightByte, OpSignShiftRightWord, OpZeroShiftRightWord, OpSignShiftRightDword, OpZeroShiftRightDword, OpSignShiftRightQword, OpZeroShiftRightQword, OpSignShiftRightOword, OpZeroShiftRightOword);
+                self.integer_code(
+                    this_type,
+                    OpShiftLeftByte,
+                    OpShiftLeftWord,
+                    OpShiftLeftDword,
+                    OpShiftLeftQword,
+                    OpShiftLeftOword,
+                );
+            } else {
+                // TokenType::Keyword(TokenKeyword::Rsh)
+                self.sign_integer_code(
+                    this_type,
+                    OpSignShiftRightByte,
+                    OpZeroShiftRightByte,
+                    OpSignShiftRightWord,
+                    OpZeroShiftRightWord,
+                    OpSignShiftRightDword,
+                    OpZeroShiftRightDword,
+                    OpSignShiftRightQword,
+                    OpZeroShiftRightQword,
+                    OpSignShiftRightOword,
+                    OpZeroShiftRightOword,
+                );
             }
             self.append_temp_chunk(&mut target);
             return Ok(target);
         }
-        
+
         // 逻辑运算符需要短路求值，走单独路线
-        if let TokenType::Keyword(TokenKeyword::And | TokenKeyword::Or) = &expr.operator.token_type {
+        if let TokenType::Keyword(TokenKeyword::And | TokenKeyword::Or) = &expr.operator.token_type
+        {
             target.append(left_code);
             if let TokenType::Keyword(TokenKeyword::And) = &expr.operator.token_type {
                 // 如果第一个表达式为 false，则整体为 false，短路跳过第二条
                 self.write_code(OpJumpFalse);
-                self.write_arg_dword((right_code.len() as u32 + 1).to_le_bytes());  // 记得留一个 OpPopByte 的位置
+                self.write_arg_dword((right_code.len() as u32 + 1).to_le_bytes());
+            // 记得留一个 OpPopByte 的位置
             } else {
                 // 如果第一个表达式为 true，则整体为 true，短路跳过第二条
                 self.write_code(OpJumpTrue);
@@ -50,7 +75,7 @@ impl Compiler {
             target.append(right_code);
             return Ok(target);
         }
-        
+
         // 获取类型并粘合代码
         let this_type = &resolve_res.ope_type;
         let left_type = &left_res.res_type;
@@ -61,30 +86,158 @@ impl Compiler {
         target.append(right_code);
         self.convert_types(right_type, this_type);
         self.append_temp_chunk(&mut target);
-        
+
         use crate::types::ValueType::*;
         match (&left_type, &right_type) {
             (Integer(_), Integer(_)) => {
                 use crate::tokens::TokenType::*;
-                
+
                 match &expr.operator.token_type {
                     Operator(ope) => {
                         use crate::tokens::TokenOperator::*;
                         match ope {
-                            Plus => self.integer_code(this_type, OpIAddByte, OpIAddWord, OpIAddDword, OpIAddQword, OpIAddOword),
-                            Minus => self.integer_code(this_type, OpISubByte, OpISubWord, OpISubDword, OpISubQword, OpISubOword),
-                            Star => self.integer_code(this_type, OpIMulByte, OpIMulWord, OpIMulDword, OpIMulQword, OpIMulOword),
-                            Slash => self.sign_integer_code(this_type, OpIDivSByte, OpIDivUByte, OpIDivSWord, OpIDivUWord, OpIDivSDword, OpIDivUDword, OpIDivSQword, OpIDivUQword, OpIDivSOword, OpIDivUOword),
-                            Mod => self.sign_integer_code(this_type, OpIModSByte, OpIModUByte, OpIModSWord, OpIModUWord, OpIModSDword, OpIModUDword, OpIModSQword, OpIModUQword, OpIModSOword, OpIModUOword),
-                            And => self.integer_code(this_type, OpBitAndByte, OpBitAndWord, OpBitAndDword, OpBitAndQword, OpBitAndOword),
-                            Pipe => self.integer_code(this_type, OpBitOrByte, OpBitOrWord, OpBitOrDword, OpBitOrQword, OpBitOrOword),
-                            Caret => self.integer_code(this_type, OpBitXorByte, OpBitXorWord, OpBitXorDword, OpBitXorQword, OpBitXorOword),
-                            EqualEqual => self.integer_code(this_type, OpICmpEqualByte, OpICmpEqualWord, OpICmpEqualDword, OpICmpEqualQword, OpICmpEqualOword),
-                            NotEqual => self.integer_code(this_type, OpICmpNotEqualByte, OpICmpNotEqualWord, OpICmpNotEqualDword, OpICmpNotEqualQword, OpICmpNotEqualOword),
-                            Less => self.sign_integer_code(this_type, OpICmpLessSByte, OpICmpLessUByte, OpICmpLessSWord, OpICmpLessUWord, OpICmpLessSDword, OpICmpLessUDword, OpICmpLessSQword, OpICmpLessUQword, OpICmpLessSOword, OpICmpLessUOword),
-                            LessEqual => self.sign_integer_code(this_type, OpICmpLessEqualSByte, OpICmpLessEqualUByte, OpICmpLessEqualSWord, OpICmpLessEqualUWord, OpICmpLessEqualSDword, OpICmpLessEqualUDword, OpICmpLessEqualSQword, OpICmpLessEqualUQword, OpICmpLessEqualSOword, OpICmpLessEqualUOword),
-                            Greater => self.sign_integer_code(this_type, OpICmpGreaterSByte, OpICmpGreaterUByte, OpICmpGreaterSWord, OpICmpGreaterUWord, OpICmpGreaterSDword, OpICmpGreaterUDword, OpICmpGreaterSQword, OpICmpGreaterUQword, OpICmpGreaterSOword, OpICmpGreaterUOword),
-                            GreaterEqual => self.sign_integer_code(this_type, OpICmpGreaterEqualSByte, OpICmpGreaterEqualUByte, OpICmpGreaterEqualSWord, OpICmpGreaterEqualUWord, OpICmpGreaterEqualSDword, OpICmpGreaterEqualUDword, OpICmpGreaterEqualSQword, OpICmpGreaterEqualUQword, OpICmpGreaterEqualSOword, OpICmpGreaterEqualUOword),
+                            Plus => self.integer_code(
+                                this_type,
+                                OpIAddByte,
+                                OpIAddWord,
+                                OpIAddDword,
+                                OpIAddQword,
+                                OpIAddOword,
+                            ),
+                            Minus => self.integer_code(
+                                this_type,
+                                OpISubByte,
+                                OpISubWord,
+                                OpISubDword,
+                                OpISubQword,
+                                OpISubOword,
+                            ),
+                            Star => self.integer_code(
+                                this_type,
+                                OpIMulByte,
+                                OpIMulWord,
+                                OpIMulDword,
+                                OpIMulQword,
+                                OpIMulOword,
+                            ),
+                            Slash => self.sign_integer_code(
+                                this_type,
+                                OpIDivSByte,
+                                OpIDivUByte,
+                                OpIDivSWord,
+                                OpIDivUWord,
+                                OpIDivSDword,
+                                OpIDivUDword,
+                                OpIDivSQword,
+                                OpIDivUQword,
+                                OpIDivSOword,
+                                OpIDivUOword,
+                            ),
+                            Mod => self.sign_integer_code(
+                                this_type,
+                                OpIModSByte,
+                                OpIModUByte,
+                                OpIModSWord,
+                                OpIModUWord,
+                                OpIModSDword,
+                                OpIModUDword,
+                                OpIModSQword,
+                                OpIModUQword,
+                                OpIModSOword,
+                                OpIModUOword,
+                            ),
+                            And => self.integer_code(
+                                this_type,
+                                OpBitAndByte,
+                                OpBitAndWord,
+                                OpBitAndDword,
+                                OpBitAndQword,
+                                OpBitAndOword,
+                            ),
+                            Pipe => self.integer_code(
+                                this_type,
+                                OpBitOrByte,
+                                OpBitOrWord,
+                                OpBitOrDword,
+                                OpBitOrQword,
+                                OpBitOrOword,
+                            ),
+                            Caret => self.integer_code(
+                                this_type,
+                                OpBitXorByte,
+                                OpBitXorWord,
+                                OpBitXorDword,
+                                OpBitXorQword,
+                                OpBitXorOword,
+                            ),
+                            EqualEqual => self.integer_code(
+                                this_type,
+                                OpICmpEqualByte,
+                                OpICmpEqualWord,
+                                OpICmpEqualDword,
+                                OpICmpEqualQword,
+                                OpICmpEqualOword,
+                            ),
+                            NotEqual => self.integer_code(
+                                this_type,
+                                OpICmpNotEqualByte,
+                                OpICmpNotEqualWord,
+                                OpICmpNotEqualDword,
+                                OpICmpNotEqualQword,
+                                OpICmpNotEqualOword,
+                            ),
+                            Less => self.sign_integer_code(
+                                this_type,
+                                OpICmpLessSByte,
+                                OpICmpLessUByte,
+                                OpICmpLessSWord,
+                                OpICmpLessUWord,
+                                OpICmpLessSDword,
+                                OpICmpLessUDword,
+                                OpICmpLessSQword,
+                                OpICmpLessUQword,
+                                OpICmpLessSOword,
+                                OpICmpLessUOword,
+                            ),
+                            LessEqual => self.sign_integer_code(
+                                this_type,
+                                OpICmpLessEqualSByte,
+                                OpICmpLessEqualUByte,
+                                OpICmpLessEqualSWord,
+                                OpICmpLessEqualUWord,
+                                OpICmpLessEqualSDword,
+                                OpICmpLessEqualUDword,
+                                OpICmpLessEqualSQword,
+                                OpICmpLessEqualUQword,
+                                OpICmpLessEqualSOword,
+                                OpICmpLessEqualUOword,
+                            ),
+                            Greater => self.sign_integer_code(
+                                this_type,
+                                OpICmpGreaterSByte,
+                                OpICmpGreaterUByte,
+                                OpICmpGreaterSWord,
+                                OpICmpGreaterUWord,
+                                OpICmpGreaterSDword,
+                                OpICmpGreaterUDword,
+                                OpICmpGreaterSQword,
+                                OpICmpGreaterUQword,
+                                OpICmpGreaterSOword,
+                                OpICmpGreaterUOword,
+                            ),
+                            GreaterEqual => self.sign_integer_code(
+                                this_type,
+                                OpICmpGreaterEqualSByte,
+                                OpICmpGreaterEqualUByte,
+                                OpICmpGreaterEqualSWord,
+                                OpICmpGreaterEqualUWord,
+                                OpICmpGreaterEqualSDword,
+                                OpICmpGreaterEqualUDword,
+                                OpICmpGreaterEqualSQword,
+                                OpICmpGreaterEqualUQword,
+                                OpICmpGreaterEqualSOword,
+                                OpICmpGreaterEqualUOword,
+                            ),
                             _ => unreachable!("Unsupported operation"),
                         }
                     }
@@ -93,7 +246,7 @@ impl Compiler {
             }
             (Float(_), Float(_)) | (Integer(_), Float(_)) | (Float(_), Integer(_)) => {
                 use crate::tokens::TokenType::*;
-                
+
                 match &expr.operator.token_type {
                     Operator(ope) => {
                         use crate::tokens::TokenOperator::*;
@@ -102,12 +255,28 @@ impl Compiler {
                             Minus => self.float_code(this_type, OpFSubFloat, OpFSubDouble),
                             Star => self.float_code(this_type, OpFMulFloat, OpFMulDouble),
                             Slash => self.float_code(this_type, OpFDivFloat, OpFDivDouble),
-                            EqualEqual => self.float_code(this_type, OpFCmpEqualFloat, OpFCmpEqualDouble),
-                            NotEqual => self.float_code(this_type, OpFCmpNotEqualFloat, OpFCmpNotEqualDouble),
+                            EqualEqual => {
+                                self.float_code(this_type, OpFCmpEqualFloat, OpFCmpEqualDouble)
+                            }
+                            NotEqual => self.float_code(
+                                this_type,
+                                OpFCmpNotEqualFloat,
+                                OpFCmpNotEqualDouble,
+                            ),
                             Less => self.float_code(this_type, OpFCmpLessFloat, OpFCmpLessDouble),
-                            LessEqual => self.float_code(this_type, OpFCmpLessEqualFloat, OpFCmpLessEqualDouble),
-                            Greater => self.float_code(this_type, OpFCmpGreaterFloat, OpFCmpGreaterDouble),
-                            GreaterEqual => self.float_code(this_type, OpFCmpGreaterEqualFloat, OpFCmpGreaterEqualDouble),
+                            LessEqual => self.float_code(
+                                this_type,
+                                OpFCmpLessEqualFloat,
+                                OpFCmpLessEqualDouble,
+                            ),
+                            Greater => {
+                                self.float_code(this_type, OpFCmpGreaterFloat, OpFCmpGreaterDouble)
+                            }
+                            GreaterEqual => self.float_code(
+                                this_type,
+                                OpFCmpGreaterEqualFloat,
+                                OpFCmpGreaterEqualDouble,
+                            ),
                             _ => unreachable!("Unsupported operation"),
                         }
                     }
@@ -116,30 +285,28 @@ impl Compiler {
             }
             _ => unreachable!("Unsupported operation"),
         }
-        
+
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 
     /// 编译分组表达式
-    pub fn compile_grouping_expr(&mut self,
-                                 inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
+    pub fn compile_grouping_expr(&mut self, inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
         target.append(inside_code);
         return Ok(target);
     }
 
     /// 编译字面量表达式
-    pub fn compile_literal_expr(&mut self,
-                                expr: &ExprLiteral) -> CompileResult<Vec<u8>> {
+    pub fn compile_literal_expr(&mut self, expr: &ExprLiteral) -> CompileResult<Vec<u8>> {
         use crate::data::Data::*;
         let mut target = vec![];
-        
+
         match &expr.value {
             Integer(integer) => {
                 use crate::data::DataInteger::*;
-                
+
                 match integer {
                     Byte(data) => {
                         self.write_code(OpPushByte);
@@ -185,7 +352,7 @@ impl Compiler {
             }
             Float(float) => {
                 use crate::data::DataFloat::*;
-                
+
                 match float {
                     Float(data) => {
                         self.write_code(OpPushDword);
@@ -207,49 +374,60 @@ impl Compiler {
             }
             _ => unreachable!("Unsupported literal"),
         }
-        
+
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 
     /// 编译单元运算表达式
-    pub fn compile_unary_expr(&mut self,
-                              expr: &ExprUnary,
-                              right_code: &mut Vec<u8>,
-                              right_res: &ExprResolveRes) -> CompileResult<Vec<u8>> {
+    pub fn compile_unary_expr(
+        &mut self,
+        expr: &ExprUnary,
+        right_code: &mut Vec<u8>,
+        right_res: &ExprResolveRes,
+    ) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
-        
+
         let expr_type = &right_res.res_type;
         target.append(right_code);
-        
+
         use crate::types::ValueType::*;
         match expr_type {
             Integer(_) | Float(_) => {
-                use crate::tokens::TokenType::*;
                 use crate::tokens::TokenOperator::*;
+                use crate::tokens::TokenType::*;
                 if let Operator(Plus) = &expr.operator.token_type {
                     ()
                 } else if let Operator(Minus) = &expr.operator.token_type {
                     self.neg_ope_code(&expr_type);
                 } else if let Operator(Tilde) = &expr.operator.token_type {
-                    self.integer_code(&expr_type, OpBitNotByte, OpBitNotWord, OpBitNotDword, OpBitNotQword, OpBitNotOword);
+                    self.integer_code(
+                        &expr_type,
+                        OpBitNotByte,
+                        OpBitNotWord,
+                        OpBitNotDword,
+                        OpBitNotQword,
+                        OpBitNotOword,
+                    );
                 } else {
                     unreachable!("Unsupported operation");
                 }
             }
             _ => unreachable!("Unsupported operation"),
         }
-        
+
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 
     /// 编译转换表达式
-    pub fn compile_as_expr(&mut self,
-                           resolve_res: &ExprResolveRes,
-                           inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
+    pub fn compile_as_expr(
+        &mut self,
+        resolve_res: &ExprResolveRes,
+        inside_code: &mut Vec<u8>,
+    ) -> CompileResult<Vec<u8>> {
         // 直接计算并转换
         let mut target = vec![];
         let ope_type = &resolve_res.ope_type;
@@ -257,68 +435,68 @@ impl Compiler {
         target.append(inside_code);
         self.convert_types(ope_type, res_type);
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
-    
+
     // 编译变量表达式
-    pub fn compile_variable_expr(&mut self,
-                                 resolve_res: &ExprResolveRes,
-                                 slot: usize, 
-                                 in_assign: bool,
-                                 in_ref_let: bool,
-                                 is_ref: bool) -> CompileResult<Vec<u8>> {
+    pub fn compile_variable_expr(
+        &mut self,
+        resolve_res: &ExprResolveRes,
+        slot: usize,
+        in_assign: bool,
+        in_ref_let: bool,
+        is_ref: bool,
+    ) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
-        
+
         // 引用中，直接返回偏移量
         if in_ref_let {
             self.write_code(OpPushWord);
             self.write_arg_word((slot as u16).to_le_bytes());
         } else {
-            self.write_code(
-                if is_ref {
-                    if in_assign {
-                        match resolve_res.res_type.get_size() {
-                            DataSize::Byte => OpSetReferenceByte,
-                            DataSize::Word => OpSetReferenceWord,
-                            DataSize::Dword => OpSetReferenceDword,
-                            DataSize::Qword => OpSetReferenceQword,
-                            DataSize::Oword => OpSetReferenceOword,
-                        }
-                    } else {
-                        match resolve_res.res_type.get_size() {
-                            DataSize::Byte => OpGetReferenceByte,
-                            DataSize::Word => OpGetReferenceWord,
-                            DataSize::Dword => OpGetReferenceDword,
-                            DataSize::Qword => OpGetReferenceQword,
-                            DataSize::Oword => OpGetReferenceOword,
-                        }
+            self.write_code(if is_ref {
+                if in_assign {
+                    match resolve_res.res_type.get_size() {
+                        DataSize::Byte => OpSetReferenceByte,
+                        DataSize::Word => OpSetReferenceWord,
+                        DataSize::Dword => OpSetReferenceDword,
+                        DataSize::Qword => OpSetReferenceQword,
+                        DataSize::Oword => OpSetReferenceOword,
                     }
                 } else {
-                    if in_assign {
-                        match resolve_res.res_type.get_size() {
-                            DataSize::Byte => OpSetLocalByte,
-                            DataSize::Word => OpSetLocalWord,
-                            DataSize::Dword => OpSetLocalDword,
-                            DataSize::Qword => OpSetLocalQword,
-                            DataSize::Oword => OpSetLocalOword,
-                        }
-                    } else {
-                        match resolve_res.res_type.get_size() {
-                            DataSize::Byte => OpGetLocalByte,
-                            DataSize::Word => OpGetLocalWord,
-                            DataSize::Dword => OpGetLocalDword,
-                            DataSize::Qword => OpGetLocalQword,
-                            DataSize::Oword => OpGetLocalOword,
-                        }
+                    match resolve_res.res_type.get_size() {
+                        DataSize::Byte => OpGetReferenceByte,
+                        DataSize::Word => OpGetReferenceWord,
+                        DataSize::Dword => OpGetReferenceDword,
+                        DataSize::Qword => OpGetReferenceQword,
+                        DataSize::Oword => OpGetReferenceOword,
                     }
                 }
-            );
+            } else {
+                if in_assign {
+                    match resolve_res.res_type.get_size() {
+                        DataSize::Byte => OpSetLocalByte,
+                        DataSize::Word => OpSetLocalWord,
+                        DataSize::Dword => OpSetLocalDword,
+                        DataSize::Qword => OpSetLocalQword,
+                        DataSize::Oword => OpSetLocalOword,
+                    }
+                } else {
+                    match resolve_res.res_type.get_size() {
+                        DataSize::Byte => OpGetLocalByte,
+                        DataSize::Word => OpGetLocalWord,
+                        DataSize::Dword => OpGetLocalDword,
+                        DataSize::Qword => OpGetLocalQword,
+                        DataSize::Oword => OpGetLocalOword,
+                    }
+                }
+            });
             self.write_arg_dword((slot as u32).to_le_bytes());
         }
-        
+
         self.append_temp_chunk(&mut target);
-        
+
         return Ok(target);
     }
 }

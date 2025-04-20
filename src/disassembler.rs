@@ -1,49 +1,60 @@
 //! 反汇编模块
 
-use std::fs::File;
-use std::{io, process};
-use std::io::{Read, Write};
 use crate::byte_handler::byte_reader::{read_byte, read_dword, read_oword, read_qword, read_word};
 use crate::instr::{Instruction, SpecialFunction};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::{io, process};
 
 /// 反汇编字节码文件
 pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), String> {
     let mut file;
     match File::open(path) {
         Ok(temp) => file = temp,
-        Err(err) => return Err(format!("Cannot open file '{}'! Error message: {}", path, err)),
+        Err(err) => {
+            return Err(format!(
+                "Cannot open file '{}'! Error message: {}",
+                path, err
+            ))
+        }
     }
-    
+
     let mut buffer = vec![];
     if let Err(err) = file.read_to_end(&mut buffer) {
-        return Err(format!("Cannot read file '{}'! Error message: {}", path, err));
+        return Err(format!(
+            "Cannot read file '{}'! Error message: {}",
+            path, err
+        ));
     }
-    
+
     // 反汇编字节码
     if let Err(err) = disassemble_chunk("<main>", &buffer, output_file) {
         eprintln!("Cannot write to file: {}", err);
         process::exit(1);
     }
-    
+
     return Ok(());
 }
 
 /// 反汇编代码块
 fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> io::Result<()> {
     writeln!(output_file, "====== Chunk {} ======", name)?;
-    let mut offset = 0usize;  // 之后打印指令地址使用
-    
+    let mut offset = 0usize; // 之后打印指令地址使用
+
     while offset < chunk.len() {
         let old_offset = offset;
-        if let Ok((new_instr, new_offset)) = read_byte(chunk, offset) {  // 读取下一个字节码指令
+        if let Ok((new_instr, new_offset)) = read_byte(chunk, offset) {
+            // 读取下一个字节码指令
             offset = new_offset;
             let instr_byte = u8::from_le_bytes(new_instr);
-            
+
             if let Ok(instr) = Instruction::try_from(instr_byte) {
-                match disassemble_instruction(instr, chunk, offset) {  // 反编译单条指令
+                match disassemble_instruction(instr, chunk, offset) {
+                    // 反编译单条指令
                     Ok((result, new_offset)) => {
                         offset = new_offset;
-                        writeln!(output_file, "{:08X} | {}", old_offset, result)?;  // 打印指令
+                        writeln!(output_file, "{:08X} | {}", old_offset, result)?;
+                        // 打印指令
                     }
                     Err(err) => {
                         eprintln!("Disassemble Error: {}", err);
@@ -51,25 +62,32 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
                     }
                 }
             } else {
-                eprintln!("Disassemble Error: Invalid instruction '{:02X}'", instr_byte);
+                eprintln!(
+                    "Disassemble Error: Invalid instruction '{:02X}'",
+                    instr_byte
+                );
                 return Ok(());
             }
         }
     }
-    
+
     write!(output_file, "======")?;
     for _i in 0..(name.len() + 8) {
         write!(output_file, "=")?;
     }
     writeln!(output_file, "======")?;
-    
+
     return Ok(());
 }
 
 /// 反汇编指令
-pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+pub fn disassemble_instruction(
+    instr: Instruction,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     use crate::instr::Instruction::*;
-    
+
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
         OpReturn => Ok(simple("Return", "", chunk, offset)),
@@ -312,7 +330,7 @@ pub fn disassemble_instruction(instr: Instruction, chunk: &[u8], offset: usize) 
 macro_rules! fmt_str {
     () => {
         "{:<20} [{:^25}] {}"
-    }
+    };
 }
 
 /// 简单指令
@@ -326,74 +344,145 @@ fn jump(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String,
     if let Ok((res_goto, res_offset)) = read_dword(chunk, offset) {
         let goto = i32::from_le_bytes(res_goto);
         let location = res_offset as isize + goto as isize;
-        Ok((format!(fmt_str!(), instr, info, format!("{} (at {:08X})", goto, location)), res_offset))
+        Ok((
+            format!(
+                fmt_str!(),
+                instr,
+                info,
+                format!("{} (at {:08X})", goto, location)
+            ),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
 }
 
 /// 常数字节指令
-fn const_byte(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn const_byte(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_byte, res_offset)) = read_byte(chunk, offset) {
         let byte = u8::from_le_bytes(res_byte);
         let u_num = byte;
-        Ok((format!(fmt_str!(), instr, info, format!("{:02X} ({})", byte, u_num)), res_offset))
+        Ok((
+            format!(fmt_str!(), instr, info, format!("{:02X} ({})", byte, u_num)),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 1 byte.".to_string())
     }
 }
 
 /// 常数单字指令
-fn const_word(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn const_word(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_word, res_offset)) = read_word(chunk, offset) {
         let word = u16::from_le_bytes(res_word);
         let u_num = word;
-        Ok((format!(fmt_str!(), instr, info, format!("{:04X} ({})", word, u_num)), res_offset))
+        Ok((
+            format!(fmt_str!(), instr, info, format!("{:04X} ({})", word, u_num)),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 2 bytes.".to_string())
     }
 }
 
 /// 常数双字指令
-fn const_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn const_dword(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_dword, res_offset)) = read_dword(chunk, offset) {
         let dword = u32::from_le_bytes(res_dword);
         let u_num = dword;
         let float = f32::from_le_bytes(res_dword);
-        Ok((format!(fmt_str!(), instr, info, format!("{:08X} ({} or {:e})", dword, u_num, float)), res_offset))
+        Ok((
+            format!(
+                fmt_str!(),
+                instr,
+                info,
+                format!("{:08X} ({} or {:e})", dword, u_num, float)
+            ),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
 }
 
 /// 常数四字指令
-fn const_qword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn const_qword(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_qword, res_offset)) = read_qword(chunk, offset) {
         let qword = u64::from_le_bytes(res_qword);
         let u_num = qword;
         let double = f64::from_le_bytes(res_qword);
-        Ok((format!(fmt_str!(), instr, info, format!("{:016X} ({} or {:e})", qword, u_num, double)), res_offset))
+        Ok((
+            format!(
+                fmt_str!(),
+                instr,
+                info,
+                format!("{:016X} ({} or {:e})", qword, u_num, double)
+            ),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 8 bytes.".to_string())
     }
 }
 
 /// 常数扩展整数指令
-fn const_oword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn const_oword(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_oword, res_offset)) = read_oword(chunk, offset) {
         let oword = u128::from_le_bytes(res_oword);
         let u_num = oword;
-        Ok((format!(fmt_str!(), instr, info, format!("{:032X} ({})", oword, u_num)), res_offset))
+        Ok((
+            format!(
+                fmt_str!(),
+                instr,
+                info,
+                format!("{:032X} ({})", oword, u_num)
+            ),
+            res_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 16 bytes.".to_string())
     }
 }
 
 /// 带有 4 字节参数的指令
-fn with_dword(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn with_dword(
+    instr: &str,
+    info: &str,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     if let Ok((res_slot, new_offset)) = read_dword(chunk, offset) {
         let slot = u32::from_le_bytes(res_slot);
-        Ok((format!(fmt_str!(), instr, info, format!("{:08X}", slot)), new_offset))
+        Ok((
+            format!(fmt_str!(), instr, info, format!("{:08X}", slot)),
+            new_offset,
+        ))
     } else {
         Err("Not enough bytes to read: need 4 bytes.".to_string())
     }
@@ -406,7 +495,10 @@ fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String,
             let result = parse_special_function(instr, special_func, chunk, new_offset)?;
             Ok(result)
         } else {
-            Err(format!("Disassemble Error: Invalid special function instruction '{:02X}'", u8::from_le_bytes(res_func)))
+            Err(format!(
+                "Disassemble Error: Invalid special function instruction '{:02X}'",
+                u8::from_le_bytes(res_func)
+            ))
         }
     } else {
         Err("Not enough bytes to read: need 1 bytes".to_string())
@@ -415,9 +507,14 @@ fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String,
 
 /// 解析特殊功能
 #[inline]
-fn parse_special_function(instr: &str, special_func: SpecialFunction, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn parse_special_function(
+    instr: &str,
+    special_func: SpecialFunction,
+    chunk: &[u8],
+    offset: usize,
+) -> Result<(String, usize), String> {
     use crate::instr::SpecialFunction::*;
-    
+
     match special_func {
         PrintByte => Ok(simple(instr, "Print Byte", chunk, offset)),
         PrintSByte => Ok(simple(instr, "Print SByte", chunk, offset)),

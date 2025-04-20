@@ -6,9 +6,9 @@ use crate::instr::Instruction;
 use crate::resolver::Resolver;
 use crate::stmt::Stmt;
 
+mod front_compiler_assistance;
 mod front_compiler_expr;
 mod front_compiler_stmt;
-mod front_compiler_assistance;
 
 /// 前端编译器
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -26,36 +26,36 @@ impl<'a> FrontCompiler<'a> {
     #[must_use]
     pub fn new(statements: &'a [Stmt]) -> Self {
         Self {
-            resolver: Resolver::new(), 
+            resolver: Resolver::new(),
             compiler: Compiler::new(),
-            statements, 
+            statements,
             context: Context::init(),
             break_patches: vec![],
             continue_patches: vec![],
             codes: vec![],
         }
     }
-    
+
     /// 启动编译
     pub fn compile(mut self) -> CompileResultList<Vec<u8>> {
         let mut errors = vec![];
-        
+
         self.resolver.enter_scope();
-        
+
         self.compile_scope(&mut errors, self.statements);
-        
+
         self.resolver.leave_scope();
-        
+
         // 补充返回指令，临时充当结束程序的作用
         self.write_code(Instruction::OpReturn);
-        
+
         return if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(self.codes)
         };
     }
-    
+
     /// 编译一个作用域
     pub fn compile_scope(&mut self, errors: &mut Vec<CompileError>, statements: &[Stmt]) {
         if let Err(mut errs) = self.resolver.predefine(statements) {

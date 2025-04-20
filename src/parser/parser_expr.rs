@@ -1,18 +1,18 @@
 //! 语法解析——表达式解析模块
 
-use crate::{expr_get_pos, parser_can_match, parser_consume};
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable};
 use crate::parser::Parser;
 use crate::parser_check;
 use crate::position::Position;
-use crate::tokens::{TokenFloat, TokenKeyword, TokenOperator, TokenParen, TokenType};
 use crate::tokens::TokenFloat::*;
 use crate::tokens::TokenInteger::*;
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
 use crate::tokens::TokenType::*;
+use crate::tokens::{TokenFloat, TokenKeyword, TokenOperator, TokenParen, TokenType};
+use crate::{expr_get_pos, parser_can_match, parser_consume};
 
 impl Parser {
     /// 解析表达式——递归下降法
@@ -28,14 +28,17 @@ impl Parser {
             let right = self.logical_and()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -48,14 +51,17 @@ impl Parser {
             let right = self.equality()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -68,18 +74,21 @@ impl Parser {
             let right = self.comparison()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
-    
+
     /// 比较表达式
     fn comparison(&mut self) -> SyntaxResult<Expr> {
         let mut expr = self.binary_shift()?;
@@ -88,18 +97,21 @@ impl Parser {
             let right = self.binary_shift()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
-    
+
     /// 位移表达式
     fn binary_shift(&mut self) -> SyntaxResult<Expr> {
         let mut expr = self.binary_bit()?;
@@ -108,18 +120,21 @@ impl Parser {
             let right = self.binary_bit()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
-    
+
     /// 二元位操作
     fn binary_bit(&mut self) -> SyntaxResult<Expr> {
         let mut expr = self.term()?;
@@ -128,14 +143,17 @@ impl Parser {
             let right = self.term()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -148,14 +166,17 @@ impl Parser {
             let right = self.factor()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -168,14 +189,17 @@ impl Parser {
             let right = self.power()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -188,14 +212,17 @@ impl Parser {
             let right = self.unary()?;
             let pos_left = expr_get_pos!(&expr);
             let pos_right = expr_get_pos!(&right);
-            expr = Expr::Binary(Box::new(
-                ExprBinary {
-                    pos: Position::new(pos_left.start_line, pos_left.start_idx, pos_right.end_line, pos_right.end_idx),
-                    left: expr,
-                    operator,
-                    right,
-                }
-            ));
+            expr = Expr::Binary(Box::new(ExprBinary {
+                pos: Position::new(
+                    pos_left.start_line,
+                    pos_left.start_idx,
+                    pos_right.end_line,
+                    pos_right.end_idx,
+                ),
+                left: expr,
+                operator,
+                right,
+            }));
         }
         return Ok(expr);
     }
@@ -206,13 +233,11 @@ impl Parser {
             let operator = self.previous();
             let right = self.unary()?;
             let pos = expr_get_pos!(&right);
-            Ok(Expr::Unary(Box::new(
-                ExprUnary {
-                    pos: Position::new(operator.line, operator.start, pos.end_line, pos.end_idx),
-                    operator,
-                    right,
-                }
-            )))
+            Ok(Expr::Unary(Box::new(ExprUnary {
+                pos: Position::new(operator.line, operator.start, pos.end_line, pos.end_idx),
+                operator,
+                right,
+            })))
         } else {
             self.as_cast()
         }
@@ -224,13 +249,16 @@ impl Parser {
         while parser_can_match!(self, Keyword(As)) {
             let tag = self.parse_type_tag()?;
             let pos = expr_get_pos!(&expr);
-            expr = Expr::As(Box::new(
-                ExprAs {
-                    pos: Position::new(pos.start_line, pos.start_idx, tag.pos.end_line, tag.pos.end_idx),
-                    expression: expr,
-                    target: tag,
-                }
-            ));
+            expr = Expr::As(Box::new(ExprAs {
+                pos: Position::new(
+                    pos.start_line,
+                    pos.start_idx,
+                    tag.pos.end_line,
+                    tag.pos.end_idx,
+                ),
+                expression: expr,
+                target: tag,
+            }));
         }
         return Ok(expr);
     }
@@ -240,111 +268,88 @@ impl Parser {
         let token = self.peek();
         let pos = Position::new(token.line, token.start, token.line, token.end);
         return if parser_can_match!(self, Keyword(False)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral { 
-                    pos, 
-                    value: Data::Bool(false) 
-                }
-            )))
+            Ok(Expr::Literal(Box::new(ExprLiteral {
+                pos,
+                value: Data::Bool(false),
+            })))
         } else if parser_can_match!(self, Keyword(True)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral { 
-                    pos, 
-                    value: Data::Bool(true) 
-                }
-            )))
+            Ok(Expr::Literal(Box::new(ExprLiteral {
+                pos,
+                value: Data::Bool(true),
+            })))
         } else if parser_can_match!(self, Integer(_)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral {
+            Ok(Expr::Literal(Box::new(ExprLiteral {
                 pos,
-                value: Data::Integer(
-                    match &self.previous().token_type {
-                        Integer(integer) => {
-                            match integer {
-                                Byte(byte) => DataInteger::Byte(*byte),
-                                SByte(sbyte) => DataInteger::SByte(*sbyte),
-                                Short(short) => DataInteger::Short(*short),
-                                UShort(ushort) => DataInteger::UShort(*ushort),
-                                Int(int) => DataInteger::Int(*int),
-                                UInt(uint) => DataInteger::UInt(*uint),
-                                Long(long) => DataInteger::Long(*long),
-                                ULong(ulong) => DataInteger::ULong(*ulong),
-                                ExtInt(extint) => DataInteger::ExtInt(*extint),
-                                UExtInt(uextint) => DataInteger::UExtInt(*uextint),
-                            }
-                        }
-                        _ => panic!("Invalid token"),
-                    }
-                ),
-            }
-            )))
+                value: Data::Integer(match &self.previous().token_type {
+                    Integer(integer) => match integer {
+                        Byte(byte) => DataInteger::Byte(*byte),
+                        SByte(sbyte) => DataInteger::SByte(*sbyte),
+                        Short(short) => DataInteger::Short(*short),
+                        UShort(ushort) => DataInteger::UShort(*ushort),
+                        Int(int) => DataInteger::Int(*int),
+                        UInt(uint) => DataInteger::UInt(*uint),
+                        Long(long) => DataInteger::Long(*long),
+                        ULong(ulong) => DataInteger::ULong(*ulong),
+                        ExtInt(extint) => DataInteger::ExtInt(*extint),
+                        UExtInt(uextint) => DataInteger::UExtInt(*uextint),
+                    },
+                    _ => panic!("Invalid token"),
+                }),
+            })))
         } else if parser_can_match!(self, TokenType::Float(_)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral {
+            Ok(Expr::Literal(Box::new(ExprLiteral {
                 pos,
-                value: Data::Float(
-                    match &self.previous().token_type {
-                        TokenType::Float(float) => {
-                            match float {
-                                TokenFloat::Float(float) => DataFloat::Float(*float),
-                                Double(double) => DataFloat::Double(*double),
-                            }
-                        }
-                        _ => panic!("Invalid token"),
-                    }
-                ),
-            }
-            )))
+                value: Data::Float(match &self.previous().token_type {
+                    TokenType::Float(float) => match float {
+                        TokenFloat::Float(float) => DataFloat::Float(*float),
+                        Double(double) => DataFloat::Double(*double),
+                    },
+                    _ => panic!("Invalid token"),
+                }),
+            })))
         } else if parser_can_match!(self, Char(_)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral {
+            Ok(Expr::Literal(Box::new(ExprLiteral {
                 pos,
-                value: Data::Char(
-                    match &self.previous().token_type {
-                        Char(ch) => *ch,
-                        _ => panic!("Invalid token"),
-                    }
-                ),
-            }
-            )))
+                value: Data::Char(match &self.previous().token_type {
+                    Char(ch) => *ch,
+                    _ => panic!("Invalid token"),
+                }),
+            })))
         } else if parser_can_match!(self, String(_)) {
-            Ok(Expr::Literal(Box::new(
-                ExprLiteral {
+            Ok(Expr::Literal(Box::new(ExprLiteral {
                 pos,
-                value: Data::String(
-                    match &self.previous().token_type {
-                        String(str) => str.clone(),
-                        _ => panic!("Invalid token"),
-                    }
-                ),
-            }
-            )))
+                value: Data::String(match &self.previous().token_type {
+                    String(str) => str.clone(),
+                    _ => panic!("Invalid token"),
+                }),
+            })))
         } else if parser_can_match!(self, Paren(TokenParen::LeftParen)) {
             let expr = self.parse_expression()?;
             let end_token = self.peek();
             parser_consume!(
-                self, 
+                self,
                 Paren(TokenParen::RightParen),
                 &Position::new(pos.start_line, pos.start_idx, end_token.line, end_token.end),
                 "Expect ')' after expression.".to_string()
             )?;
             let final_token = self.previous();
-            Ok(Expr::Grouping(Box::new(
-                ExprGrouping {
-                pos: Position::new(pos.start_line, pos.start_idx, final_token.line, final_token.end),
+            Ok(Expr::Grouping(Box::new(ExprGrouping {
+                pos: Position::new(
+                    pos.start_line,
+                    pos.start_idx,
+                    final_token.line,
+                    final_token.end,
+                ),
                 expression: expr,
-            }
-            )))
+            })))
         } else if let Identifier(name) = &token.token_type {
             self.advance();
-            Ok(Expr::Variable(Box::new(
-                ExprVariable {
+            Ok(Expr::Variable(Box::new(ExprVariable {
                 pos,
                 name: name.clone(),
-            }
-            )))
+            })))
         } else {
-            Err(SyntaxError::new(&pos, "Invalid expression.".to_string() ))
-        }
+            Err(SyntaxError::new(&pos, "Invalid expression.".to_string()))
+        };
     }
 }

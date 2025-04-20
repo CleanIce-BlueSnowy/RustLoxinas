@@ -22,7 +22,7 @@ pub enum TreeChild<'a> {
 /// 打印表达式的抽象语法树
 #[cfg(debug_assertions)]
 #[derive(Debug)]
-pub struct AstPrinter { }
+pub struct AstPrinter {}
 
 #[cfg(debug_assertions)]
 impl AstPrinter {
@@ -42,10 +42,10 @@ impl AstPrinter {
 
     /// 将合法的运算符转换为运算符对应的字符串
     pub fn operator_to_string(&self, token: &TokenType) -> String {
-        use crate::tokens::TokenType::*;
-        use crate::tokens::TokenOperator::*;
         use crate::tokens::TokenKeyword::*;
-        
+        use crate::tokens::TokenOperator::*;
+        use crate::tokens::TokenType::*;
+
         match token {
             Operator(TokenOperator::And) => "&",
             Operator(NotEqual) => "!=",
@@ -69,8 +69,9 @@ impl AstPrinter {
             Keyword(Or) => "or",
             Keyword(Shl) => "shl",
             Keyword(Shr) => "shr",
-            _ => unreachable!(),  // 不合法的运算符令牌，在解析表达式时就应该去除
-        }.to_string()
+            _ => unreachable!(), // 不合法的运算符令牌，在解析表达式时就应该去除
+        }
+        .to_string()
     }
 
     /// 为语法树节点添加括号并格式化
@@ -79,7 +80,7 @@ impl AstPrinter {
         res.push_str("( ");
         res.push_str(name);
         res.push('\n');
-        
+
         for (name, child) in children {
             let str: String = match child {
                 TreeChild::Expr(expr) => expr.accept(self),

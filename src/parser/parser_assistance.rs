@@ -1,11 +1,11 @@
 //! 语法分析——辅助功能模块
 
-use std::rc::Rc;
 use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::parser::Parser;
 use crate::position::Position;
 use crate::tokens::{Token, TokenOperator, TokenType};
 use crate::types::TypeTag;
+use std::rc::Rc;
 
 /// 若下一个令牌能匹配模式，则消耗该令牌，并返回是否匹配
 #[macro_export]
@@ -17,7 +17,7 @@ macro_rules! parser_can_match {
         } else {
             false
         }
-    }
+    };
 }
 
 /// 返回下一个令牌是否匹配模式
@@ -25,7 +25,7 @@ macro_rules! parser_can_match {
 macro_rules! parser_check {
     ( $self:expr, $token_type:pat ) => {
         matches!(&$self.peek().token_type, $token_type)
-    }
+    };
 }
 
 /// 若令牌匹配，则消耗令牌；若不匹配，则报错
@@ -38,7 +38,7 @@ macro_rules! parser_consume {
         } else {
             Err(SyntaxError::new($pos, $message))
         }
-    }
+    };
 }
 
 impl Parser {
@@ -74,11 +74,11 @@ impl Parser {
 
     /// 解析类型标识符
     pub fn parse_type_tag(&mut self) -> SyntaxResult<TypeTag> {
-        use crate::tokens::TokenType::*;
         use crate::tokens::TokenOperator::*;
-        
+        use crate::tokens::TokenType::*;
+
         let next_token = self.advance().clone();
-        
+
         return if let Identifier(name) = &next_token.token_type {
             let mut tag = TypeTag::new();
             tag.pos.start_line = next_token.line;
@@ -86,7 +86,7 @@ impl Parser {
             tag.pos.end_line = next_token.line;
             tag.pos.end_idx = next_token.end;
             tag.chain.push_back(name.clone());
-            
+
             while parser_can_match!(self, Operator(DoubleColon)) {
                 let token = self.advance().clone();
                 if let Identifier(name) = &token.token_type {
@@ -96,24 +96,37 @@ impl Parser {
                 } else {
                     return Err(SyntaxError::new(
                         &Position::new(token.line, token.start, token.line, token.end),
-                        "Expect type name".to_string()
+                        "Expect type name".to_string(),
                     ));
                 }
             }
             Ok(tag)
         } else {
-            Err(SyntaxError::new(&Position::new(next_token.line, next_token.start, next_token.line, next_token.end), "Expect type name".to_string()))
-        }
+            Err(SyntaxError::new(
+                &Position::new(
+                    next_token.line,
+                    next_token.start,
+                    next_token.line,
+                    next_token.end,
+                ),
+                "Expect type name".to_string(),
+            ))
+        };
     }
-    
+
     /// 获取最后词素位置信息
     #[inline]
     #[must_use]
     pub fn get_final_pos(&self) -> Position {
         let semicolon = self.previous();
-        return Position::new(semicolon.line, semicolon.start, semicolon.line, semicolon.end);
+        return Position::new(
+            semicolon.line,
+            semicolon.start,
+            semicolon.line,
+            semicolon.end,
+        );
     }
-    
+
     /// 同步错误
     pub fn synchronize(&mut self) {
         self.advance();
@@ -122,8 +135,10 @@ impl Parser {
                 return;
             } else if let TokenType::Keyword(keyword) = &self.peek().token_type {
                 use crate::tokens::TokenKeyword::*;
-                
-                if let If | Else | For | While | Let | Init | Loop | Break | Continue | Print = keyword {
+
+                if let If | Else | For | While | Let | Init | Loop | Break | Continue | Print =
+                    keyword
+                {
                     return;
                 }
             }

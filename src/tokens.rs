@@ -41,47 +41,47 @@ pub enum TokenType {
 /// 括号令牌
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenParen {
-    LeftParen,  // (
-    RightParen,  // )
+    LeftParen,       // (
+    RightParen,      // )
     LeftSqrBracket,  // [
-    RightSqrBracket,  // ]
-    LeftBrace,  // {
-    RightBrace,  // }
+    RightSqrBracket, // ]
+    LeftBrace,       // {
+    RightBrace,      // }
 }
 
 /// 运算符令牌
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenOperator {
-    Plus,  // +
-    Minus,  // -
-    Slash,  // /
-    Star,  // *
-    Power,  // **
-    Backslash,  // \
-    And,  // &
-    Pipe,  // |
-    Tilde,  // ~
-    Colon,  // :
-    Semicolon,  // ;
-    Equal,  // =
-    EqualEqual,  // ==
-    NotEqual,  // !=
-    Less,  // <
-    Greater,  // >
-    LessEqual,  // <=
-    GreaterEqual,  // >=
-    Bang,  // !
-    Caret,  // ^
-    Mod,  // %
+    Plus,         // +
+    Minus,        // -
+    Slash,        // /
+    Star,         // *
+    Power,        // **
+    Backslash,    // \
+    And,          // &
+    Pipe,         // |
+    Tilde,        // ~
+    Colon,        // :
+    Semicolon,    // ;
+    Equal,        // =
+    EqualEqual,   // ==
+    NotEqual,     // !=
+    Less,         // <
+    Greater,      // >
+    LessEqual,    // <=
+    GreaterEqual, // >=
+    Bang,         // !
+    Caret,        // ^
+    Mod,          // %
     DoubleColon,  // ::
-    PlusEqual,  // +=
-    MinusEqual,  // -=
-    StarEqual,  // *=
-    SlashEqual,  // /=
-    AndEqual,  // &=
-    PipeEqual,  // |=
-    CaretEqual,  // ^=
-    ModEqual,  // %=
+    PlusEqual,    // +=
+    MinusEqual,   // -=
+    StarEqual,    // *=
+    SlashEqual,   // /=
+    AndEqual,     // &=
+    PipeEqual,    // |=
+    CaretEqual,   // ^=
+    ModEqual,     // %=
 }
 
 /// 关键字令牌

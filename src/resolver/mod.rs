@@ -9,9 +9,9 @@ use crate::stmt::Stmt;
 use crate::tokens::Token;
 use crate::types::ValueType;
 
+mod resolver_assistance;
 mod resolver_expr;
 mod resolver_stmt;
-mod resolver_assistance;
 
 /// 语义分析器
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -34,9 +34,9 @@ impl Resolver {
     /// 初始化全局类型列表
     #[must_use]
     fn init_types() -> HashMap<String, ValueType> {
-        use crate::types::ValueIntegerType::*;
         use crate::types::ValueFloatType::*;
-        
+        use crate::types::ValueIntegerType::*;
+
         hashmap! {
             "char".to_string() => ValueType::Char,
             "bool".to_string() => ValueType::Bool,
@@ -56,63 +56,61 @@ impl Resolver {
             "String".to_string() => ValueType::Object(LoxinasClass::String),
         }
     }
-    
+
     /// 操作符转字符串，方便报错
     #[must_use]
     pub fn operator_to_string(token: &Rc<Token>) -> String {
         use crate::tokens::TokenType;
-        String::from(
-            match &token.token_type {
-                TokenType::Operator(operator) => {
-                    use crate::tokens::TokenOperator::*;
-                    
-                    match operator {
-                        Plus => "+",
-                        Minus => "-",
-                        Star => "*",
-                        Slash => "/",
-                        Power => "**",
-                        Backslash => "\\",
-                        And => "&",
-                        Pipe => "|",
-                        Tilde => "~",
-                        Colon => ":",
-                        Semicolon => ";",
-                        Equal => "=",
-                        EqualEqual => "==",
-                        NotEqual => "!=",
-                        Less => "<",
-                        LessEqual => "<=",
-                        Greater => ">",
-                        GreaterEqual => ">=",
-                        Bang => "!",
-                        Caret => "^",
-                        Mod => "%",
-                        DoubleColon => "::",
-                        PlusEqual => "+=",
-                        MinusEqual => "-=",
-                        StarEqual => "*=",
-                        SlashEqual => "/=",
-                        AndEqual => "&=",
-                        PipeEqual => "|=",
-                        CaretEqual => "^=",
-                        ModEqual => "%=",
-                    }
+        String::from(match &token.token_type {
+            TokenType::Operator(operator) => {
+                use crate::tokens::TokenOperator::*;
+
+                match operator {
+                    Plus => "+",
+                    Minus => "-",
+                    Star => "*",
+                    Slash => "/",
+                    Power => "**",
+                    Backslash => "\\",
+                    And => "&",
+                    Pipe => "|",
+                    Tilde => "~",
+                    Colon => ":",
+                    Semicolon => ";",
+                    Equal => "=",
+                    EqualEqual => "==",
+                    NotEqual => "!=",
+                    Less => "<",
+                    LessEqual => "<=",
+                    Greater => ">",
+                    GreaterEqual => ">=",
+                    Bang => "!",
+                    Caret => "^",
+                    Mod => "%",
+                    DoubleColon => "::",
+                    PlusEqual => "+=",
+                    MinusEqual => "-=",
+                    StarEqual => "*=",
+                    SlashEqual => "/=",
+                    AndEqual => "&=",
+                    PipeEqual => "|=",
+                    CaretEqual => "^=",
+                    ModEqual => "%=",
                 }
-                TokenType::Keyword(operator) => {
-                    use crate::tokens::TokenKeyword::*;
-                    match operator {
-                        And => "and",
-                        Or => "or",
-                        Not => "not",
-                        Shl => "shl",
-                        Shr => "shr",
-                        _ => unreachable!("Invalid operator"),
-                    }
-                }
-                _ => unreachable!("Invalid operator"),
             }
-        )
+            TokenType::Keyword(operator) => {
+                use crate::tokens::TokenKeyword::*;
+                match operator {
+                    And => "and",
+                    Or => "or",
+                    Not => "not",
+                    Shl => "shl",
+                    Shr => "shr",
+                    _ => unreachable!("Invalid operator"),
+                }
+            }
+            _ => unreachable!("Invalid operator"),
+        })
     }
 }
 
@@ -129,8 +127,8 @@ pub struct ExprResolveRes {
 impl ExprResolveRes {
     #[must_use]
     pub fn new(expr_type: ValueType, ope_type: ValueType) -> Self {
-        Self { 
-            res_type: expr_type, 
+        Self {
+            res_type: expr_type,
             ope_type,
         }
     }
@@ -156,13 +154,20 @@ pub struct Variable {
 
 impl Variable {
     #[must_use]
-    pub fn new(define_stmt: *const Stmt, defined: bool, initialized: bool, slot: usize, var_type: Option<ValueType>, is_ref: bool) -> Self {
-        Self { 
-            define_stmt, 
-            defined, 
-            initialized, 
-            slot, 
-            var_type, 
+    pub fn new(
+        define_stmt: *const Stmt,
+        defined: bool,
+        initialized: bool,
+        slot: usize,
+        var_type: Option<ValueType>,
+        is_ref: bool,
+    ) -> Self {
+        Self {
+            define_stmt,
+            defined,
+            initialized,
+            slot,
+            var_type,
             is_ref,
         }
     }

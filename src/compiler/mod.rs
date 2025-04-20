@@ -12,8 +12,6 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Self {
-        Self {
-            temp_chunk: vec![],
-        }
+        Self { temp_chunk: vec![] }
     }
 }
