@@ -11,7 +11,7 @@ use crate::types::ValueType;
 impl Resolver {
     /// 分析表达式语句
     pub fn resolve_expr_stmt(&mut self) -> CompileResult<()> {
-        return Ok(());
+        Ok(())
     }
 
     /// 分析变量定义语句
@@ -83,7 +83,7 @@ impl Resolver {
             }
         }
 
-        return Ok((target_variable.var_type.clone().unwrap(), variable.slot));
+        Ok((target_variable.var_type.clone().unwrap(), variable.slot))
     }
 
     /// 分析变量延迟初始化语句
@@ -166,11 +166,11 @@ impl Resolver {
                 ),
             ));
         }
-        return Ok((
+        Ok((
             variable.var_type.as_ref().unwrap().clone(),
             variable.slot,
             right_slot,
-        ));
+        ))
     }
 
     /// 分析变量赋值语句
@@ -201,7 +201,7 @@ impl Resolver {
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 
     /// 分析条件判断语句
@@ -229,11 +229,11 @@ impl Resolver {
             }
         }
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     pub fn resolve_while_stmt(

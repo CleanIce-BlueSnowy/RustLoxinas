@@ -55,33 +55,33 @@ impl<'a> VM<'a> {
     #[must_use]
     pub fn peek_byte(&self) -> [u8; 1] {
         let top = self.vm_stack.len() - 1;
-        return [self.vm_stack[top]];
+        [self.vm_stack[top]]
     }
 
     #[inline]
     #[must_use]
     pub fn peek_word(&self) -> [u8; 2] {
         let top = self.vm_stack.len() - 1;
-        return [self.vm_stack[top - 1], self.vm_stack[top]];
+        [self.vm_stack[top - 1], self.vm_stack[top]]
     }
 
     #[inline]
     #[must_use]
     pub fn peek_dword(&self) -> [u8; 4] {
         let top = self.vm_stack.len() - 1;
-        return [
+        [
             self.vm_stack[top - 3],
             self.vm_stack[top - 2],
             self.vm_stack[top - 1],
             self.vm_stack[top],
-        ];
+        ]
     }
 
     #[inline]
     #[must_use]
     pub fn peek_qword(&self) -> [u8; 8] {
         let top = self.vm_stack.len() - 1;
-        return [
+        [
             self.vm_stack[top - 7],
             self.vm_stack[top - 6],
             self.vm_stack[top - 5],
@@ -90,14 +90,14 @@ impl<'a> VM<'a> {
             self.vm_stack[top - 2],
             self.vm_stack[top - 1],
             self.vm_stack[top],
-        ];
+        ]
     }
 
     #[inline]
     #[must_use]
     pub fn peek_oword(&self) -> [u8; 16] {
         let top = self.vm_stack.len() - 1;
-        return [
+        [
             self.vm_stack[top - 15],
             self.vm_stack[top - 14],
             self.vm_stack[top - 13],
@@ -114,56 +114,56 @@ impl<'a> VM<'a> {
             self.vm_stack[top - 2],
             self.vm_stack[top - 1],
             self.vm_stack[top],
-        ];
+        ]
     }
 
     #[inline]
     #[must_use]
     pub fn peek_bool(&self) -> bool {
         let top = self.vm_stack.len() - 1;
-        return self.vm_stack[top] != 0;
+        self.vm_stack[top] != 0
     }
 
     #[inline]
     pub fn pop_byte(&mut self) -> [u8; 1] {
         let res = self.peek_byte();
         self.vm_stack.truncate(self.vm_stack.len() - 1);
-        return res;
+        res
     }
 
     #[inline]
     pub fn pop_word(&mut self) -> [u8; 2] {
         let res = self.peek_word();
         self.vm_stack.truncate(self.vm_stack.len() - 2);
-        return res;
+        res
     }
 
     #[inline]
     pub fn pop_dword(&mut self) -> [u8; 4] {
         let res = self.peek_dword();
         self.vm_stack.truncate(self.vm_stack.len() - 4);
-        return res;
+        res
     }
 
     #[inline]
     pub fn pop_qword(&mut self) -> [u8; 8] {
         let res = self.peek_qword();
         self.vm_stack.truncate(self.vm_stack.len() - 8);
-        return res;
+        res
     }
 
     #[inline]
     pub fn pop_oword(&mut self) -> [u8; 16] {
         let res = self.peek_oword();
         self.vm_stack.truncate(self.vm_stack.len() - 16);
-        return res;
+        res
     }
 
     #[inline]
     pub fn pop_bool(&mut self) -> bool {
         let res = self.peek_bool();
         self.vm_stack.truncate(self.vm_stack.len() - 1);
-        return res;
+        res
     }
 
     #[inline]

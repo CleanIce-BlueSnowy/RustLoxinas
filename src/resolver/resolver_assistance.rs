@@ -30,11 +30,11 @@ impl Resolver {
             }
         }
 
-        return if errors.is_empty() {
+        if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
-        };
+        }
     }
 
     /// 解析类型标识符
@@ -82,7 +82,7 @@ impl Resolver {
             ));
         }
 
-        return Ok(res_type.unwrap());
+        Ok(res_type.unwrap())
     }
 
     /// 进入作用域
@@ -107,7 +107,7 @@ impl Resolver {
 
         self.now_slot = scope.top_slot;
 
-        return scope;
+        scope
     }
 
     /// 获取当前作用域
@@ -115,7 +115,7 @@ impl Resolver {
     #[must_use]
     pub fn get_current_scope(&mut self) -> &mut Scope {
         let length = self.scopes.len();
-        return &mut self.scopes[length - 1];
+        &mut self.scopes[length - 1]
     }
 
     /// 寻找变量
@@ -131,7 +131,7 @@ impl Resolver {
             }
             scope_idx -= 1;
         }
-        return None;
+        None
     }
 
     /// 在当前作用域寻找变量
@@ -139,7 +139,7 @@ impl Resolver {
     #[must_use]
     pub fn find_variable_in_current_scope(&mut self, name: &String) -> Option<&mut Variable> {
         let current = self.get_current_scope();
-        return current.variables.get_mut(name);
+        current.variables.get_mut(name)
     }
 
     /// 检查类型转换
@@ -148,7 +148,7 @@ impl Resolver {
         if let (Object(_), _) | (_, Object(_)) = (from, to) {
             return false;
         }
-        return true;
+        true
     }
 
     /// 更新当前栈偏移量

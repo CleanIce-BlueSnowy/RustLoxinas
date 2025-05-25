@@ -13,7 +13,7 @@ impl StmtVisitor<String> for AstPrinter {
     fn visit_empty_stmt(&mut self, this: *const Stmt, _stmt: &StmtEmpty) -> String {
         let children = indexmap!();
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Empty", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Empty", children))
     }
 
     fn visit_expr_stmt(&mut self, this: *const Stmt, stmt: &StmtExpr) -> String {
@@ -21,7 +21,7 @@ impl StmtVisitor<String> for AstPrinter {
             "expr" => TreeChild::Expr(&stmt.expression)
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Expr", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Expr", children))
     }
 
     fn visit_let_stmt(&mut self, this: *const Stmt, stmt: &StmtLet) -> String {
@@ -42,11 +42,11 @@ impl StmtVisitor<String> for AstPrinter {
                 "name" => TreeChild::Identifier(&stmt.name),
             }
         };
-        return format!(
+        format!(
             "STMT {:?} {}",
             this,
-            self.parenthesize(stmt_name, children,),
-        );
+            self.parenthesize(stmt_name, children),
+        )
     }
 
     fn visit_init_stmt(&mut self, this: *const Stmt, stmt: &StmtInit) -> String {
@@ -55,7 +55,7 @@ impl StmtVisitor<String> for AstPrinter {
             "init" => TreeChild::Expr(&stmt.init),
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Init", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Init", children))
     }
 
     fn visit_assign_stmt(&mut self, this: *const Stmt, stmt: &StmtAssign) -> String {
@@ -64,7 +64,7 @@ impl StmtVisitor<String> for AstPrinter {
             "right" => TreeChild::Expr(&stmt.right_expr),
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Assign", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Assign", children))
     }
 
     fn visit_block_stmt(&mut self, this: *const Stmt, stmt: &StmtBlock) -> String {
@@ -72,7 +72,7 @@ impl StmtVisitor<String> for AstPrinter {
             "statements" => TreeChild::StmtList(&stmt.statements),
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Block", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Block", children))
     }
 
     fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> String {
@@ -90,7 +90,7 @@ impl StmtVisitor<String> for AstPrinter {
             children.insert("else_chunk", TreeChild::Stmt(chunk));
         }
 
-        return format!("STMT {:?} {}", this, self.parenthesize("If", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("If", children))
     }
 
     fn visit_loop_stmt(&mut self, this: *const Stmt, stmt: &StmtLoop) -> String {
@@ -104,7 +104,7 @@ impl StmtVisitor<String> for AstPrinter {
 
         children.insert("chunk", TreeChild::Stmt(&stmt.chunk));
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Loop", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Loop", children))
     }
 
     fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> String {
@@ -118,7 +118,7 @@ impl StmtVisitor<String> for AstPrinter {
 
         children.insert("chunk", TreeChild::Stmt(&stmt.chunk));
 
-        return format!("STMT {:?} {}", this, self.parenthesize("While", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("While", children))
     }
 
     fn visit_for_stmt(&mut self, this: *const Stmt, stmt: &StmtFor) -> String {
@@ -134,7 +134,7 @@ impl StmtVisitor<String> for AstPrinter {
 
         children.insert("chunk", TreeChild::Stmt(&stmt.chunk));
 
-        return format!("STMT {:?} {}", this, self.parenthesize("For", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("For", children))
     }
 
     fn visit_break_stmt(&mut self, this: *const Stmt, stmt: &StmtBreak) -> String {
@@ -146,7 +146,7 @@ impl StmtVisitor<String> for AstPrinter {
             indexmap!()
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Break", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Break", children))
     }
 
     fn visit_continue_stmt(&mut self, this: *const Stmt, stmt: &StmtContinue) -> String {
@@ -158,11 +158,11 @@ impl StmtVisitor<String> for AstPrinter {
             indexmap!()
         };
 
-        return format!(
+        format!(
             "STMT {:?} {}",
             this,
-            self.parenthesize("Continue", children,),
-        );
+            self.parenthesize("Continue", children),
+        )
     }
 
     fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> String {
@@ -174,6 +174,6 @@ impl StmtVisitor<String> for AstPrinter {
             indexmap!()
         };
 
-        return format!("STMT {:?} {}", this, self.parenthesize("Print", children,),);
+        format!("STMT {:?} {}", this, self.parenthesize("Print", children))
     }
 }

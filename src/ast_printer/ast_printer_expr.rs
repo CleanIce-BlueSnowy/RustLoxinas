@@ -20,7 +20,7 @@ impl ExprVisitor<String> for AstPrinter {
             "right" => TreeChild::Expr(&expr.right),
         };
 
-        return format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),);
+        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
     }
 
     fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> String {
@@ -28,11 +28,11 @@ impl ExprVisitor<String> for AstPrinter {
             "expr" => TreeChild::Expr(&expr.expression),
         };
 
-        return format!("EXPR {:?} {}", this, self.parenthesize("Group", children,),);
+        format!("EXPR {:?} {}", this, self.parenthesize("Group", children,),)
     }
 
     fn visit_literal_expr(&mut self, this: *const Expr, expr: &ExprLiteral) -> String {
-        return match &expr.value {
+        match &expr.value {
             // 将数据转换为对应的字符串，并带上 Loxinas 代码对应的数据后缀，字符串需要处理
             Data::Bool(res) => res.to_string(),
             Data::String(res) => {
@@ -97,7 +97,7 @@ impl ExprVisitor<String> for AstPrinter {
                     }
                 )
             }
-        };
+        }
     }
 
     fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> String {
@@ -109,7 +109,7 @@ impl ExprVisitor<String> for AstPrinter {
             "right" => TreeChild::Expr(&expr.right),
         };
 
-        return format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),);
+        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
     }
 
     fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> String {
@@ -118,7 +118,7 @@ impl ExprVisitor<String> for AstPrinter {
             "expr" => TreeChild::Expr(&expr.expression),
         };
 
-        return format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),);
+        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
     }
 
     fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> String {
@@ -126,10 +126,10 @@ impl ExprVisitor<String> for AstPrinter {
             "name" => TreeChild::Identifier(&expr.name),
         };
 
-        return format!(
+        format!(
             "EXPR {:?} {}",
             this,
             self.parenthesize("Variable", children,),
-        );
+        )
     }
 }

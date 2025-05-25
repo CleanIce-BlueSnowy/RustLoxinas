@@ -308,7 +308,7 @@ impl Resolver {
             }
         }
 
-        return Ok(ExprResolveRes::new(res_type, ope_type));
+        Ok(ExprResolveRes::new(res_type, ope_type))
     }
 
     /// 分析分组表达式
@@ -316,7 +316,7 @@ impl Resolver {
         &mut self,
         inside_expr_res: &ExprResolveRes,
     ) -> CompileResult<ExprResolveRes> {
-        return Ok(inside_expr_res.clone());
+        Ok(inside_expr_res.clone())
     }
 
     /// 分析字面量表达式
@@ -350,7 +350,7 @@ impl Resolver {
 
         let res_type = ope_type.clone();
 
-        return Ok(ExprResolveRes::new(res_type, ope_type));
+        Ok(ExprResolveRes::new(res_type, ope_type))
     }
 
     /// 分析单元运算表达式
@@ -433,7 +433,7 @@ impl Resolver {
         }
         res_type = ope_type.clone();
 
-        return Ok(ExprResolveRes::new(res_type, ope_type));
+        Ok(ExprResolveRes::new(res_type, ope_type))
     }
 
     /// 分析类型转换表达式
@@ -458,7 +458,7 @@ impl Resolver {
             ));
         }
 
-        return Ok(ExprResolveRes::new(res_type, ope_type.clone()));
+        Ok(ExprResolveRes::new(res_type, ope_type.clone()))
     }
 
     pub fn resolve_variable_expr(
@@ -494,10 +494,10 @@ impl Resolver {
         // 设置类型
         let ty = variable.var_type.clone().unwrap();
 
-        return Ok((
+        Ok((
             ExprResolveRes::new(ty.clone(), ty.clone()),
             variable.slot,
             variable.is_ref,
-        ));
+        ))
     }
 }

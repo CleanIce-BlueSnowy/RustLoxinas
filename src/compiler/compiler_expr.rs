@@ -288,14 +288,14 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译分组表达式
     pub fn compile_grouping_expr(&mut self, inside_code: &mut Vec<u8>) -> CompileResult<Vec<u8>> {
         let mut target = vec![];
         target.append(inside_code);
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译字面量表达式
@@ -377,7 +377,7 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译单元运算表达式
@@ -419,7 +419,7 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译转换表达式
@@ -436,7 +436,7 @@ impl Compiler {
         self.convert_types(ope_type, res_type);
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     // 编译变量表达式
@@ -497,6 +497,6 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 }

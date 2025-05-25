@@ -68,11 +68,11 @@ impl<'a> TokenScanner<'a> {
             self.chars.len() + 1,
         )));
 
-        return if errors.is_empty() {
+        if errors.is_empty() {
             Ok(self.tokens)
         } else {
             Err(errors)
-        };
+        }
     }
 
     /// 扫描单个令牌
@@ -221,7 +221,7 @@ impl<'a> TokenScanner<'a> {
                 self.throw_error(&format!("Invalid character: `{other}`"))?;
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     /// 添加令牌并自动填写位置信息
@@ -240,7 +240,7 @@ impl<'a> TokenScanner<'a> {
     fn advance(&mut self) -> char {
         let ch = self.chars[self.current];
         self.current += 1;
-        return ch;
+        ch
     }
 
     /// 是否为合法的标识符字符，开始字符不能为数字，支持下划线
@@ -271,7 +271,7 @@ impl<'a> TokenScanner<'a> {
             return false;
         }
         self.current += 1;
-        return true;
+        true
     }
 
     /// 返回下一个字符。支持末尾检查
@@ -318,7 +318,7 @@ impl<'a> TokenScanner<'a> {
         for &ch in &self.chars[self.start..self.current] {
             res.push(ch);
         }
-        return res;
+        res
     }
 
     /// 检查是否为关键字
@@ -550,7 +550,7 @@ impl<'a> TokenScanner<'a> {
                 },
             }
         }
-        return Ok(());
+        Ok(())
     }
 
     /// 扫描字符串
@@ -589,7 +589,7 @@ impl<'a> TokenScanner<'a> {
         }
 
         self.add_token(TokenType::String(res));
-        return Ok(());
+        Ok(())
     }
 
     /// 扫描字符
@@ -605,13 +605,13 @@ impl<'a> TokenScanner<'a> {
             ch = self.escape_char(esc)?; // 转义
         }
 
-        return if self.can_match('\'') {
+        if self.can_match('\'') {
             // 结束引号
             self.add_token(TokenType::Char(ch));
             Ok(())
         } else {
             self.throw_error("Unterminated character.")
-        };
+        }
     }
 
     /// 扫描标签
@@ -629,7 +629,7 @@ impl<'a> TokenScanner<'a> {
         }
         let tag = self.get_whole_word();
         self.add_token(TokenType::Tag(tag[1..].to_string()));
-        return Ok(());
+        Ok(())
     }
 
     /// 转义字符串
@@ -649,7 +649,7 @@ impl<'a> TokenScanner<'a> {
                 self.current + 1,
             )?,
         }
-        return res;
+        res
     }
 
     /// 同步错误

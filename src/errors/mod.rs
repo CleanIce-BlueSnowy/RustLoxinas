@@ -51,7 +51,7 @@ pub fn print_all_errors(lines: &[&str], errors: ErrorList) -> String {
             }
         }
     }
-    return result;
+    result
 }
 
 /** 打印错误（返回字符串）
@@ -143,7 +143,7 @@ pub fn print_error(error_type: &str, lines: &[&str], message: &str, pos: &Positi
         res.push('\n');
     }
 
-    return res;
+    res
 }
 
 /** 打印运行时错误

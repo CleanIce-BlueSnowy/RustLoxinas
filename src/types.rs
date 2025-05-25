@@ -111,7 +111,7 @@ impl Display for ValueType {
         }
         .to_string();
 
-        return write!(formatter, "{}", str);
+        write!(formatter, "{}", str)
     }
 }
 
@@ -149,6 +149,6 @@ impl Display for TypeTag {
             res.push_str(&type_name);
         }
 
-        return write!(f, "{}", res);
+        write!(f, "{}", res)
     }
 }

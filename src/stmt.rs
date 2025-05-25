@@ -183,7 +183,7 @@ impl Stmt {
     #[must_use]
     pub fn accept<RetType>(&self, visitor: &mut impl StmtVisitor<RetType>) -> RetType {
         let ptr = self as *const Stmt;
-        return match self {
+        match self {
             Stmt::Empty(stmt) => visitor.visit_empty_stmt(ptr, stmt),
             Stmt::Expr(stmt) => visitor.visit_expr_stmt(ptr, stmt),
             Stmt::Let(stmt) => visitor.visit_let_stmt(ptr, stmt),
@@ -197,7 +197,7 @@ impl Stmt {
             Stmt::Break(stmt) => visitor.visit_break_stmt(ptr, stmt),
             Stmt::Continue(stmt) => visitor.visit_continue_stmt(ptr, stmt),
             Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
-        };
+        }
     }
 }
 

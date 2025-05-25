@@ -40,7 +40,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 逻辑运算布尔表达式——逻辑与
@@ -63,7 +63,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 判等表达式
@@ -86,7 +86,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 比较表达式
@@ -109,7 +109,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 位移表达式
@@ -132,7 +132,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 二元位操作
@@ -155,7 +155,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 加减表达式
@@ -178,7 +178,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 乘除表达式
@@ -201,7 +201,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 幂表达式
@@ -224,7 +224,7 @@ impl Parser {
                 right,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 单元运算符表达式
@@ -260,14 +260,14 @@ impl Parser {
                 target: tag,
             }));
         }
-        return Ok(expr);
+        Ok(expr)
     }
 
     /// 基本表达式
     fn primary(&mut self) -> SyntaxResult<Expr> {
         let token = self.peek();
         let pos = Position::new(token.line, token.start, token.line, token.end);
-        return if parser_can_match!(self, Keyword(False)) {
+        if parser_can_match!(self, Keyword(False)) {
             Ok(Expr::Literal(Box::new(ExprLiteral {
                 pos,
                 value: Data::Bool(false),
@@ -350,6 +350,6 @@ impl Parser {
             })))
         } else {
             Err(SyntaxError::new(&pos, "Invalid expression.".to_string()))
-        };
+        }
     }
 }

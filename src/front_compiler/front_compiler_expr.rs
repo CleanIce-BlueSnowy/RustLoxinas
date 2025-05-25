@@ -25,7 +25,7 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
             &mut right_code,
             &right_res,
         ))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 
     fn visit_grouping_expr(
@@ -36,7 +36,7 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
         let (inside_res, mut inside_code) = expr.expression.accept(self)?;
         let expr_res = Self::pack_error(self.resolver.resolve_grouping_expr(&inside_res))?;
         let expr_code = Self::pack_error(self.compiler.compile_grouping_expr(&mut inside_code))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 
     fn visit_literal_expr(
@@ -46,7 +46,7 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
     ) -> CompileResultList<(ExprResolveRes, Vec<u8>)> {
         let expr_res = Self::pack_error(self.resolver.resolve_literal_expr(expr))?;
         let expr_code = Self::pack_error(self.compiler.compile_literal_expr(expr))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 
     fn visit_unary_expr(
@@ -61,7 +61,7 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
             &mut right_code,
             &right_res,
         ))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 
     fn visit_as_expr(
@@ -73,7 +73,7 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
         let expr_res = Self::pack_error(self.resolver.resolve_as_expr(expr, &inside_res))?;
         let expr_code =
             Self::pack_error(self.compiler.compile_as_expr(&expr_res, &mut inside_code))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 
     fn visit_variable_expr(
@@ -89,6 +89,6 @@ impl<'a> ExprVisitor<CompileResultList<(ExprResolveRes, Vec<u8>)>> for FrontComp
             self.context.in_ref_let,
             is_ref,
         ))?;
-        return Ok((expr_res, expr_code));
+        Ok((expr_res, expr_code))
     }
 }

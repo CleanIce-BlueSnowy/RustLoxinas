@@ -77,7 +77,7 @@ impl<'a> VM<'a> {
             self.print_stack();
         }
 
-        return Ok(());
+        Ok(())
     }
 
     /// 运行单条指令
@@ -1395,7 +1395,7 @@ impl<'a> VM<'a> {
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 
     /// 运行特殊功能
@@ -1477,6 +1477,6 @@ impl<'a> VM<'a> {
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 }
