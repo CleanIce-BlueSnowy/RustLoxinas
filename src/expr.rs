@@ -97,14 +97,14 @@ impl Expr {
     #[must_use]
     pub fn accept<RetType>(&self, visitor: &mut impl ExprVisitor<RetType>) -> RetType {
         let ptr = self as *const Expr;
-        return match self {
+        match self {
             Expr::Binary(expr) => visitor.visit_binary_expr(ptr, expr),
             Expr::Grouping(expr) => visitor.visit_grouping_expr(ptr, expr),
             Expr::Literal(expr) => visitor.visit_literal_expr(ptr, expr),
             Expr::Unary(expr) => visitor.visit_unary_expr(ptr, expr),
             Expr::As(expr) => visitor.visit_as_expr(ptr, expr),
             Expr::Variable(expr) => visitor.visit_variable_expr(ptr, expr),
-        };
+        }
     }
 }
 

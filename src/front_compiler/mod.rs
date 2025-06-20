@@ -49,11 +49,11 @@ impl<'a> FrontCompiler<'a> {
         // 补充返回指令，临时充当结束程序的作用
         self.write_code(Instruction::OpReturn);
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(self.codes)
-        };
+        }
     }
 
     /// 编译一个作用域

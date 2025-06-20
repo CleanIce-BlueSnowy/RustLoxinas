@@ -19,7 +19,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         let mut final_code =
             Self::pack_error(self.compiler.compile_expr_stmt(&mut expr_code, &expr_res))?;
         self.codes.append(&mut final_code);
-        return Ok(());
+        Ok(())
     }
 
     fn visit_let_stmt(&mut self, _this: *const Stmt, stmt: &StmtLet) -> CompileResultList<()> {
@@ -41,7 +41,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         ))?;
         self.context.in_ref_let = false;
         self.codes.append(&mut final_code);
-        return Ok(());
+        Ok(())
     }
 
     fn visit_init_stmt(&mut self, _this: *const Stmt, stmt: &StmtInit) -> CompileResultList<()> {
@@ -59,7 +59,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
             var_type,
         ))?;
         self.codes.append(&mut final_code);
-        return Ok(());
+        Ok(())
     }
 
     fn visit_assign_stmt(
@@ -93,7 +93,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         ))?;
         self.context.in_assign = false;
         self.codes.append(&mut final_code);
-        return Ok(());
+        Ok(())
     }
 
     fn visit_block_stmt(&mut self, _this: *const Stmt, stmt: &StmtBlock) -> CompileResultList<()> {
@@ -108,11 +108,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         // 单独的语句块不需要进行初始化一致性检查，所以直接初始化相关变量
         Self::scope_init_vars(&scope);
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     fn visit_if_stmt(&mut self, _this: *const Stmt, stmt: &StmtIf) -> CompileResultList<()> {
@@ -225,11 +225,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
 
         Self::scope_init_vars(&compare_scope);
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     fn visit_loop_stmt(&mut self, _this: *const Stmt, stmt: &StmtLoop) -> CompileResultList<()> {
@@ -294,11 +294,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         self.codes[alloc_location..(alloc_location + 4)]
             .copy_from_slice(&(memory_used as u32).to_le_bytes());
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     fn visit_while_stmt(&mut self, _this: *const Stmt, stmt: &StmtWhile) -> CompileResultList<()> {
@@ -381,11 +381,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         self.codes[alloc_location..(alloc_location + 4)]
             .copy_from_slice(&(memory_used as u32).to_le_bytes());
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     fn visit_for_stmt(&mut self, _this: *const Stmt, stmt: &StmtFor) -> CompileResultList<()> {
@@ -481,11 +481,11 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
 
         self.resolver.leave_scope(); // 保护作用域
 
-        return if !errors.is_empty() {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
-        };
+        }
     }
 
     fn visit_break_stmt(&mut self, _this: *const Stmt, stmt: &StmtBreak) -> CompileResultList<()> {
@@ -506,7 +506,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         self.break_patches
             .push(BreakPatch::new(stmt.tag.clone(), break_location));
 
-        return Ok(());
+        Ok(())
     }
 
     fn visit_continue_stmt(
@@ -531,7 +531,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         self.continue_patches
             .push(ContinuePatch::new(stmt.tag.clone(), continue_location));
 
-        return Ok(());
+        Ok(())
     }
 
     fn visit_print_stmt(&mut self, _this: *const Stmt, stmt: &StmtPrint) -> CompileResultList<()> {
@@ -547,6 +547,6 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
                 .compile_print_stmt(expr_code, expr_res, expr_pos),
         )?;
         self.codes.append(&mut final_code);
-        return Ok(());
+        Ok(())
     }
 }

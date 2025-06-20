@@ -47,10 +47,10 @@ impl Parser {
             }
         }
 
-        return if errors.is_empty() {
+        if errors.is_empty() {
             Ok(statements)
         } else {
             Err(errors)
-        };
+        }
     }
 }

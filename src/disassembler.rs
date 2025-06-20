@@ -33,7 +33,7 @@ pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), S
         process::exit(1);
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// 反汇编代码块
@@ -77,7 +77,7 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
     }
     writeln!(output_file, "======")?;
 
-    return Ok(());
+    Ok(())
 }
 
 /// 反汇编指令

@@ -28,7 +28,7 @@ impl Compiler {
         });
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译变量定义语句
@@ -94,7 +94,7 @@ impl Compiler {
             self.append_temp_chunk(&mut target);
         }
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译变量延迟初始化语句
@@ -129,7 +129,7 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 编译赋值语句
@@ -168,7 +168,7 @@ impl Compiler {
         self.append_temp_chunk(&mut target);
         target.append(var_code);
 
-        return Ok(target);
+        Ok(target)
     }
 
     /// 临时辅助功能：编译打印语句
@@ -226,6 +226,6 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
-        return Ok(target);
+        Ok(target)
     }
 }

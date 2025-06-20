@@ -141,7 +141,7 @@ fn compile_file(path: &str, output_path: Option<&str>) -> Result<(), String> {
         ));
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// 编译代码
@@ -178,8 +178,8 @@ fn compile_code(source: String) -> Result<Vec<u8>, String> {
     // 前端编译
     let front_compiler = FrontCompiler::new(&statements);
 
-    return match front_compiler.compile() {
+    match front_compiler.compile() {
         Ok(codes) => Ok(codes),
         Err(errs) => Err(print_all_errors(&lines, ErrorList::CompileErrors(&errs))),
-    };
+    }
 }

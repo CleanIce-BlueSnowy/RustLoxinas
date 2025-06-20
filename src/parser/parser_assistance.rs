@@ -69,7 +69,7 @@ impl Parser {
         if !self.is_at_end() {
             self.current += 1;
         }
-        return self.previous();
+        self.previous()
     }
 
     /// 解析类型标识符
@@ -79,7 +79,7 @@ impl Parser {
 
         let next_token = self.advance().clone();
 
-        return if let Identifier(name) = &next_token.token_type {
+        if let Identifier(name) = &next_token.token_type {
             let mut tag = TypeTag::new();
             tag.pos.start_line = next_token.line;
             tag.pos.start_idx = next_token.start;
@@ -111,7 +111,7 @@ impl Parser {
                 ),
                 "Expect type name".to_string(),
             ))
-        };
+        }
     }
 
     /// 获取最后词素位置信息
@@ -119,12 +119,12 @@ impl Parser {
     #[must_use]
     pub fn get_final_pos(&self) -> Position {
         let semicolon = self.previous();
-        return Position::new(
+        Position::new(
             semicolon.line,
             semicolon.start,
             semicolon.line,
             semicolon.end,
-        );
+        )
     }
 
     /// 同步错误

@@ -56,7 +56,7 @@ impl Parser {
     /// 以表达式开头的语句
     fn start_with_expr(&mut self) -> SyntaxResult<Stmt> {
         let expr = self.parse_expression()?;
-        return if parser_can_match!(self, Operator(Equal)) {
+        if parser_can_match!(self, Operator(Equal)) {
             self.assign_stmt(expr)
         } else if parser_can_match!(
             self,
@@ -74,7 +74,7 @@ impl Parser {
             self.desugar_self_assign_stmt(expr, self.previous())
         } else {
             self.expr_stmt(expr)
-        };
+        }
     }
 
     /// 语法糖脱糖——自赋值运算符
@@ -122,7 +122,7 @@ impl Parser {
         let right_expr = self.parse_expression()?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Assign(Box::new(StmtAssign {
+        Ok(Stmt::Assign(Box::new(StmtAssign {
             pos: Position::new(
                 left_pos.start_line,
                 left_pos.start_idx,
@@ -136,7 +136,7 @@ impl Parser {
                 operator,
                 right: right_expr,
             })),
-        })));
+        })))
     }
 
     /// 表达式语句
@@ -159,7 +159,7 @@ impl Parser {
         }
 
         let final_pos = self.get_final_pos();
-        return Ok(Stmt::Expr(Box::new(StmtExpr {
+        Ok(Stmt::Expr(Box::new(StmtExpr {
             pos: Position::new(
                 expr_pos.start_line,
                 expr_pos.start_idx,
@@ -167,7 +167,7 @@ impl Parser {
                 final_pos.end_idx,
             ),
             expression: expr,
-        })));
+        })))
     }
 
     /// `let` 语句
@@ -233,7 +233,7 @@ impl Parser {
         )?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Let(Box::new(StmtLet {
+        Ok(Stmt::Let(Box::new(StmtLet {
             pos: Position::new(
                 let_pos.start_line,
                 let_pos.start_idx,
@@ -250,7 +250,7 @@ impl Parser {
                 None
             },
             is_ref,
-        })));
+        })))
     }
 
     /// `init` 语句。
@@ -301,7 +301,7 @@ impl Parser {
         )?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Init(Box::new(StmtInit {
+        Ok(Stmt::Init(Box::new(StmtInit {
             pos: Position::new(
                 key_init_pos.start_line,
                 key_init_pos.start_idx,
@@ -311,7 +311,7 @@ impl Parser {
             name_pos: name_token_pos,
             name: name.clone(),
             init,
-        })));
+        })))
     }
 
     /// 条件判断语句
@@ -341,7 +341,7 @@ impl Parser {
 
         let if_chunk = self.block_stmt()?;
 
-        return if parser_can_match!(self, Keyword(Else)) {
+        if parser_can_match!(self, Keyword(Else)) {
             if parser_can_match!(self, Keyword(If)) {
                 let mut else_if_cases = vec![];
 
@@ -409,7 +409,7 @@ impl Parser {
                 else_if_branch: vec![],
                 else_branch: None,
             })))
-        };
+        }
     }
 
     /// 无限循环语句
@@ -441,7 +441,7 @@ impl Parser {
         let chunk = self.block_stmt()?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Loop(Box::new(StmtLoop {
+        Ok(Stmt::Loop(Box::new(StmtLoop {
             pos: Position::new(
                 loop_pos.start_line,
                 loop_pos.start_idx,
@@ -450,7 +450,7 @@ impl Parser {
             ),
             chunk,
             tag,
-        })));
+        })))
     }
 
     /// 条件循环语句
@@ -489,7 +489,7 @@ impl Parser {
         let chunk = self.block_stmt()?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::While(Box::new(StmtWhile {
+        Ok(Stmt::While(Box::new(StmtWhile {
             pos: Position::new(
                 while_pos.start_line,
                 while_pos.start_idx,
@@ -499,7 +499,7 @@ impl Parser {
             condition,
             chunk,
             tag,
-        })));
+        })))
     }
 
     fn for_stmt(&mut self) -> SyntaxResult<Stmt> {
@@ -565,7 +565,7 @@ impl Parser {
 
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::For(Box::new(StmtFor {
+        Ok(Stmt::For(Box::new(StmtFor {
             pos: Position::new(
                 for_pos.start_line,
                 for_pos.start_idx,
@@ -577,7 +577,7 @@ impl Parser {
             update,
             chunk,
             tag,
-        })));
+        })))
     }
 
     /// 退出循环语句
@@ -618,7 +618,7 @@ impl Parser {
 
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Break(Box::new(StmtBreak {
+        Ok(Stmt::Break(Box::new(StmtBreak {
             pos: Position::new(
                 break_pos.start_line,
                 break_pos.start_idx,
@@ -626,7 +626,7 @@ impl Parser {
                 final_pos.end_idx,
             ),
             tag,
-        })));
+        })))
     }
 
     /// 继续循环语句
@@ -667,7 +667,7 @@ impl Parser {
 
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Continue(Box::new(StmtContinue {
+        Ok(Stmt::Continue(Box::new(StmtContinue {
             pos: Position::new(
                 continue_pos.start_line,
                 continue_pos.start_idx,
@@ -675,7 +675,7 @@ impl Parser {
                 final_pos.end_idx,
             ),
             tag,
-        })));
+        })))
     }
 
     /// 赋值语句
@@ -700,7 +700,7 @@ impl Parser {
         }
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Assign(Box::new(StmtAssign {
+        Ok(Stmt::Assign(Box::new(StmtAssign {
             pos: Position::new(
                 start_pos.start_line,
                 start_pos.start_idx,
@@ -709,7 +709,7 @@ impl Parser {
             ),
             assign_vars: vars,
             right_expr: next_expr,
-        })));
+        })))
     }
 
     /// 块语句
@@ -748,7 +748,7 @@ impl Parser {
         )?;
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Block(Box::new(StmtBlock {
+        Ok(Stmt::Block(Box::new(StmtBlock {
             pos: Position::new(
                 left_brace_pos.start_line,
                 left_brace_pos.start_idx,
@@ -756,7 +756,7 @@ impl Parser {
                 final_pos.end_idx,
             ),
             statements,
-        })));
+        })))
     }
 
     /// 临时辅助功能：打印语句
@@ -787,7 +787,7 @@ impl Parser {
         };
         let final_pos = self.get_final_pos();
 
-        return Ok(Stmt::Print(Box::new(StmtPrint {
+        Ok(Stmt::Print(Box::new(StmtPrint {
             pos: Position::new(
                 print_pos.start_line,
                 print_pos.start_idx,
@@ -795,6 +795,6 @@ impl Parser {
                 final_pos.end_idx,
             ),
             expr,
-        })));
+        })))
     }
 }

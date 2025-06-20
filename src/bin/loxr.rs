@@ -71,7 +71,7 @@ fn run_file(path: &str) -> Result<(), String> {
     // 运行代码
     run_code(&buffer)?;
 
-    return Ok(());
+    Ok(())
 }
 
 /// 执行字节码
@@ -84,5 +84,5 @@ fn run_code(code: &[u8]) -> Result<(), String> {
         return Err(print_runtime_error(&err.message));
     }
 
-    return Ok(());
+    Ok(())
 }

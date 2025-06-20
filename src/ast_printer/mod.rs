@@ -37,7 +37,7 @@ impl AstPrinter {
             let one: String = statement.accept(self);
             result.push_str(&format!("{}\n", one));
         }
-        return result;
+        result
     }
 
     /// 将合法的运算符转换为运算符对应的字符串
@@ -114,6 +114,6 @@ impl AstPrinter {
             }
         }
         res.push(')');
-        return res;
+        res
     }
 }
