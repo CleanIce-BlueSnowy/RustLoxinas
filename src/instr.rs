@@ -9,8 +9,20 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 pub enum Instruction {
     /// 特殊功能
     OpSpecialFunction,
-    /// 返回
-    OpReturn,
+    /// 调用函数
+    OpCall,
+    /// 返回空单位
+    OpReturnUnit,
+    /// 返回字节
+    OpReturnByte,
+    /// 返回单字
+    OpReturnWord,
+    /// 返回双字
+    OpReturnDword,
+    /// 返回四字
+    OpReturnQword,
+    /// 返回八字
+    OpReturnOword,
     /// 栈扩展
     OpStackExtend,
     /// 栈收缩

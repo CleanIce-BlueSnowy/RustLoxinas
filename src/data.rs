@@ -35,6 +35,7 @@ pub enum DataFloat {
 /// 数据大小
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum DataSize {
+    Zero,
     Byte,
     Word,
     Dword,
@@ -48,6 +49,7 @@ impl DataSize {
     #[must_use]
     pub fn get_bytes_cnt(&self) -> usize {
         match self {
+            DataSize::Zero => 0,
             DataSize::Byte => 1,
             DataSize::Word => 2,
             DataSize::Dword => 4,

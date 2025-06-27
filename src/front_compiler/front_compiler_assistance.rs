@@ -83,7 +83,7 @@ impl<'a> FrontCompiler<'a> {
     pub fn check_tag(&self, tag: &Option<String>, pos: &Position) -> CompileResult<()> {
         if let Some(tag_name) = tag {
             let mut found_tag = false;
-            for tag in &self.context.loop_tags {
+            for tag in &self.loop_tags {
                 if let Some(loop_tag) = tag {
                     if loop_tag == tag_name {
                         found_tag = true;

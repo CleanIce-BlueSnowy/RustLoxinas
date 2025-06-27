@@ -34,8 +34,10 @@ pub enum Stmt {
     Break(Box<StmtBreak>),
     /// 继续循环语句
     Continue(Box<StmtContinue>),
-    /// 临时辅助功能：打印语句
-    Print(Box<StmtPrint>),
+    /// 函数定义语句
+    Func(Box<StmtFunc>),
+    /// 返回语句
+    Return(Box<StmtReturn>),
 }
 
 /// 空语句
@@ -138,9 +140,19 @@ pub struct StmtContinue {
     pub tag: Option<String>,
 }
 
-/// 临时辅助功能：打印语句
+/// 函数定义语句
 #[cfg_attr(debug_assertions, derive(Debug))]
-pub struct StmtPrint {
+pub struct StmtFunc {
+    pub pos: Position,
+    pub name: String,
+    pub params: Vec<(String, TypeTag)>,
+    pub return_type: Option<TypeTag>,
+    pub body: Stmt,
+}
+
+/// 返回语句
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct StmtReturn {
     pub pos: Position,
     pub expr: Option<Expr>,
 }
@@ -151,52 +163,54 @@ pub struct StmtPrint {
  */
 pub trait StmtVisitor<RetType> {
     #[must_use]
-    fn visit_empty_stmt(&mut self, this: *const Stmt, stmt: &StmtEmpty) -> RetType;
+    fn visit_empty_stmt(&mut self, stmt: &StmtEmpty) -> RetType;
     #[must_use]
-    fn visit_expr_stmt(&mut self, this: *const Stmt, stmt: &StmtExpr) -> RetType;
+    fn visit_expr_stmt(&mut self, stmt: &StmtExpr) -> RetType;
     #[must_use]
-    fn visit_let_stmt(&mut self, this: *const Stmt, stmt: &StmtLet) -> RetType;
+    fn visit_let_stmt(&mut self, stmt: &StmtLet) -> RetType;
     #[must_use]
-    fn visit_init_stmt(&mut self, this: *const Stmt, stmt: &StmtInit) -> RetType;
+    fn visit_init_stmt(&mut self, stmt: &StmtInit) -> RetType;
     #[must_use]
-    fn visit_assign_stmt(&mut self, this: *const Stmt, stmt: &StmtAssign) -> RetType;
+    fn visit_assign_stmt(&mut self, stmt: &StmtAssign) -> RetType;
     #[must_use]
-    fn visit_block_stmt(&mut self, this: *const Stmt, stmt: &StmtBlock) -> RetType;
+    fn visit_block_stmt(&mut self, stmt: &StmtBlock) -> RetType;
     #[must_use]
-    fn visit_if_stmt(&mut self, this: *const Stmt, stmt: &StmtIf) -> RetType;
+    fn visit_if_stmt(&mut self, stmt: &StmtIf) -> RetType;
     #[must_use]
-    fn visit_loop_stmt(&mut self, this: *const Stmt, stmt: &StmtLoop) -> RetType;
+    fn visit_loop_stmt(&mut self, stmt: &StmtLoop) -> RetType;
     #[must_use]
-    fn visit_while_stmt(&mut self, this: *const Stmt, stmt: &StmtWhile) -> RetType;
+    fn visit_while_stmt(&mut self, stmt: &StmtWhile) -> RetType;
     #[must_use]
-    fn visit_for_stmt(&mut self, this: *const Stmt, stmt: &StmtFor) -> RetType;
+    fn visit_for_stmt(&mut self, stmt: &StmtFor) -> RetType;
     #[must_use]
-    fn visit_break_stmt(&mut self, this: *const Stmt, stmt: &StmtBreak) -> RetType;
+    fn visit_break_stmt(&mut self, stmt: &StmtBreak) -> RetType;
     #[must_use]
-    fn visit_continue_stmt(&mut self, this: *const Stmt, stmt: &StmtContinue) -> RetType;
+    fn visit_continue_stmt(&mut self, stmt: &StmtContinue) -> RetType;
     #[must_use]
-    fn visit_print_stmt(&mut self, this: *const Stmt, stmt: &StmtPrint) -> RetType;
+    fn visit_func_stmt(&mut self,  stmt: &StmtFunc) -> RetType;
+    #[must_use]
+    fn visit_return_stmt(&mut self, stmt: &StmtReturn) -> RetType;
 }
 
 impl Stmt {
     /// 访问自己，通过模式匹配具体的枚举值
     #[must_use]
     pub fn accept<RetType>(&self, visitor: &mut impl StmtVisitor<RetType>) -> RetType {
-        let ptr = self as *const Stmt;
         match self {
-            Stmt::Empty(stmt) => visitor.visit_empty_stmt(ptr, stmt),
-            Stmt::Expr(stmt) => visitor.visit_expr_stmt(ptr, stmt),
-            Stmt::Let(stmt) => visitor.visit_let_stmt(ptr, stmt),
-            Stmt::Init(stmt) => visitor.visit_init_stmt(ptr, stmt),
-            Stmt::Assign(stmt) => visitor.visit_assign_stmt(ptr, stmt),
-            Stmt::Block(stmt) => visitor.visit_block_stmt(ptr, stmt),
-            Stmt::If(stmt) => visitor.visit_if_stmt(ptr, stmt),
-            Stmt::Loop(stmt) => visitor.visit_loop_stmt(ptr, stmt),
-            Stmt::While(stmt) => visitor.visit_while_stmt(ptr, stmt),
-            Stmt::For(stmt) => visitor.visit_for_stmt(ptr, stmt),
-            Stmt::Break(stmt) => visitor.visit_break_stmt(ptr, stmt),
-            Stmt::Continue(stmt) => visitor.visit_continue_stmt(ptr, stmt),
-            Stmt::Print(stmt) => visitor.visit_print_stmt(ptr, stmt),
+            Self::Empty(stmt) => visitor.visit_empty_stmt(stmt),
+            Self::Expr(stmt) => visitor.visit_expr_stmt(stmt),
+            Self::Let(stmt) => visitor.visit_let_stmt(stmt),
+            Self::Init(stmt) => visitor.visit_init_stmt(stmt),
+            Self::Assign(stmt) => visitor.visit_assign_stmt(stmt),
+            Self::Block(stmt) => visitor.visit_block_stmt(stmt),
+            Self::If(stmt) => visitor.visit_if_stmt(stmt),
+            Self::Loop(stmt) => visitor.visit_loop_stmt(stmt),
+            Self::While(stmt) => visitor.visit_while_stmt(stmt),
+            Self::For(stmt) => visitor.visit_for_stmt(stmt),
+            Self::Break(stmt) => visitor.visit_break_stmt(stmt),
+            Self::Continue(stmt) => visitor.visit_continue_stmt(stmt),
+            Self::Func(stmt) => visitor.visit_func_stmt(stmt),
+            Self::Return(stmt) => visitor.visit_return_stmt(stmt),
         }
     }
 }
@@ -219,7 +233,8 @@ macro_rules! stmt_get_pos {
             Stmt::For(stmt) => stmt.pos.clone(),
             Stmt::Break(stmt) => stmt.pos.clone(),
             Stmt::Continue(stmt) => stmt.pos.clone(),
-            Stmt::Print(stmt) => stmt.pos.clone(),
+            Stmt::Func(stmt) => stmt.pos.clone(),
+            Stmt::Return(stmt) => stmt.pos.clone(),
         }
     }};
 }

@@ -64,8 +64,8 @@ impl<'a> TokenScanner<'a> {
         self.tokens.push(Rc::new(Token::new(
             TokenType::EOF,
             self.line,
-            self.chars.len(),
-            self.chars.len() + 1,
+            self.current - self.scanned_chars,
+            self.current - self.scanned_chars + 1,
         )));
 
         if errors.is_empty() {
@@ -100,6 +100,8 @@ impl<'a> TokenScanner<'a> {
             '-' => {
                 if self.can_match('=') {
                     self.add_token(TokenType::Operator(MinusEqual));
+                } else if self.can_match('>') {
+                    self.add_token(TokenType::Operator(RightArrow));
                 } else {
                     self.add_token(TokenType::Operator(Minus));
                 }
@@ -125,6 +127,7 @@ impl<'a> TokenScanner<'a> {
                     self.add_token(TokenType::Operator(Star));
                 }
             }
+            ',' => self.add_token(TokenType::Operator(Comma)),
             '\\' => self.add_token(TokenType::Operator(Backslash)),
             '&' => {
                 if self.can_match('=') {
@@ -340,7 +343,6 @@ impl<'a> TokenScanner<'a> {
             "as" => Some(As),
             "init" => Some(Init),
             "ref" => Some(Ref),
-            "print" => Some(Print),
             "shl" => Some(Shl),
             "shr" => Some(Shr),
             "break" => Some(Break),

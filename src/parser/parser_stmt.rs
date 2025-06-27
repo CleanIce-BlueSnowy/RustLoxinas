@@ -4,10 +4,7 @@ use crate::errors::error_types::{SyntaxError, SyntaxResult};
 use crate::expr::Expr;
 use crate::parser::Parser;
 use crate::position::Position;
-use crate::stmt::{
-    Stmt, StmtAssign, StmtBlock, StmtBreak, StmtContinue, StmtEmpty, StmtExpr, StmtFor, StmtIf,
-    StmtInit, StmtLet, StmtLoop, StmtPrint, StmtWhile,
-};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtBreak, StmtContinue, StmtEmpty, StmtExpr, StmtFor, StmtFunc, StmtIf, StmtInit, StmtLet, StmtLoop, StmtReturn, StmtWhile};
 use crate::tokens::Token;
 use crate::tokens::TokenKeyword::*;
 use crate::tokens::TokenOperator::*;
@@ -37,8 +34,10 @@ impl Parser {
             self.break_stmt()
         } else if parser_can_match!(self, Keyword(Continue)) {
             self.continue_stmt()
-        } else if parser_can_match!(self, Keyword(Print)) {
-            self.print_stmt()
+        } else if parser_can_match!(self, Keyword(Func)) {
+            self.func_stmt()
+        } else if parser_can_match!(self, Keyword(Return)) {
+            self.return_stmt()
         } else if parser_can_match!(self, Paren(LeftBrace)) {
             self.block_stmt()
         } else {
@@ -142,18 +141,12 @@ impl Parser {
     /// 表达式语句
     fn expr_stmt(&mut self, expr: Expr) -> SyntaxResult<Stmt> {
         let expr_pos = expr_get_pos!(&expr);
-        let end_pos = Position::new(
-            expr_pos.end_line,
-            expr_pos.end_idx,
-            expr_pos.end_line,
-            expr_pos.end_idx + 1,
-        );
 
         if !self.in_for_update {
             parser_consume!(
                 self,
                 Operator(Semicolon),
-                &end_pos,
+                &self.get_next_pos(),
                 "Expect ';' after a statement.".to_string()
             )?;
         }
@@ -213,22 +206,10 @@ impl Parser {
             None
         };
 
-        let end_pos = if let Some(init) = &init {
-            let pos = expr_get_pos!(init);
-            Position::new(pos.end_line, pos.end_idx, pos.end_line, pos.end_idx + 1)
-        } else {
-            Position::new(
-                name_pos.end_line,
-                name_pos.end_idx,
-                name_pos.end_line,
-                name_pos.end_idx + 1,
-            )
-        };
-
         parser_consume!(
             self,
             Operator(Semicolon),
-            &end_pos,
+            &self.get_next_pos(),
             "Expect ';' after a statement.".to_string()
         )?;
         let final_pos = self.get_final_pos();
@@ -279,11 +260,13 @@ impl Parser {
                 "Expect variable name.".to_string(),
             ));
         };
-
-        let next = self.peek();
-        let err_pos = Position::new(next.line, next.start, next.line, next.end);
-
-        parser_consume!(self, Operator(Equal), &err_pos, "Expect '='.".to_string())?;
+        
+        parser_consume!(
+            self, 
+            Operator(Equal), 
+            &self.get_next_pos(),
+            "Expect '='.".to_string()
+        )?;
 
         let init = self.parse_expression()?;
         let init_pos = expr_get_pos!(&init);
@@ -325,17 +308,11 @@ impl Parser {
         );
 
         let if_expr = self.parse_expression()?;
-        let if_expr_pos = expr_get_pos!(&if_expr);
-        let err_pos = Position::new(
-            if_expr_pos.end_line,
-            if_expr_pos.end_idx,
-            if_expr_pos.end_line,
-            if_expr_pos.end_idx + 1,
-        );
+        
         parser_consume!(
             self,
             Paren(LeftBrace),
-            &err_pos,
+            &self.get_next_pos(),
             "Except '{' after the expression.".to_string()
         )?;
 
@@ -367,17 +344,10 @@ impl Parser {
                     else_branch: else_if.else_branch,
                 })))
             } else {
-                let keyword_else = self.previous();
-                let err_pos = Position::new(
-                    keyword_else.line,
-                    keyword_else.end,
-                    keyword_else.line,
-                    keyword_else.end + 1,
-                );
                 parser_consume!(
                     self,
                     Paren(LeftBrace),
-                    &err_pos,
+                    &self.get_next_pos(),
                     "Expect '{' after 'else'.".to_string()
                 )?;
                 let else_chunk = self.block_stmt()?;
@@ -429,14 +399,13 @@ impl Parser {
         } else {
             None
         };
-
-        let err_pos = Position::new(
-            loop_pos.end_line,
-            loop_pos.end_idx,
-            loop_pos.end_line,
-            loop_pos.end_line + 1,
-        );
-        parser_consume!(self, Paren(LeftBrace), &err_pos, "Expect '{'.".to_string())?;
+        
+        parser_consume!(
+            self, 
+            Paren(LeftBrace), 
+            &self.get_next_pos(), 
+            "Expect '{'.".to_string()
+        )?;
 
         let chunk = self.block_stmt()?;
         let final_pos = self.get_final_pos();
@@ -472,17 +441,11 @@ impl Parser {
         };
 
         let condition = self.parse_expression()?;
-        let condition_pos = expr_get_pos!(&condition);
-        let err_pos = Position::new(
-            condition_pos.end_line,
-            condition_pos.end_idx,
-            condition_pos.end_line,
-            condition_pos.end_idx + 1,
-        );
+        
         parser_consume!(
             self,
             Paren(LeftBrace),
-            &err_pos,
+            &self.get_next_pos(),
             "Expect '{' after the condition.".to_string()
         )?;
 
@@ -521,18 +484,11 @@ impl Parser {
 
         let init = self.parse_statement()?;
         let condition = self.parse_expression()?;
-
-        let condition_pos = expr_get_pos!(&condition);
-        let err_pos = Position::new(
-            condition_pos.end_line,
-            condition_pos.end_idx,
-            condition_pos.end_line,
-            condition_pos.end_idx + 1,
-        );
+        
         parser_consume!(
             self,
             Operator(Semicolon),
-            &err_pos,
+            &self.get_next_pos(),
             "Expect ';' after the expression.".to_string()
         )?;
 
@@ -541,23 +497,14 @@ impl Parser {
         self.in_for_update = false;
         let update_pos = stmt_get_pos!(&update);
 
-        if !matches!(
-            update,
-            Stmt::Expr(_) | Stmt::Assign(_) | Stmt::If(_) | Stmt::Print(_)
-        ) {
-            return Err(SyntaxError::new(&update_pos, "Only expression statement, assign statement, if statement and print statement can be used as update statement.".to_string()));
+        if !matches!(update, Stmt::Expr(_) | Stmt::Assign(_) | Stmt::If(_)) {
+            return Err(SyntaxError::new(&update_pos, "Only expression statement, assign statement and if statement can be used as update statement.".to_string()));
         }
-
-        let err_pos = Position::new(
-            update_pos.end_line,
-            update_pos.end_idx,
-            update_pos.end_line,
-            update_pos.end_idx + 1,
-        );
+        
         parser_consume!(
             self,
             Paren(LeftBrace),
-            &err_pos,
+            &self.get_next_pos(),
             "Expect '{' after the update statement.".to_string()
         )?;
 
@@ -591,28 +538,16 @@ impl Parser {
         );
 
         // 处理标记
-        let (tag, err_pos) = if let Tag(tag_name) = &self.peek().token_type {
-            let token = self.advance();
-            (
-                Some(tag_name.clone()),
-                Position::new(token.line, token.end, token.line, token.end + 1),
-            )
+        let tag = if let Tag(tag_name) = &self.peek().token_type {
+            Some(tag_name.clone())
         } else {
-            (
-                None,
-                Position::new(
-                    break_pos.end_line,
-                    break_pos.end_idx,
-                    break_pos.end_line,
-                    break_pos.end_idx + 1,
-                ),
-            )
+            None
         };
 
         parser_consume!(
             self,
             Operator(Semicolon),
-            &err_pos,
+            &self.get_next_pos(),
             "Expect ';' after 'break'.".to_string()
         )?;
 
@@ -640,28 +575,16 @@ impl Parser {
         );
 
         // 处理标记
-        let (tag, err_pos) = if let Tag(tag_name) = &self.peek().token_type {
-            let token = self.advance();
-            (
-                Some(tag_name.clone()),
-                Position::new(token.line, token.end, token.line, token.end + 1),
-            )
+        let tag = if let Tag(tag_name) = &self.peek().token_type {
+            Some(tag_name.clone())
         } else {
-            (
-                None,
-                Position::new(
-                    continue_pos.end_line,
-                    continue_pos.end_idx,
-                    continue_pos.end_line,
-                    continue_pos.end_idx + 1,
-                ),
-            )
+            None
         };
 
         parser_consume!(
             self,
             Operator(Semicolon),
-            &err_pos,
+            &self.get_next_pos(),
             "Expect ';' after 'continue'.".to_string()
         )?;
 
@@ -688,13 +611,11 @@ impl Parser {
             vars.push(next_expr);
             next_expr = self.parse_expression()?;
         }
-        let pos = expr_get_pos!(&next_expr);
-        let end_pos = Position::new(pos.end_line, pos.end_idx, pos.end_line, pos.end_idx + 1);
         if !self.in_for_update {
             parser_consume!(
                 self,
                 Operator(Semicolon),
-                &end_pos,
+                &self.get_next_pos(),
                 "Expect ';' after a statement.".to_string()
             )?;
         }
@@ -723,27 +644,14 @@ impl Parser {
         );
 
         let mut statements = vec![];
-        let mut end_pos = Position::new(
-            left_brace_pos.end_line,
-            left_brace_pos.end_idx,
-            left_brace_pos.end_line,
-            left_brace_pos.end_idx + 1,
-        );
         while !parser_check!(self, Paren(RightBrace)) {
             let statement = self.parse_statement()?;
-            let stmt_pos = stmt_get_pos!(&statement);
-            end_pos = Position::new(
-                stmt_pos.end_line,
-                stmt_pos.end_idx,
-                stmt_pos.end_line,
-                stmt_pos.end_idx + 1,
-            );
             statements.push(statement);
         }
         parser_consume!(
             self,
             Paren(RightBrace),
-            &end_pos,
+            &self.get_next_pos(),
             "Unclosed block statement.".to_string()
         )?;
         let final_pos = self.get_final_pos();
@@ -759,38 +667,142 @@ impl Parser {
         })))
     }
 
-    /// 临时辅助功能：打印语句
-    fn print_stmt(&mut self) -> SyntaxResult<Stmt> {
-        let keyword_print = self.previous();
-        let print_pos = Position::new(
-            keyword_print.line,
-            keyword_print.start,
-            keyword_print.line,
-            keyword_print.end,
+    fn func_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let keyword_func = self.previous();
+        let func_pos = Position::new(
+            keyword_func.line,
+            keyword_func.start,
+            keyword_func.line,
+            keyword_func.end,
         );
 
+        let next_token = self.advance();
+        let next_token_pos = Position::new(
+            next_token.line,
+            next_token.start,
+            next_token.line,
+            next_token.end,
+        );
+        let func_name = if let Identifier(name) = &next_token.token_type {
+            name
+        } else {
+            return Err(SyntaxError::new(
+                &next_token_pos,
+                "Expect an identifier.".to_string(),
+            ));
+        };
+
+        parser_consume!(
+            self, 
+            Paren(LeftParen), 
+            &self.get_next_pos(), 
+            "Expect '('.".to_string()
+        )?;
+        
+        let mut parameters = vec![];
+
+        let mut name_token = self.peek();
+        while let Identifier(param_name) = &name_token.token_type {
+            self.advance();
+
+            parser_consume!(
+                self,
+                Operator(Colon),
+                &self.get_next_pos(),
+                "Expect ':' after parameter name.".to_string(),
+            )?;
+
+            let param_type = self.parse_type_tag()?;
+
+            parameters.push((param_name.clone(), param_type));
+            
+            if let Paren(RightParen) = &self.peek().token_type {
+                break;
+            }
+            
+            parser_consume!(
+                self,
+                Operator(Comma),
+                &self.get_next_pos(),
+                "Except ',' or ')'.".to_string(),
+            )?;
+            
+            name_token = self.peek();
+        }
+        
+        if parser_check!(self, Operator(Comma)) {
+            self.advance();
+        }
+        
+        parser_consume!(
+            self,
+            Paren(RightParen),
+            &self.get_next_pos(),
+            "Except ')' after parameter list.".to_string(),
+        )?;
+        
+        let return_type = if parser_can_match!(self, Operator(RightArrow)) {
+            Some(self.parse_type_tag()?)
+        } else {
+            None
+        };
+        
+        parser_consume!(
+            self,
+            Paren(LeftBrace),
+            &self.get_next_pos(),
+            "Except '{' after function declaration.".to_string(),
+        )?;
+        
+        let chunk = self.block_stmt()?;
+        
+        let final_pos = self.get_final_pos();
+        
+        Ok(Stmt::Func(Box::new(StmtFunc {
+            pos: Position::new(
+                func_pos.start_line,
+                func_pos.start_idx,
+                final_pos.end_line,
+                final_pos.end_idx,
+            ),
+            name: func_name.clone(),
+            params: parameters,
+            return_type,
+            body: chunk,
+        })))
+    }
+    
+    /// 返回语句
+    fn return_stmt(&mut self) -> SyntaxResult<Stmt> {
+        let keyword_return = self.previous();
+        let return_pos = Position::new(
+            keyword_return.line,
+            keyword_return.start,
+            keyword_return.line,
+            keyword_return.end,
+        );
+        
         let expr = if parser_can_match!(self, Operator(Semicolon)) {
             None
         } else {
-            let res = self.parse_expression()?;
-            let pos = expr_get_pos!(&res);
-            let end_pos = Position::new(pos.end_line, pos.end_idx, pos.end_line, pos.end_idx + 1);
-            if !self.in_for_update {
-                parser_consume!(
-                    self,
-                    Operator(Semicolon),
-                    &end_pos,
-                    "Expect ';' after a statement.".to_string()
-                )?;
-            }
-            Some(res)
+            let expr = self.parse_expression()?;
+            
+            parser_consume!(
+                self,
+                Operator(Semicolon),
+                &self.get_next_pos(),
+                "Expect ';' after return statement.".to_string(),
+            )?;
+            
+            Some(expr)
         };
+        
         let final_pos = self.get_final_pos();
-
-        Ok(Stmt::Print(Box::new(StmtPrint {
+        
+        Ok(Stmt::Return(Box::new(StmtReturn {
             pos: Position::new(
-                print_pos.start_line,
-                print_pos.start_idx,
+                return_pos.start_line,
+                return_pos.start_idx,
                 final_pos.end_line,
                 final_pos.end_idx,
             ),

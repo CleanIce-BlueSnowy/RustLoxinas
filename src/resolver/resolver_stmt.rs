@@ -4,6 +4,7 @@ use crate::data::DataSize;
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::Expr;
 use crate::expr_get_pos;
+use crate::global_compiler::GlobalCompiler;
 use crate::resolver::{ExprResolveRes, Resolver, Variable};
 use crate::stmt::{StmtAssign, StmtFor, StmtIf, StmtInit, StmtLet, StmtWhile};
 use crate::types::ValueType;
@@ -26,7 +27,10 @@ impl Resolver {
 
         // 处理类型定义
         if let Some(tag) = &stmt.var_type {
-            let ty = self.parse_value_type(tag)?;
+            let ty = GlobalCompiler::parse_value_type(&self.global_types, tag)?;
+            if ty == ValueType::Unit {
+                return Err(CompileError::new(&tag.pos, "Cannot use type `unit` directly.".to_string()));
+            }
             variable.var_type = Some(ty);
         }
 

@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// 数据类型
 #[cfg_attr(debug_assertions, derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ValueType {
     /// 整数类型
     Integer(ValueIntegerType),
@@ -18,6 +18,8 @@ pub enum ValueType {
     Char,
     /// 布尔型
     Bool,
+    /// 空单元类型
+    Unit,
     /// 引用类型（对象）
     Object(LoxinasClass),
 }
@@ -27,7 +29,7 @@ unsafe impl Sync for ValueType {}
 
 /// 整数类型
 #[cfg_attr(debug_assertions, derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ValueIntegerType {
     Byte,
     SByte,
@@ -43,7 +45,7 @@ pub enum ValueIntegerType {
 
 /// 浮点类型
 #[cfg_attr(debug_assertions, derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ValueFloatType {
     Float,
     Double,
@@ -60,6 +62,7 @@ impl ValueType {
         match self {
             Char => DataSize::Dword,
             Bool => DataSize::Byte,
+            Unit => DataSize::Zero,
             Integer(integer) => match integer {
                 SByte | Byte => DataSize::Byte,
                 Short | UShort => DataSize::Word,
@@ -107,6 +110,7 @@ impl Display for ValueType {
             }
             Char => "char",
             Bool => "bool",
+            Unit => "unit",
             Object(object) => object.get_name(),
         }
         .to_string();

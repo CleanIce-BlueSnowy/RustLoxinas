@@ -4,13 +4,11 @@ use indexmap::indexmap;
 
 use crate::ast_printer::{AstPrinter, TreeChild};
 use crate::data::{Data, DataFloat, DataInteger};
-use crate::expr::{
-    Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable, ExprVisitor,
-};
+use crate::expr::{ExprAs, ExprBinary, ExprCall, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable, ExprVisitor};
 
 #[cfg(debug_assertions)]
 impl ExprVisitor<String> for AstPrinter {
-    fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> String {
+    fn visit_binary_expr(&mut self, expr: &ExprBinary) -> String {
         let name = format!(
             "Binary {}",
             self.operator_to_string(&expr.operator.token_type)
@@ -20,18 +18,18 @@ impl ExprVisitor<String> for AstPrinter {
             "right" => TreeChild::Expr(&expr.right),
         };
 
-        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
+        format!("EXPR {}", self.parenthesize(&name, children,),)
     }
 
-    fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> String {
+    fn visit_grouping_expr(&mut self, expr: &ExprGrouping) -> String {
         let children = indexmap! {
             "expr" => TreeChild::Expr(&expr.expression),
         };
 
-        format!("EXPR {:?} {}", this, self.parenthesize("Group", children,),)
+        format!("EXPR {}", self.parenthesize("Group", children,),)
     }
 
-    fn visit_literal_expr(&mut self, this: *const Expr, expr: &ExprLiteral) -> String {
+    fn visit_literal_expr(&mut self, expr: &ExprLiteral) -> String {
         match &expr.value {
             // 将数据转换为对应的字符串，并带上 Loxinas 代码对应的数据后缀，字符串需要处理
             Data::Bool(res) => res.to_string(),
@@ -51,13 +49,12 @@ impl ExprVisitor<String> for AstPrinter {
                         _ => ret.push(ch),
                     }
                 }
-                format!("EXPR {:?} Literal {}", this, ret)
+                format!("EXPR Literal {}", ret)
             }
             Data::Float(float) => {
                 format!(
-                    "EXPR {:?} Literal {}",
-                    this,
-                    match float {
+                    "EXPR Literal {}",
+                            match float {
                         DataFloat::Float(res) => format!("{}f", res.to_string()),
                         DataFloat::Double(res) => res.to_string(),
                     }
@@ -65,9 +62,8 @@ impl ExprVisitor<String> for AstPrinter {
             }
             Data::Integer(integer) => {
                 format!(
-                    "EXPR {:?} Literal {}",
-                    this,
-                    match integer {
+                    "EXPR Literal {}",
+                            match integer {
                         DataInteger::Byte(res) => format!("{}b", res.to_string()),
                         DataInteger::SByte(res) => format!("{}sb", res.to_string()),
                         DataInteger::Short(res) => format!("{}s", res.to_string()),
@@ -83,9 +79,8 @@ impl ExprVisitor<String> for AstPrinter {
             }
             Data::Char(ch) => {
                 format!(
-                    "EXPR {:?} Literal '{}'",
-                    this,
-                    match ch {
+                    "EXPR Literal '{}'",
+                            match ch {
                         '"' => r#"""#.to_string(),
                         '\n' => r"\n".to_string(),
                         '\0' => r"\0".to_string(),
@@ -100,7 +95,7 @@ impl ExprVisitor<String> for AstPrinter {
         }
     }
 
-    fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> String {
+    fn visit_unary_expr(&mut self, expr: &ExprUnary) -> String {
         let name = format!(
             "Unary {}",
             self.operator_to_string(&expr.operator.token_type)
@@ -109,27 +104,38 @@ impl ExprVisitor<String> for AstPrinter {
             "right" => TreeChild::Expr(&expr.right),
         };
 
-        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
+        format!("EXPR {}", self.parenthesize(&name, children,),)
     }
 
-    fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> String {
+    fn visit_as_expr(&mut self, expr: &ExprAs) -> String {
         let name = format!("As => {}", expr.target);
         let children = indexmap! {
             "expr" => TreeChild::Expr(&expr.expression),
         };
 
-        format!("EXPR {:?} {}", this, self.parenthesize(&name, children,),)
+        format!("EXPR {}", self.parenthesize(&name, children,),)
     }
 
-    fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> String {
+    fn visit_variable_expr(&mut self, expr: &ExprVariable) -> String {
         let children = indexmap! {
             "name" => TreeChild::Identifier(&expr.name),
         };
 
         format!(
-            "EXPR {:?} {}",
-            this,
+            "EXPR {}",
             self.parenthesize("Variable", children,),
+        )
+    }
+
+    fn visit_call_expr(&mut self, expr: &ExprCall) -> String {
+        let children = indexmap! {
+            "call_target" => TreeChild::Identifier(&expr.func_name),
+            "arguments" => TreeChild::ExprList(&expr.arguments),
+        };
+        
+        format!(
+            "EXPR {}",
+            self.parenthesize("Call", children),
         )
     }
 }

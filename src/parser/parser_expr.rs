@@ -2,7 +2,7 @@
 
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::errors::error_types::{SyntaxError, SyntaxResult};
-use crate::expr::{Expr, ExprAs, ExprBinary, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable};
+use crate::expr::{Expr, ExprAs, ExprBinary, ExprCall, ExprGrouping, ExprLiteral, ExprUnary, ExprVariable};
 use crate::parser::Parser;
 use crate::parser_check;
 use crate::position::Position;
@@ -245,7 +245,7 @@ impl Parser {
 
     /// 类型转换表达式
     fn as_cast(&mut self) -> SyntaxResult<Expr> {
-        let mut expr = self.primary()?;
+        let mut expr = self.func_call()?;
         while parser_can_match!(self, Keyword(As)) {
             let tag = self.parse_type_tag()?;
             let pos = expr_get_pos!(&expr);
@@ -261,6 +261,62 @@ impl Parser {
             }));
         }
         Ok(expr)
+    }
+    
+    /// 函数调用表达式
+    fn func_call(&mut self) -> SyntaxResult<Expr> {
+        use crate::tokens::TokenParen::*;
+        
+        let expr = self.primary()?;
+        
+        if parser_can_match!(self, Paren(LeftParen)) {
+            let func = if let Expr::Variable(var) = expr {
+                var
+            } else {
+                return Err(SyntaxError::new(&expr_get_pos!(expr), "Function object is unsupported! Expect function name.".to_string()));
+            };
+            
+            let mut args = vec![];
+            while !parser_check!(self, Paren(RightParen) | Operator(Comma)) {
+                args.push(self.parse_expression()?);
+                if parser_check!(self, Paren(RightParen)) {
+                    break;
+                }
+                let next_token = self.peek();
+                let end_pos = Position::new(
+                    next_token.line,
+                    next_token.start,
+                    next_token.line,
+                    next_token.end,
+                );
+                parser_consume!(
+                    self,
+                    Operator(Comma),
+                    &end_pos,
+                    "Expect ')' or ',' after arguments.".to_string(),
+                )?;
+            }
+            parser_consume!(
+                self,
+                Paren(RightParen),
+                &self.get_next_pos(),
+                "Expect ')' after arguments.".to_string(),
+            )?;
+            let func_pos = func.pos;
+            let final_pos = self.get_final_pos();
+            Ok(Expr::Call(Box::new(ExprCall {
+                pos: Position::new(
+                    func_pos.start_line,
+                    func_pos.start_idx,
+                    final_pos.end_line,
+                    final_pos.end_idx,
+                ),
+                func_name: func.name,
+                arguments: args,
+            })))
+        } else {
+            Ok(expr)
+        }
     }
 
     /// 基本表达式

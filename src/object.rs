@@ -6,8 +6,8 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-#[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone, PartialEq)]
 pub enum LoxinasClass {
     Object,
     String,
@@ -49,6 +49,7 @@ impl LoxinasClass {
 
 /// 用户定义类
 #[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(PartialEq)]
 pub struct UserClass {
     pub name: String,
     pub contain_types: HashMap<String, ValueType>,

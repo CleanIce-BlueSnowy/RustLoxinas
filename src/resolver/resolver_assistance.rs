@@ -1,10 +1,10 @@
 use crate::data::DataSize;
-use crate::errors::error_types::{CompileError, CompileResult};
+use crate::errors::error_types::CompileError;
 use crate::expr::Expr;
 use crate::resolver::{Resolver, Scope, Variable};
 use crate::stmt::Stmt;
 use crate::types::ValueType::Object;
-use crate::types::{TypeTag, ValueType};
+use crate::types::ValueType;
 
 impl Resolver {
     /// 预定义
@@ -21,9 +21,9 @@ impl Resolver {
                             format!("Redefine variable '{}'.", &stmt.name),
                         ));
                     }
-                    current.variables.insert(
+                    current.add_variable(
                         stmt.name.clone(),
-                        Variable::new(statement, false, false, 0, None, stmt.is_ref),
+                        Variable::new(false, false, 0, None, stmt.is_ref),
                     );
                 }
                 _ => (),
@@ -35,54 +35,6 @@ impl Resolver {
         } else {
             Err(errors)
         }
-    }
-
-    /// 解析类型标识符
-    pub fn parse_value_type(&mut self, type_tag: &TypeTag) -> CompileResult<ValueType> {
-        let mut res_type: Option<ValueType> = None;
-        let mut search_map = self.global_types.clone();
-        let mut in_global = true;
-
-        for name in &type_tag.chain {
-            if let Some(temp_ty) = &res_type {
-                if let Object(object) = temp_ty {
-                    search_map = object.get_contain_types().clone();
-                    in_global = false;
-                } else {
-                    return Err(CompileError::new(
-                        &type_tag.pos,
-                        format!("Unknown type '{}' in '{}'.", name, temp_ty),
-                    ));
-                }
-            }
-            let ty = if let Some(temp) = search_map.get(name) {
-                temp
-            } else {
-                return Err(CompileError::new(
-                    &type_tag.pos,
-                    if in_global {
-                        format!("Unknown type '{}' in global.", name)
-                    } else {
-                        format!(
-                            "Unknown type '{}' in '{}'.",
-                            name,
-                            res_type.as_ref().unwrap()
-                        )
-                    },
-                ));
-            };
-            res_type = Some(ty.clone());
-        }
-
-        // 不允许转换为对象
-        if let Some(Object(_)) = res_type {
-            return Err(CompileError::new(
-                &type_tag.pos,
-                "Cannot convert a value to an object by using 'as'.".to_string(),
-            ));
-        }
-
-        Ok(res_type.unwrap())
     }
 
     /// 进入作用域

@@ -1,6 +1,7 @@
 //! 虚拟机模块
 
-use crate::byte_handler::byte_reader::read_byte;
+use std::process;
+use crate::byte_handler::byte_reader::{read_byte, read_dword};
 
 #[cfg(debug_assertions)]
 use crate::disassembler::disassemble_instruction;
@@ -13,11 +14,24 @@ mod vim_io;
 mod vm_assistance;
 mod vm_debug;
 
+/// 虚拟机
 pub struct VM<'a> {
+    /// 虚拟机栈
     pub vm_stack: Vec<u8>,
+    /// 代码块
     pub chunk: &'a [u8],
+    /// 指令指针
     pub ip: usize,
+    /// 栈帧开始
     pub frame_start: usize,
+    /// 指令指针栈，用于函数返回时确定位置。若返回时为空，则说明从主函数返回，则退出程序
+    pub ip_stack: Vec<usize>,
+    /// 栈帧栈，用于函数返回时确定原栈帧位置
+    pub frame_stack: Vec<usize>,
+    /// 参数大小栈，用于释放栈帧
+    pub arg_size_stack: Vec<u32>,
+    /// 函数引用表
+    pub func_ref_list: Vec<u32>,
 }
 
 impl<'a> VM<'a> {
@@ -28,7 +42,100 @@ impl<'a> VM<'a> {
             chunk,
             ip: 0,
             frame_start: 0,
+            ip_stack: vec![],
+            frame_stack: vec![],
+            arg_size_stack: vec![],
+            func_ref_list: vec![],
         }
+    }
+    
+    /// 启动虚拟机
+    pub fn start(&mut self) -> RuntimeResult<()> {
+        let has_main_function = match self.analyze() {
+            Ok(res) => res,
+            Err(err) => {
+                eprintln!("{}", err);
+                process::exit(1);
+            }
+        };
+        
+        if !has_main_function {
+            eprintln!("Cannot run: This program doesn't have `main` function.");
+            process::exit(1);
+        }
+        
+        self.run()
+    }
+    
+    /// 分析代码信息，返回是否有主函数
+    fn analyze(&mut self) -> Result<bool, String> {
+        // 头部信息
+        if let Err(_err) = read_dword(self.chunk, 0) {  // 忽略符号表起始位置（但是要检查）
+            return Err("File Format Error: Symbol list address is missing.".to_string());
+        }
+        
+        let func_ref_start = if let Ok((start_bytes, _new_offset)) = read_dword(self.chunk, 4) {  // 函数引用表起始位置
+            u32::from_le_bytes(start_bytes) as usize
+        } else {
+            return Err("File Format Error: Function reference list address is missing.".to_string());
+        };
+
+        #[cfg(debug_assertions)]
+        println!("DEBUG: Function Reference List Address: {:08X}", func_ref_start);
+        
+        let code_start = if let Ok((start_bytes, _new_offset)) = read_dword(self.chunk, 8) {  // 代码起始位置
+            u32::from_le_bytes(start_bytes) as usize
+        } else {
+            return Err("File Format Error: Code address is missing.".to_string());
+        };
+
+        #[cfg(debug_assertions)]
+        println!("DEBUG: Code Address: {:08X}", code_start);
+
+        // 检查是否有主函数
+        if let Err(_err) = read_dword(self.chunk, 12) {  // 忽略符号表长度（但是要检查）
+            return Err("File Format Error: The length of symbol link list is missing.".to_string());
+        }
+        let main_symbol_length = if let Ok((length_bytes, _new_offset)) = read_dword(self.chunk, 16) {
+            u32::from_le_bytes(length_bytes)
+        } else {
+            return Err("File Format Error: The length of symbol is missing.".to_string());
+        };
+        let has_main_function = main_symbol_length != 0;
+
+        #[cfg(debug_assertions)]
+        println!("DEBUG: Main Symbol Length: {:08X}", main_symbol_length);
+        
+        // 读取函数引用表
+        let func_ref = &self.chunk[func_ref_start..code_start];
+        let ref_length = if let Ok((length_bytes, _new_offset)) = read_dword(func_ref, 0) {
+            u32::from_le_bytes(length_bytes) as usize
+        } else {
+            return Err("File Format Error: The length of function reference list is missing.".to_string());
+        };
+
+        #[cfg(debug_assertions)]
+        println!("DEBUG: Function Reference List Length: {:08X}", ref_length);
+        
+        let mut offset = 4;
+        self.func_ref_list = vec![0; ref_length];
+        for i in 0..ref_length {
+            let reference = if let Ok((ref_bytes, new_offset)) = read_dword(func_ref, offset) {
+                offset = new_offset;
+                u32::from_le_bytes(ref_bytes)
+            } else {
+                return Err("File Format Error: Function reference address is missing.".to_string());
+            };
+
+            #[cfg(debug_assertions)]
+            println!("DEBUG: Function Reference #{}: {:08X}", i, reference);
+
+            self.func_ref_list[i] = reference;
+        }
+        
+        self.chunk = &self.chunk[code_start..];
+        
+        Ok(has_main_function)
     }
 
     /// 运行字节码
@@ -56,8 +163,10 @@ impl<'a> VM<'a> {
 
             #[cfg(debug_assertions)]
             {
-                self.print_stack();
-                match disassemble_instruction(instr.clone(), self.chunk, old_ip + 1) {
+                self.print_vm_stack();
+                self.print_ip_stack();
+                self.print_frame_stack();
+                match disassemble_instruction(instr.clone(), self.chunk, old_ip + 1, 0) {
                     Ok(temp) => println!("{:08X} {}", old_ip, temp.0),
                     Err(err) => {
                         return Err(RuntimeError::new(format!(
@@ -74,7 +183,7 @@ impl<'a> VM<'a> {
         #[cfg(debug_assertions)]
         {
             print!("FINALLY ");
-            self.print_stack();
+            self.print_vm_stack();
         }
 
         Ok(())
@@ -104,9 +213,101 @@ impl<'a> VM<'a> {
 
                 self.run_special_function(special_func)?;
             }
-            OpReturn => {
-                // 临时充当结束程序的作用
-                return Ok(());
+            OpCall => {
+                // 获取引用
+                let idx = u32::from_le_bytes(self.read_arg_dword()) as usize;
+                let mut reference = self.func_ref_list[idx];
+                if reference & 0b_1000_0000__0000_0000__0000_0000__0000_0000 == 0 {  // 暂不支持符号链接引用
+                    return Err(RuntimeError::new("NOT SUPPORT: Symbol Link Function Reference.".to_string()));
+                }
+                reference &= 0b_0111_1111__1111_1111__1111_1111__1111_1111;
+                // 保存栈帧位置
+                self.frame_stack.push(self.frame_start);
+                // 保存返回地址
+                self.ip_stack.push(self.ip);
+                // 读取参数大小
+                let arg_size = u16::from_le_bytes(self.pop_word()) as usize;
+                // 设置栈帧位置
+                self.frame_start = self.vm_stack.len() - arg_size;
+                // 保存参数大小
+                self.arg_size_stack.push(arg_size as u32);
+                // 跳转到函数地址
+                self.ip = reference as usize;
+            }
+            OpReturnUnit => {
+                // 如果返回地址为空，则从主函数返回，程序结束
+                if self.ip_stack.is_empty() {
+                    process::exit(0);
+                }
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
+            }
+            OpReturnByte => {
+                // 保存返回值
+                let ret = self.pop_byte();
+                // 释放栈帧
+                let arg_size = self.arg_size_stack.pop().unwrap();
+                self.stack_shrink(arg_size);
+                // 插回返回值
+                self.push_byte(ret);
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
+            }
+            OpReturnWord => {
+                // 保存返回值
+                let ret = self.pop_word();
+                // 释放栈帧
+                let arg_size = self.arg_size_stack.pop().unwrap();
+                self.stack_shrink(arg_size);
+                // 插回返回值
+                self.push_word(ret);
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
+            }
+            OpReturnDword => {
+                // 保存返回值
+                let ret = self.pop_dword();
+                // 释放栈帧
+                let arg_size = self.arg_size_stack.pop().unwrap();
+                self.stack_shrink(arg_size);
+                // 插回返回值
+                self.push_dword(ret);
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
+            }
+            OpReturnQword => {
+                // 保存返回值
+                let ret = self.pop_qword();
+                // 释放栈帧
+                let arg_size = self.arg_size_stack.pop().unwrap();
+                self.stack_shrink(arg_size);
+                // 插回返回值
+                self.push_qword(ret);
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
+            }
+            OpReturnOword => {
+                // 保存返回值
+                let ret = self.pop_oword();
+                // 释放栈帧
+                let arg_size = self.arg_size_stack.pop().unwrap();
+                self.stack_shrink(arg_size);
+                // 插回返回值
+                self.push_oword(ret);
+                // 恢复栈帧
+                self.frame_start = self.frame_stack.pop().unwrap();
+                // 设置返回跳转地址
+                self.ip = self.ip_stack.pop().unwrap();
             }
             OpStackExtend => {
                 let length = u32::from_le_bytes(self.read_arg_dword());

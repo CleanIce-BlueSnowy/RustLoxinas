@@ -10,7 +10,7 @@ use std::rc::Rc;
 /// 若下一个令牌能匹配模式，则消耗该令牌，并返回是否匹配
 #[macro_export]
 macro_rules! parser_can_match {
-    ( $self:expr, $token_type:pat ) => {
+    ( $self:expr, $token_type:pat $(,)? ) => {
         if parser_check!($self, $token_type) {
             $self.advance();
             true
@@ -23,7 +23,7 @@ macro_rules! parser_can_match {
 /// 返回下一个令牌是否匹配模式
 #[macro_export]
 macro_rules! parser_check {
-    ( $self:expr, $token_type:pat ) => {
+    ( $self:expr, $token_type:pat $(,)? ) => {
         matches!(&$self.peek().token_type, $token_type)
     };
 }
@@ -31,7 +31,7 @@ macro_rules! parser_check {
 /// 若令牌匹配，则消耗令牌；若不匹配，则报错
 #[macro_export]
 macro_rules! parser_consume {
-    ( $self:expr, $token_type:pat, $pos:expr, $message:expr ) => {
+    ( $self:expr, $token_type:pat, $pos:expr, $message:expr $(,)? ) => {
         if parser_check!($self, $token_type) {
             $self.advance();
             Ok(())
@@ -126,6 +126,19 @@ impl Parser {
             semicolon.end,
         )
     }
+    
+    /// 获取下一个词素的位置信息
+    #[inline]
+    #[must_use]
+    pub fn get_next_pos(&self) -> Position {
+        let next_token = self.peek();
+        Position::new(
+            next_token.line,
+            next_token.start,
+            next_token.line,
+            next_token.end,
+        )
+    }
 
     /// 同步错误
     pub fn synchronize(&mut self) {
@@ -136,7 +149,7 @@ impl Parser {
             } else if let TokenType::Keyword(keyword) = &self.peek().token_type {
                 use crate::tokens::TokenKeyword::*;
 
-                if let If | Else | For | While | Let | Init | Loop | Break | Continue | Print =
+                if let If | Else | For | While | Let | Init | Loop | Break | Continue =
                     keyword
                 {
                     return;

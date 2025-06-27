@@ -5,6 +5,7 @@ use crate::instr::{Instruction, SpecialFunction};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::{io, process};
+use indexmap::{indexmap, IndexMap};
 
 /// 反汇编字节码文件
 pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), String> {
@@ -27,8 +28,75 @@ pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), S
         ));
     }
 
-    // 反汇编字节码
-    if let Err(err) = disassemble_chunk("<main>", &buffer, output_file) {
+    // 反汇编头部信息
+    if let Err(err) = writeln!(output_file, "====== HEADER INFORMATION ======") {
+        eprintln!("Cannot write to file: {}", err);
+        process::exit(1);
+    }
+    let (symbol_start, func_ref_start, code_start) = match disassemble_header_info(&buffer, output_file) {
+        (Err(err), _) => {
+            eprintln!("Cannot write to file: {}", err);
+            process::exit(1);
+        }
+        (Ok(()), Err(err)) => return Err(err),
+        (Ok(()), Ok(result)) => result,
+    };
+    
+    // 反汇编符号表
+    if let Err(err) = writeln!(output_file, "\n====== SYMBOL LIST ======") {
+        eprintln!("Cannot write to file: {}", err);
+        process::exit(1);
+    }
+    let location_symbol = match disassemble_symbol_list(&buffer[symbol_start..func_ref_start], output_file) {
+        (Err(err), _) => {
+            eprintln!("Cannot write to file: {}", err);
+            process::exit(1);
+        }
+        (Ok(()), Err(err)) => return Err(err),
+        (Ok(()), Ok(result)) => result,
+    };
+    
+    // 反汇编函数引用表
+    if let Err(err) = writeln!(output_file, "\n====== FUNCTION REFERENCE LIST ======") {
+        eprintln!("Cannot write to file: {}", err);
+        process::exit(1);
+    }
+    match disassemble_func_ref_list(&buffer[func_ref_start..code_start], output_file) {
+        (Err(err), _) => {
+            eprintln!("Cannot write to file: {}", err);
+            process::exit(1);
+        }
+        (Ok(()), Err(err)) => return Err(err),
+        _ => (),
+    };
+
+    // 反汇编代码
+    if let Err(err) = writeln!(output_file, "\n====== CODE ======") {
+        eprintln!("Cannot write to file: {}", err);
+        process::exit(1);
+    }
+    
+    let code_buffer = &buffer[code_start..];
+    let mut last_location = 0;
+    let mut last_symbol = "".to_string();
+    let mut first = true;
+    for (location, symbol) in location_symbol {
+        if first {
+            first = false;
+            last_location = location;
+            last_symbol = symbol;
+        } else {
+            let code_chunk = &code_buffer[last_location..location];
+            if let Err(err) = disassemble_chunk(&last_symbol, code_chunk, last_location as u32, output_file) {
+                eprintln!("Cannot write to file: {}", err);
+                process::exit(1);
+            }
+            last_location = location;
+            last_symbol = symbol;
+        }
+    }
+    let code_chunk = &code_buffer[last_location..];
+    if let Err(err) = disassemble_chunk(&last_symbol, code_chunk, last_location as u32, output_file) {
         eprintln!("Cannot write to file: {}", err);
         process::exit(1);
     }
@@ -36,9 +104,140 @@ pub fn disassemble_file(path: &str, output_file: &mut dyn Write) -> Result<(), S
     Ok(())
 }
 
+fn disassemble_header_info(chunk: &[u8], output_file: &mut dyn Write) -> (io::Result<()>, Result<(usize, usize, usize), String>) {
+    let mut offset = 0;
+    let symbol_start = if let Ok((start_bytes, new_offset)) = read_dword(chunk, offset) {
+        offset = new_offset;
+        u32::from_le_bytes(start_bytes)
+    } else {
+        return (Ok(()), Err("File Format Error: Symbol list address is missing.".to_string()));
+    };
+    let func_ref_start = if let Ok((start_bytes, new_offset)) = read_dword(chunk, offset) {
+        offset = new_offset;
+        u32::from_le_bytes(start_bytes)
+    } else {
+        return (Ok(()), Err("File Format Error: Function reference list address is missing.".to_string()));
+    };
+    let code_start = if let Ok((start_bytes, _new_offset)) = read_dword(chunk, offset) {
+        u32::from_le_bytes(start_bytes)
+    } else {
+        return (Ok(()), Err("File Format Error: Code address is missing.".to_string()));
+    };
+    
+    // 打印
+    if let Err(err) = writeln!(output_file, "Symbol List Address: {:08X}\nFunction Reference List Address: {:08X}\nCode Address: {:08X}", symbol_start, func_ref_start, code_start) {
+        (Err(err), Err("".to_string()))
+    } else {
+        (Ok(()), Ok((symbol_start as usize, func_ref_start as usize, code_start as usize)))
+    }
+}
+
+/// 反汇编符号表，返回一个地址到符号的映射，方便后续输出
+fn disassemble_symbol_list(chunk: &[u8], output_file: &mut dyn Write) -> (io::Result<()>, Result<IndexMap<usize, String>, String>) {
+    let mut offset = 0;
+    if let Ok((length_bytes, new_offset)) = read_dword(chunk, offset) {
+        offset = new_offset;
+        // 条目数量
+        let length = u32::from_le_bytes(length_bytes) as usize;
+        let mut result = indexmap!();
+        
+        // 打印
+        if let Err(err) = writeln!(output_file, "Length: {}", length) {
+            return (Err(err), Err("".to_string()));
+        }
+        
+        for i in 0..length {
+            if let Ok((symbol_length_bytes, new_offset)) = read_dword(chunk, offset) {
+                offset = new_offset;
+                // 符号长度
+                let symbol_length = u32::from_le_bytes(symbol_length_bytes) as usize;
+                let mut bytes = vec![0_u8; symbol_length];
+                // 读取符号
+                for idx in 0..symbol_length {
+                    if let Ok((byte, new_offset)) = read_byte(chunk, offset) {
+                        offset = new_offset;
+                        bytes[idx] = byte[0];
+                    } else {
+                        return (Ok(()), Err("File Format Error: Symbol string is missing.".to_string()));
+                    }
+                }
+                let symbol = match String::from_utf8(bytes) {
+                    Ok(str) => str,
+                    Err(err) => return (Ok(()), Err(err.to_string())),
+                };
+                // 符号文件位置
+                let pos = if let Ok((pos_bytes, new_offset)) = read_dword(chunk, offset) {
+                    offset = new_offset;
+                    u32::from_le_bytes(pos_bytes)
+                } else {
+                    return (Ok(()), Err("File Format Error: File position of symbol link is missing.".to_string()));
+                };
+                // 符号代码位置
+                let location = if let Ok((location_bytes, new_offset)) = read_dword(chunk, offset) {
+                    offset = new_offset;
+                    i32::from_le_bytes(location_bytes)
+                } else {
+                    return (Ok(()), Err("File Format Error: Link location address is missing.".to_string()));
+                };
+                
+                // 打印
+                if let Err(err) = writeln!(output_file, "  #{}: `{}` -> {} : {:08X}", i, symbol, pos, location) {
+                    return (Err(err), Err("".to_string()));
+                }
+                
+                // 添加
+                if location != -1 {
+                    result.insert(location as usize, symbol);
+                }
+            } else {
+                return (Ok(()), Err("File Format Error: The length of symbol is missing.".to_string()));
+            }
+        }
+        (Ok(()), Ok(result))
+    } else {
+        (Ok(()), Err("File Format Error: The length of symbol link list is missing.".to_string()))
+    }
+}
+
+/// 反汇编函数引用表
+fn disassemble_func_ref_list(chunk: &[u8], output_file: &mut dyn Write) -> (io::Result<()>, Result<(), String>) {
+    let mut offset = 0;
+    if let Ok((length_bytes, new_offset)) = read_dword(chunk, offset) {
+        offset = new_offset;
+        // 条目数量
+        let length = u32::from_le_bytes(length_bytes) as usize;
+
+        // 打印
+        if let Err(err) = writeln!(output_file, "Length: {}", length) {
+            return (Err(err), Err("".to_string()));
+        }
+
+        for i in 0..length {
+            if let Ok((reference_bytes, new_offset)) = read_dword(chunk, offset) {
+                offset = new_offset;
+                let reference = u32::from_le_bytes(reference_bytes);
+                if reference_bytes[3] & 0b_1000_0000 == 0 {  // 首位为 0
+                    if let Err(err) = writeln!(output_file, "  #{}: Symbol Reference - {:08X}", i, reference & 0b_0111_1111) {
+                        return (Err(err), Err("".to_string()));
+                    }
+                } else {  // 首位为 1
+                    if let Err(err) = writeln!(output_file, "  #{}: Direct Reference - {:08X}", i, reference & 0b_0111_1111) {
+                        return (Err(err), Err("".to_string()));
+                    }
+                }
+            } else {
+                return (Ok(()), Err("File Format Error: Function reference address is missing.".to_string()));
+            }
+        }
+        (Ok(()), Ok(()))
+    } else {
+        (Ok(()), Err("File Format Error: The length of function reference list is missing.".to_string()))
+    }
+}
+
 /// 反汇编代码块
-fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> io::Result<()> {
-    writeln!(output_file, "====== Chunk {} ======", name)?;
+fn disassemble_chunk(name: &str, chunk: &[u8], start_location: u32, output_file: &mut dyn Write) -> io::Result<()> {
+    writeln!(output_file, "----- Function `{}` ----- at {:08X}", name, start_location)?;
     let mut offset = 0usize; // 之后打印指令地址使用
 
     while offset < chunk.len() {
@@ -49,11 +248,11 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
             let instr_byte = u8::from_le_bytes(new_instr);
 
             if let Ok(instr) = Instruction::try_from(instr_byte) {
-                match disassemble_instruction(instr, chunk, offset) {
+                match disassemble_instruction(instr, chunk, offset, start_location) {
                     // 反编译单条指令
                     Ok((result, new_offset)) => {
                         offset = new_offset;
-                        writeln!(output_file, "{:08X} | {}", old_offset, result)?;
+                        writeln!(output_file, "{:08X} | {}", old_offset as u32 + start_location, result)?;
                         // 打印指令
                     }
                     Err(err) => {
@@ -71,12 +270,6 @@ fn disassemble_chunk(name: &str, chunk: &[u8], output_file: &mut dyn Write) -> i
         }
     }
 
-    write!(output_file, "======")?;
-    for _i in 0..(name.len() + 8) {
-        write!(output_file, "=")?;
-    }
-    writeln!(output_file, "======")?;
-
     Ok(())
 }
 
@@ -85,19 +278,26 @@ pub fn disassemble_instruction(
     instr: Instruction,
     chunk: &[u8],
     offset: usize,
+    start_location: u32,
 ) -> Result<(String, usize), String> {
     use crate::instr::Instruction::*;
 
     match instr {
         OpSpecialFunction => special_function("SpecialFunction", chunk, offset),
-        OpReturn => Ok(simple("Return", "", chunk, offset)),
+        OpCall => with_dword("Call", "", chunk, offset),
+        OpReturnUnit => Ok(simple("Return", "Unit", chunk, offset)),
+        OpReturnByte => Ok(simple("Return", "Byte", chunk, offset)),
+        OpReturnWord => Ok(simple("Return", "Word", chunk, offset)),
+        OpReturnDword => Ok(simple("Return", "Dword", chunk, offset)),
+        OpReturnQword => Ok(simple("Return", "Qword", chunk, offset)),
+        OpReturnOword => Ok(simple("Return", "Oword", chunk, offset)),
         OpStackExtend => with_dword("StackExtend", "", chunk, offset),
         OpStackShrink => with_dword("StackShrink", "", chunk, offset),
-        OpJump => jump("Jump", "", chunk, offset),
-        OpJumpTrue => jump("Jump", "True", chunk, offset),
-        OpJumpTruePop => jump("Jump", "True & Pop", chunk, offset),
-        OpJumpFalse => jump("Jump", "False", chunk, offset),
-        OpJumpFalsePop => jump("Jump", "False & Pop", chunk, offset),
+        OpJump => jump("Jump", "", chunk, offset, start_location),
+        OpJumpTrue => jump("Jump", "True", chunk, offset, start_location),
+        OpJumpTruePop => jump("Jump", "True & Pop", chunk, offset, start_location),
+        OpJumpFalse => jump("Jump", "False", chunk, offset, start_location),
+        OpJumpFalsePop => jump("Jump", "False & Pop", chunk, offset, start_location),
         OpSignExtendByteToWord => Ok(simple("SignExtend", "Byte -> Word", chunk, offset)),
         OpSignExtendWordToDword => Ok(simple("SignExtend", "Word -> Dword", chunk, offset)),
         OpSignExtendDwordToQword => Ok(simple("SignExtend", "Dword -> Qword", chunk, offset)),
@@ -340,7 +540,7 @@ fn simple(instr: &str, info: &str, _chunk: &[u8], offset: usize) -> (String, usi
     (format!(fmt_str!(), instr, info, ""), offset)
 }
 
-fn jump(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String, usize), String> {
+fn jump(instr: &str, info: &str, chunk: &[u8], offset: usize, start_location: u32) -> Result<(String, usize), String> {
     if let Ok((res_goto, res_offset)) = read_dword(chunk, offset) {
         let goto = i32::from_le_bytes(res_goto);
         let location = res_offset as isize + goto as isize;
@@ -349,12 +549,12 @@ fn jump(instr: &str, info: &str, chunk: &[u8], offset: usize) -> Result<(String,
                 fmt_str!(),
                 instr,
                 info,
-                format!("{} (at {:08X})", goto, location)
+                format!("{} (at {:08X})", goto, location as u32 + start_location - 1)
             ),
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 4 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -373,7 +573,7 @@ fn const_byte(
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 1 byte.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -392,7 +592,7 @@ fn const_word(
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 2 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -417,7 +617,7 @@ fn const_dword(
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 4 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -442,7 +642,7 @@ fn const_qword(
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 8 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -466,7 +666,7 @@ fn const_oword(
             res_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 16 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -484,7 +684,7 @@ fn with_dword(
             new_offset,
         ))
     } else {
-        Err("Not enough bytes to read: need 4 bytes.".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 
@@ -501,7 +701,7 @@ fn special_function(instr: &str, chunk: &[u8], offset: usize) -> Result<(String,
             ))
         }
     } else {
-        Err("Not enough bytes to read: need 1 bytes".to_string())
+        Err("File Format Error: No enough bytes of instrument argument.".to_string())
     }
 }
 

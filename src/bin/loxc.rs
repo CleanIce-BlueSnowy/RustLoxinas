@@ -10,7 +10,7 @@ use std::{env, process};
 use RustLoxinas::ast_printer::AstPrinter;
 
 use RustLoxinas::errors::{print_all_errors, ErrorList};
-use RustLoxinas::front_compiler::FrontCompiler;
+use RustLoxinas::global_compiler::GlobalCompiler;
 use RustLoxinas::parser::Parser;
 use RustLoxinas::scanner::TokenScanner;
 
@@ -176,10 +176,11 @@ fn compile_code(source: String) -> Result<Vec<u8>, String> {
     }
 
     // 前端编译
-    let front_compiler = FrontCompiler::new(&statements);
+    let mut compiler = GlobalCompiler::new(statements);
 
-    match front_compiler.compile() {
-        Ok(codes) => Ok(codes),
-        Err(errs) => Err(print_all_errors(&lines, ErrorList::CompileErrors(&errs))),
+    if let Err(errs) = compiler.compile() {
+        Err(print_all_errors(&lines, ErrorList::CompileErrors(&errs)))
+    } else {
+        Ok(compiler.get_bytes())
     }
 }

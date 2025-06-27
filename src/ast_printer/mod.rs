@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::tokens::{TokenKeyword, TokenOperator, TokenType};
+use crate::types::TypeTag;
 
 mod ast_printer_expr;
 mod ast_printer_stmt;
@@ -17,6 +18,7 @@ pub enum TreeChild<'a> {
     ExprList(&'a [Expr]),
     Identifier(&'a str),
     Tag(&'a str),
+    ParamList(&'a [(String, TypeTag)]),
 }
 
 /// 打印表达式的抽象语法树
@@ -101,6 +103,13 @@ impl AstPrinter {
                 }
                 TreeChild::Identifier(identifier) => identifier.to_string(),
                 TreeChild::Tag(tag_name) => format!("@{}", tag_name),
+                TreeChild::ParamList(params) => {
+                    let mut res = String::new();
+                    for (param_name, param_type) in params {
+                        res.push_str(&format!("{}: {},\n", param_name, param_type));
+                    }
+                    res
+                }
             };
             res.push_str(&format!("    {name}: "));
             let mut first_line = true;

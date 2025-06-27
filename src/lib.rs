@@ -23,3 +23,5 @@ pub mod stmt;
 pub mod tokens;
 pub mod types;
 pub mod vm;
+pub mod global_compiler;
+pub mod function;

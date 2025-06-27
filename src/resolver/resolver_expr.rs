@@ -3,6 +3,7 @@
 use crate::data::{Data, DataFloat, DataInteger};
 use crate::errors::error_types::{CompileError, CompileResult};
 use crate::expr::{ExprAs, ExprBinary, ExprLiteral, ExprUnary, ExprVariable};
+use crate::global_compiler::GlobalCompiler;
 use crate::object::LoxinasClass;
 use crate::resolver::{ExprResolveRes, Resolver};
 use crate::tokens::{TokenKeyword, TokenOperator, TokenType};
@@ -445,7 +446,7 @@ impl Resolver {
         let ope_type = &inside_expr_res.res_type;
 
         // 查找类型
-        let res_type = self.parse_value_type(&expr.target)?;
+        let res_type = GlobalCompiler::parse_value_type(&self.global_types, &expr.target)?;
 
         // 不允许在对象上使用 `as`
         if !Self::check_type_convert(ope_type, &res_type) {

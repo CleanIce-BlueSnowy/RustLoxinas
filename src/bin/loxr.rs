@@ -80,7 +80,7 @@ fn run_code(code: &[u8]) -> Result<(), String> {
     let mut vm = VM::new(code);
 
     // 执行
-    if let Err(err) = vm.run() {
+    if let Err(err) = vm.start() {
         return Err(print_runtime_error(&err.message));
     }
 

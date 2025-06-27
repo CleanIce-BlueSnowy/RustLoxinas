@@ -1,13 +1,11 @@
 //! 语义分析模块
 
-use std::collections::{BTreeSet, HashMap};
-use std::rc::Rc;
-
+use crate::global_compiler::GlobalCompiler;
 use crate::hashmap;
-use crate::object::LoxinasClass;
-use crate::stmt::Stmt;
 use crate::tokens::Token;
 use crate::types::ValueType;
+use std::collections::{BTreeSet, HashMap};
+use std::rc::Rc;
 
 mod resolver_assistance;
 mod resolver_expr;
@@ -25,35 +23,18 @@ impl Resolver {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            global_types: Self::init_types(),
+            global_types: GlobalCompiler::init_types(),
             scopes: vec![],
             now_slot: 0,
         }
     }
-
-    /// 初始化全局类型列表
-    #[must_use]
-    fn init_types() -> HashMap<String, ValueType> {
-        use crate::types::ValueFloatType::*;
-        use crate::types::ValueIntegerType::*;
-
-        hashmap! {
-            "char".to_string() => ValueType::Char,
-            "bool".to_string() => ValueType::Bool,
-            "byte".to_string() => ValueType::Integer(Byte),
-            "sbyte".to_string() => ValueType::Integer(SByte),
-            "short".to_string() => ValueType::Integer(Short),
-            "ushort".to_string() => ValueType::Integer(UShort),
-            "int".to_string() => ValueType::Integer(Int),
-            "uint".to_string() => ValueType::Integer(UInt),
-            "long".to_string() => ValueType::Integer(Long),
-            "ulong".to_string() => ValueType::Integer(ULong),
-            "extint".to_string() => ValueType::Integer(ExtInt),
-            "uextint".to_string() => ValueType::Integer(UExtInt),
-            "float".to_string() => ValueType::Float(Float),
-            "double".to_string() => ValueType::Float(Double),
-            "Object".to_string() => ValueType::Object(LoxinasClass::Object),
-            "String".to_string() => ValueType::Object(LoxinasClass::String),
+    
+    /// 初始化形参
+    pub fn init_parameters(&mut self, params: &[(String, ValueType)]) {
+        let scope = &mut self.scopes[0];
+        for param in params {
+            scope.add_variable(param.0.clone(), Variable::new(true, true, self.now_slot, Some(param.1.clone()), false));
+            self.now_slot += param.1.get_size().get_bytes_cnt();
         }
     }
 
@@ -71,6 +52,7 @@ impl Resolver {
                     Star => "*",
                     Slash => "/",
                     Power => "**",
+                    Comma => ",",
                     Backslash => "\\",
                     And => "&",
                     Pipe => "|",
@@ -96,6 +78,7 @@ impl Resolver {
                     PipeEqual => "|=",
                     CaretEqual => "^=",
                     ModEqual => "%=",
+                    RightArrow => "->",
                 }
             }
             TokenType::Keyword(operator) => {
@@ -126,9 +109,9 @@ pub struct ExprResolveRes {
 
 impl ExprResolveRes {
     #[must_use]
-    pub fn new(expr_type: ValueType, ope_type: ValueType) -> Self {
+    pub fn new(res_type: ValueType, ope_type: ValueType) -> Self {
         Self {
-            res_type: expr_type,
+            res_type,
             ope_type,
         }
     }
@@ -138,8 +121,6 @@ impl ExprResolveRes {
 #[cfg_attr(debug_assertions, derive(Debug))]
 #[derive(Clone)]
 pub struct Variable {
-    /// 定义位置的语句指针
-    pub define_stmt: *const Stmt,
     /// 已定义
     pub defined: bool,
     /// 已初始化
@@ -155,7 +136,6 @@ pub struct Variable {
 impl Variable {
     #[must_use]
     pub fn new(
-        define_stmt: *const Stmt,
         defined: bool,
         initialized: bool,
         slot: usize,
@@ -163,7 +143,6 @@ impl Variable {
         is_ref: bool,
     ) -> Self {
         Self {
-            define_stmt,
             defined,
             initialized,
             slot,
@@ -192,5 +171,10 @@ impl Scope {
             top_slot: now_slot,
             init_vars: BTreeSet::new(),
         }
+    }
+    
+    // 添加变量
+    fn add_variable(&mut self, name: String, var: Variable) {
+        self.variables.insert(name, var);
     }
 }

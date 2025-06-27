@@ -4,6 +4,7 @@ use crate::compiler::Compiler;
 use crate::data::DataSize;
 use crate::errors::error_types::CompileResult;
 use crate::expr::{ExprBinary, ExprLiteral, ExprUnary};
+use crate::function::LoxinasFunction;
 use crate::instr::Instruction::*;
 use crate::resolver::ExprResolveRes;
 use crate::tokens::{TokenKeyword, TokenType};
@@ -463,6 +464,7 @@ impl Compiler {
                         DataSize::Dword => OpSetReferenceDword,
                         DataSize::Qword => OpSetReferenceQword,
                         DataSize::Oword => OpSetReferenceOword,
+                        _ => unreachable!(),
                     }
                 } else {
                     match resolve_res.res_type.get_size() {
@@ -471,6 +473,7 @@ impl Compiler {
                         DataSize::Dword => OpGetReferenceDword,
                         DataSize::Qword => OpGetReferenceQword,
                         DataSize::Oword => OpGetReferenceOword,
+                        _ => unreachable!(),
                     }
                 }
             } else {
@@ -481,6 +484,7 @@ impl Compiler {
                         DataSize::Dword => OpSetLocalDword,
                         DataSize::Qword => OpSetLocalQword,
                         DataSize::Oword => OpSetLocalOword,
+                        _ => unreachable!(),
                     }
                 } else {
                     match resolve_res.res_type.get_size() {
@@ -489,6 +493,7 @@ impl Compiler {
                         DataSize::Dword => OpGetLocalDword,
                         DataSize::Qword => OpGetLocalQword,
                         DataSize::Oword => OpGetLocalOword,
+                        _ => unreachable!(),
                     }
                 }
             });
@@ -497,6 +502,31 @@ impl Compiler {
 
         self.append_temp_chunk(&mut target);
 
+        Ok(target)
+    }
+    
+    pub fn compile_call_expr(
+        &mut self,
+        arg_res: &[ExprResolveRes],
+        arg_code: &mut [Vec<u8>],
+        func: &LoxinasFunction,
+    ) -> CompileResult<Vec<u8>> {
+        // 直接往堆栈上堆砌实参结果，调用的函数栈帧会直接包括此结果
+        let mut target = vec![];
+        for mut code in arg_code {
+            target.append(&mut code);
+        }
+        
+        // 压入参数总大小，VM 通过这个计算新的栈帧起点
+        let mut total_size = 0usize;
+        for res in arg_res {
+            total_size += res.res_type.get_size().get_bytes_cnt();
+        }
+        self.append_temp_chunk(&mut target);
+        
+        // 调用
+        target.append(&mut func.call(total_size as u16));
+        
         Ok(target)
     }
 }

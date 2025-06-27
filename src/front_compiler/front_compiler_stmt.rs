@@ -1,19 +1,18 @@
 use crate::errors::error_types::{CompileError, CompileResultList};
-use crate::expr_get_pos;
 use crate::front_compiler::{BreakPatch, ContinuePatch, FrontCompiler};
 use crate::instr::Instruction::*;
-use crate::stmt::{
-    Stmt, StmtAssign, StmtBlock, StmtBreak, StmtContinue, StmtEmpty, StmtExpr, StmtFor, StmtIf,
-    StmtInit, StmtLet, StmtLoop, StmtPrint, StmtVisitor, StmtWhile,
-};
+use crate::stmt::{Stmt, StmtAssign, StmtBlock, StmtBreak, StmtContinue, StmtEmpty, StmtExpr, StmtFor, StmtFunc, StmtIf, StmtInit, StmtLet, StmtLoop, StmtReturn, StmtVisitor, StmtWhile};
+use crate::types::ValueType;
+use crate::stmt_get_pos;
 use std::slice;
+use crate::data::DataSize;
 
 impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
-    fn visit_empty_stmt(&mut self, _this: *const Stmt, _stmt: &StmtEmpty) -> CompileResultList<()> {
+    fn visit_empty_stmt(&mut self, _stmt: &StmtEmpty) -> CompileResultList<()> {
         Ok(())
     }
 
-    fn visit_expr_stmt(&mut self, _this: *const Stmt, stmt: &StmtExpr) -> CompileResultList<()> {
+    fn visit_expr_stmt(&mut self, stmt: &StmtExpr) -> CompileResultList<()> {
         let (expr_res, mut expr_code) = stmt.expression.accept(self)?;
         Self::pack_error(self.resolver.resolve_expr_stmt())?;
         let mut final_code =
@@ -22,7 +21,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_let_stmt(&mut self, _this: *const Stmt, stmt: &StmtLet) -> CompileResultList<()> {
+    fn visit_let_stmt(&mut self, stmt: &StmtLet) -> CompileResultList<()> {
         self.context.in_ref_let = stmt.is_ref;
         let (init_res, mut init_code) = if let Some(init) = &stmt.init {
             let (a, b) = init.accept(self)?;
@@ -44,7 +43,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_init_stmt(&mut self, _this: *const Stmt, stmt: &StmtInit) -> CompileResultList<()> {
+    fn visit_init_stmt(&mut self, stmt: &StmtInit) -> CompileResultList<()> {
         let (init_res, mut init_code) = stmt.init.accept(self)?;
         let (var_type, slot, right_slot) = Self::pack_error(self.resolver.resolve_init_stmt(
             stmt,
@@ -62,11 +61,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_assign_stmt(
-        &mut self,
-        _this: *const Stmt,
-        stmt: &StmtAssign,
-    ) -> CompileResultList<()> {
+    fn visit_assign_stmt(&mut self, stmt: &StmtAssign) -> CompileResultList<()> {
         self.context.in_assign = true;
         let mut vars_res = Vec::with_capacity(stmt.assign_vars.len());
         let mut vars_code = Vec::with_capacity(stmt.assign_vars.len());
@@ -96,12 +91,22 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_block_stmt(&mut self, _this: *const Stmt, stmt: &StmtBlock) -> CompileResultList<()> {
+    fn visit_block_stmt(&mut self, stmt: &StmtBlock) -> CompileResultList<()> {
         let mut errors = vec![];
 
         self.resolver.enter_scope();
 
+        let mut context = self.context.save();
         self.compile_scope(&mut errors, &stmt.statements);
+
+        // 检查末尾语句的返回情况。注意，此时 self.context 为子作用域的上下文
+        if context.final_statement {
+            if self.context.returned {
+                context.returned = true;
+            }
+        }
+
+        self.context.restore(context);
 
         let scope = self.resolver.leave_scope();
 
@@ -115,21 +120,18 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         }
     }
 
-    fn visit_if_stmt(&mut self, _this: *const Stmt, stmt: &StmtIf) -> CompileResultList<()> {
+    fn visit_if_stmt(&mut self, stmt: &StmtIf) -> CompileResultList<()> {
         let (if_expr_res, mut if_expr_code) = stmt.if_branch.0.accept(self)?;
-        let else_if_expr: Vec<_> = stmt
-            .else_if_branch
-            .iter()
-            .map(|(expr, _chunk)| expr.accept(self))
-            .collect::<Result<_, _>>()?;
-        let (else_if_expr_res, mut branch_expr_codes): (Vec<_>, Vec<_>) =
-            else_if_expr.into_iter().unzip();
+        let else_if_expr: Vec<_> = stmt.else_if_branch.iter().map(|(expr, _chunk)| expr.accept(self)).collect::<Result<_, _>>()?;
+        let (else_if_expr_res, mut branch_expr_codes): (Vec<_>, Vec<_>) = else_if_expr.into_iter().unzip();
 
-        self.resolver
-            .resolve_if_stmt(stmt, &if_expr_res, &else_if_expr_res)?;
+        self.resolver.resolve_if_stmt(stmt, &if_expr_res, &else_if_expr_res)?;
 
         let mut errors = vec![];
         let mut jump_end_locations = vec![];
+
+        let mut returned_list = vec![false; 1 + stmt.else_if_branch.len() + if let Some(_) = stmt.else_branch { 1 } else { 0 }];
+        let mut has_returned = false;
 
         // if 分支
         self.codes.append(&mut if_expr_code);
@@ -144,8 +146,16 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         } else {
             unreachable!("Not a block statement.")
         };
+        let context = self.context.save();
         self.compile_scope(&mut errors, &if_chunk.statements);
 
+        // 检查返回，若是最后一个语句，所有分支都要返回
+        if context.final_statement {
+            returned_list[0] = self.context.returned;
+            has_returned = self.context.returned;
+        }
+
+        self.context.restore(context);
         let compare_scope = self.resolver.leave_scope();
 
         self.write_code(OpJump); // 跳转结尾
@@ -157,9 +167,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
             .copy_from_slice(&(false_jump_dis as u32).to_le_bytes());
 
         // else if 分支
-        for (condition_code, (_chunk_expr, chunk_block)) in
-            branch_expr_codes.iter_mut().zip(stmt.else_if_branch.iter())
-        {
+        for (i, (condition_code, (_chunk_expr, chunk_block))) in branch_expr_codes.iter_mut().zip(stmt.else_if_branch.iter()).enumerate() {
             self.codes.append(condition_code);
             self.write_code(OpJumpFalsePop);
             let false_jump_location = self.codes.len();
@@ -172,8 +180,16 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
             } else {
                 unreachable!("Not a block statement.")
             };
+            let context = self.context.save();
             self.compile_scope(&mut errors, &chunk.statements);
 
+            if context.final_statement {
+                if self.context.returned {
+                    has_returned = true;
+                    returned_list[i + 1] = true;
+                }
+            }
+            self.context.restore(context);
             let this_scope = self.resolver.leave_scope();
 
             if !Self::scopes_same_inits(&compare_scope, &this_scope) {
@@ -204,8 +220,17 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
             } else {
                 unreachable!("Not a block statement.")
             };
+            let context = self.context.save();
             self.compile_scope(&mut errors, &chunk.statements);
 
+            if context.final_statement {
+                if self.context.returned {
+                    has_returned = true;
+                    let final_idx = returned_list.len() - 1;
+                    returned_list[final_idx] = true;
+                }
+            }
+            self.context.restore(context);
             let this_scope = self.resolver.leave_scope();
 
             if !Self::scopes_same_inits(&compare_scope, &this_scope) {
@@ -225,6 +250,37 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
 
         Self::scope_init_vars(&compare_scope);
 
+        // 检查返回统一性
+        if self.context.final_statement && has_returned {
+            let mut uniform = true;
+            for (i, returned) in returned_list.iter().enumerate() {
+                if !returned {
+                    uniform = false;
+                    let pos = match i {
+                        0 => {
+                            let block = &stmt.if_branch.1;
+                            stmt_get_pos!(block)
+                        }
+                        _ => {
+                            if let Some(else_branch) = &stmt.else_branch {
+                                if i == returned_list.len() - 1 {
+                                    stmt_get_pos!(else_branch)
+                                } else {
+                                    let block = &stmt.else_if_branch[i - 1].1;
+                                    stmt_get_pos!(block)
+                                }
+                            } else {
+                                let block = &stmt.else_if_branch[i - 1].1;
+                                stmt_get_pos!(block)
+                            }
+                        }
+                    };
+                    errors.push(CompileError::new(&pos, "The return of the final if statement needs to be uniform across branches.".to_string()));
+                }
+            }
+            self.context.returned = uniform;
+        }
+
         if !errors.is_empty() {
             Err(errors)
         } else {
@@ -232,7 +288,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         }
     }
 
-    fn visit_loop_stmt(&mut self, _this: *const Stmt, stmt: &StmtLoop) -> CompileResultList<()> {
+    fn visit_loop_stmt(&mut self, stmt: &StmtLoop) -> CompileResultList<()> {
         // 提前分配内存
         self.write_code(OpStackExtend);
         let alloc_location = self.codes.len();
@@ -244,7 +300,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         let before_slot = self.resolver.now_slot;
         self.resolver.enter_scope();
         self.context.in_loop = true;
-        self.context.loop_tags.push(stmt.tag.clone());
+        self.loop_tags.push(stmt.tag.clone());
 
         let mut errors = vec![];
 
@@ -253,12 +309,14 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         } else {
             unreachable!("Not a block statement.")
         };
+        let context = self.context.save();
         self.compile_scope(&mut errors, &chunk.statements);
 
         let after_slot = self.resolver.now_slot;
+        self.context.restore(context);
         self.resolver.leave_scope();
-        let this_tag = self.context.loop_tags.pop().unwrap();
-        self.context.in_loop = !self.context.loop_tags.is_empty();
+        let this_tag = self.loop_tags.pop().unwrap();
+        self.context.in_loop = !self.loop_tags.is_empty();
 
         let jump_back = (self.codes.len() - start_location) as i32;
         self.write_code(OpJump);
@@ -301,7 +359,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         }
     }
 
-    fn visit_while_stmt(&mut self, _this: *const Stmt, stmt: &StmtWhile) -> CompileResultList<()> {
+    fn visit_while_stmt(&mut self, stmt: &StmtWhile) -> CompileResultList<()> {
         let (condition_res, mut condition_code) = stmt.condition.accept(self)?;
 
         Self::pack_error(self.resolver.resolve_while_stmt(stmt, &condition_res))?;
@@ -326,7 +384,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         let before_slot = self.resolver.now_slot; // 用于计算循环占用的空间
         self.resolver.enter_scope();
         self.context.in_loop = true;
-        self.context.loop_tags.push(stmt.tag.clone());
+        self.loop_tags.push(stmt.tag.clone());
 
         let mut errors = vec![];
 
@@ -335,12 +393,14 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         } else {
             unreachable!("Not a block statement.")
         };
+        let context = self.context.save();
         self.compile_scope(&mut errors, &chunk.statements);
 
         let after_slot = self.resolver.now_slot;
+        self.context.restore(context);
         self.resolver.leave_scope();
-        let this_tag = self.context.loop_tags.pop().unwrap();
-        self.context.in_loop = !self.context.loop_tags.is_empty(); // 可能有嵌套的循环
+        let this_tag = self.loop_tags.pop().unwrap();
+        self.context.in_loop = !self.loop_tags.is_empty(); // 可能有嵌套的循环
 
         let jump_back = (self.codes.len() - start_location) as i32;
         self.write_code(OpJump);
@@ -388,9 +448,9 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         }
     }
 
-    fn visit_for_stmt(&mut self, _this: *const Stmt, stmt: &StmtFor) -> CompileResultList<()> {
+    fn visit_for_stmt(&mut self, stmt: &StmtFor) -> CompileResultList<()> {
         self.resolver.enter_scope(); // 保护作用域
-        let protect_scope_before_slot = self.resolver.now_slot; // 保护作用域的
+        let protect_scope_before_slot = self.resolver.now_slot; // 保护作用域的偏移量
         self.resolver.predefine(slice::from_ref(&stmt.init))?;
 
         stmt.init.accept(self)?; // 编译初始化语句
@@ -417,7 +477,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         let before_slot = self.resolver.now_slot; // 用于计算循环占用的空间
         self.resolver.enter_scope();
         self.context.in_loop = true;
-        self.context.loop_tags.push(stmt.tag.clone());
+        self.loop_tags.push(stmt.tag.clone());
 
         let mut errors = vec![];
 
@@ -426,12 +486,14 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         } else {
             unreachable!("Not a block statement.")
         };
+        let context = self.context.save();
         self.compile_scope(&mut errors, &chunk.statements);
 
         let after_slot = self.resolver.now_slot;
+        self.context.restore(context);
         self.resolver.leave_scope();
-        let this_tag = self.context.loop_tags.pop().unwrap();
-        self.context.in_loop = !self.context.loop_tags.is_empty(); // 可能有嵌套的循环
+        let this_tag = self.loop_tags.pop().unwrap();
+        self.context.in_loop = !self.loop_tags.is_empty(); // 可能有嵌套的循环
 
         let update_location = self.codes.len();
 
@@ -488,7 +550,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         }
     }
 
-    fn visit_break_stmt(&mut self, _this: *const Stmt, stmt: &StmtBreak) -> CompileResultList<()> {
+    fn visit_break_stmt(&mut self, stmt: &StmtBreak) -> CompileResultList<()> {
         // 直接在这里进行分析并编译
         if !self.context.in_loop {
             return Err(vec![CompileError::new(
@@ -509,11 +571,7 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_continue_stmt(
-        &mut self,
-        _this: *const Stmt,
-        stmt: &StmtContinue,
-    ) -> CompileResultList<()> {
+    fn visit_continue_stmt(&mut self, stmt: &StmtContinue) -> CompileResultList<()> {
         // 直接在这里分析并编译
         if !self.context.in_loop {
             return Err(vec![CompileError::new(
@@ -534,19 +592,39 @@ impl<'a> StmtVisitor<CompileResultList<()>> for FrontCompiler<'a> {
         Ok(())
     }
 
-    fn visit_print_stmt(&mut self, _this: *const Stmt, stmt: &StmtPrint) -> CompileResultList<()> {
-        let (expr_res, expr_code, expr_pos) = if let Some(expr) = &stmt.expr {
-            let (res, code) = expr.accept(self)?;
-            (Some(res), Some(code), Some(expr_get_pos!(expr)))
+    fn visit_func_stmt(&mut self, stmt: &StmtFunc) -> CompileResultList<()> {
+        Err(vec![CompileError::new(
+            &stmt.pos,
+            "Cannot use 'func' inside a function: Closure hasn't been implemented yet.".to_string(),
+        )])
+    }
+
+    fn visit_return_stmt(&mut self, stmt: &StmtReturn) -> CompileResultList<()> {
+        if let Some(expr) = &stmt.expr {
+            let (expr_res, mut expr_code) = expr.accept(self)?;
+            if &expr_res.res_type == self.current_function.get_return_type() {
+                self.codes.append(&mut expr_code);
+                self.write_code(match self.current_function.get_return_type().get_size() {
+                    DataSize::Zero => OpReturnUnit,
+                    DataSize::Byte => OpReturnByte,
+                    DataSize::Word => OpReturnWord,
+                    DataSize::Dword => OpReturnDword,
+                    DataSize::Qword => OpReturnQword,
+                    DataSize::Oword => OpReturnOword,
+                });
+                self.context.returned = true;
+                Ok(())
+            } else {
+                Err(vec![CompileError::new(&stmt.pos, "Return type mismatched.".to_string())])
+            }
         } else {
-            (None, None, None)
-        };
-        Self::pack_error(self.resolver.resolve_print_stmt())?;
-        let mut final_code = Self::pack_error(
-            self.compiler
-                .compile_print_stmt(expr_code, expr_res, expr_pos),
-        )?;
-        self.codes.append(&mut final_code);
-        Ok(())
+            if self.current_function.get_return_type() == &ValueType::Unit {
+                self.write_code(OpReturnUnit);
+                self.context.returned = true;
+                Ok(())
+            } else {
+                Err(vec![CompileError::new(&stmt.pos, "Return type mismatched.".to_string())])
+            }
+        }
     }
 }

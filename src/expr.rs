@@ -25,6 +25,8 @@ pub enum Expr {
     As(Box<ExprAs>),
     /// 变量
     Variable(Box<ExprVariable>),
+    /// 调用函数
+    Call(Box<ExprCall>),
 }
 
 /// 二元操作表达式
@@ -73,37 +75,47 @@ pub struct ExprVariable {
     pub name: String,
 }
 
+/// 函数调用表达式
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct ExprCall {
+    pub pos: Position,
+    pub func_name: String,
+    pub arguments: Vec<Expr>,
+}
+
 /** 使用访问者模式的访问器，用于访问各种表达式，从而访问表达式抽象语法树
 
 `RetType` 是返回类型
  */
 pub trait ExprVisitor<RetType> {
     #[must_use]
-    fn visit_binary_expr(&mut self, this: *const Expr, expr: &ExprBinary) -> RetType;
+    fn visit_binary_expr(&mut self, expr: &ExprBinary) -> RetType;
     #[must_use]
-    fn visit_grouping_expr(&mut self, this: *const Expr, expr: &ExprGrouping) -> RetType;
+    fn visit_grouping_expr(&mut self, expr: &ExprGrouping) -> RetType;
     #[must_use]
-    fn visit_literal_expr(&mut self, this: *const Expr, expr: &ExprLiteral) -> RetType;
+    fn visit_literal_expr(&mut self, expr: &ExprLiteral) -> RetType;
     #[must_use]
-    fn visit_unary_expr(&mut self, this: *const Expr, expr: &ExprUnary) -> RetType;
+    fn visit_unary_expr(&mut self, expr: &ExprUnary) -> RetType;
     #[must_use]
-    fn visit_as_expr(&mut self, this: *const Expr, expr: &ExprAs) -> RetType;
+    fn visit_as_expr(&mut self, expr: &ExprAs) -> RetType;
     #[must_use]
-    fn visit_variable_expr(&mut self, this: *const Expr, expr: &ExprVariable) -> RetType;
+    fn visit_variable_expr(&mut self, expr: &ExprVariable) -> RetType;
+    #[must_use]
+    fn visit_call_expr(&mut self, expr: &ExprCall) -> RetType;
 }
 
 impl Expr {
     /// 访问自己，通过模式匹配具体的枚举值
     #[must_use]
     pub fn accept<RetType>(&self, visitor: &mut impl ExprVisitor<RetType>) -> RetType {
-        let ptr = self as *const Expr;
         match self {
-            Expr::Binary(expr) => visitor.visit_binary_expr(ptr, expr),
-            Expr::Grouping(expr) => visitor.visit_grouping_expr(ptr, expr),
-            Expr::Literal(expr) => visitor.visit_literal_expr(ptr, expr),
-            Expr::Unary(expr) => visitor.visit_unary_expr(ptr, expr),
-            Expr::As(expr) => visitor.visit_as_expr(ptr, expr),
-            Expr::Variable(expr) => visitor.visit_variable_expr(ptr, expr),
+            Self::Binary(expr) => visitor.visit_binary_expr(expr),
+            Self::Grouping(expr) => visitor.visit_grouping_expr(expr),
+            Self::Literal(expr) => visitor.visit_literal_expr(expr),
+            Self::Unary(expr) => visitor.visit_unary_expr(expr),
+            Self::As(expr) => visitor.visit_as_expr(expr),
+            Self::Variable(expr) => visitor.visit_variable_expr(expr),
+            Self::Call(expr) => visitor.visit_call_expr(expr),
         }
     }
 }
@@ -120,6 +132,7 @@ macro_rules! expr_get_pos {
             Expr::Unary(expr) => expr.pos.clone(),
             Expr::As(expr) => expr.pos.clone(),
             Expr::Variable(expr) => expr.pos.clone(),
+            Expr::Call(expr) => expr.pos.clone(),
         }
     }};
 }

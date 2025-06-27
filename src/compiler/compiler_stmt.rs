@@ -18,14 +18,17 @@ impl Compiler {
         let mut target = vec![];
         target.append(expr_code);
 
-        self.write_code(match expr_res.res_type.get_size() {
-            // 弹出结果
-            DataSize::Byte => OpPopByte,
-            DataSize::Word => OpPopWord,
-            DataSize::Dword => OpPopDword,
-            DataSize::Qword => OpPopQword,
-            DataSize::Oword => OpPopOword,
-        });
+        if !matches!(expr_res.res_type.get_size(), DataSize::Zero) {
+            self.write_code(match expr_res.res_type.get_size() {
+                // 弹出结果
+                DataSize::Byte => OpPopByte,
+                DataSize::Word => OpPopWord,
+                DataSize::Dword => OpPopDword,
+                DataSize::Qword => OpPopQword,
+                DataSize::Oword => OpPopOword,
+                _ => unreachable!(),
+            });
+        }
         self.append_temp_chunk(&mut target);
 
         Ok(target)
@@ -60,6 +63,7 @@ impl Compiler {
                     DataSize::Dword => OpSetLocalDword,
                     DataSize::Qword => OpSetLocalQword,
                     DataSize::Oword => OpSetLocalOword,
+                    _ => unreachable!(),
                 });
                 self.write_arg_dword((slot as u32).to_le_bytes());
             }
@@ -89,6 +93,7 @@ impl Compiler {
                         self.write_code(OpPushOword);
                         self.write_arg_oword(0u128.to_le_bytes());
                     }
+                    _ => unreachable!(),
                 }
             }
             self.append_temp_chunk(&mut target);
@@ -124,6 +129,7 @@ impl Compiler {
             DataSize::Dword => OpSetLocalDword,
             DataSize::Qword => OpSetLocalQword,
             DataSize::Oword => OpSetLocalOword,
+            _ => unreachable!(),
         });
         self.write_arg_dword((slot as u32).to_le_bytes());
 
@@ -155,6 +161,7 @@ impl Compiler {
                 DataSize::Dword => OpCopyDword,
                 DataSize::Qword => OpCopyQword,
                 DataSize::Oword => OpCopyOword,
+                _ => unreachable!(),
             });
             self.convert_types(&right_res.res_type, &var_res.res_type);
             self.append_temp_chunk(&mut target);

@@ -57,6 +57,7 @@ pub enum TokenOperator {
     Slash,        // /
     Star,         // *
     Power,        // **
+    Comma,        // ,
     Backslash,    // \
     And,          // &
     Pipe,         // |
@@ -82,6 +83,7 @@ pub enum TokenOperator {
     PipeEqual,    // |=
     CaretEqual,   // ^=
     ModEqual,     // %=
+    RightArrow,   // ->
 }
 
 /// 关键字令牌
@@ -102,7 +104,6 @@ pub enum TokenKeyword {
     As,
     Init,
     Ref,
-    Print,
     Shl,
     Shr,
     Break,
