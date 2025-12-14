@@ -1,0 +1,50 @@
+====== HEADER INFORMATION ======
+Symbol List Address: 0000000C
+Function Reference List Address: 00000077
+Code Address: 00000087
+
+====== SYMBOL LIST ======
+Length: 3
+  #0: `main$unit` -> 0 : 00000000
+  #1: `this_is_a_function#int$double` -> 0 : 00000031
+  #2: `this_is_a_function#double$int` -> 0 : 00000042
+
+====== FUNCTION REFERENCE LIST ======
+Length: 3
+  #0: Direct Reference - 00000000
+  #1: Direct Reference - 00000031
+  #2: Direct Reference - 00000042
+
+====== CODE ======
+----- Function `main$unit` ----- at 00000000
+00000000 | Push                 [          Dword          ] 0000000C (12 or 1.7e-44)
+00000005 | Push                 [          Word           ] 0004 (4)
+00000008 | Call                 [                         ] 00000001
+0000000D | GetLocal             [          Qword          ] 00000000
+00000012 | SpecialFunction      [      Print Double       ] 
+00000014 | SpecialFunction      [      Print NewLine      ] 
+00000016 | Push                 [          Qword          ] 402A333333333333 (4623564262444577587 or 1.31e1)
+0000001F | Push                 [          Word           ] 0008 (8)
+00000022 | Call                 [                         ] 00000002
+00000027 | GetLocal             [          Dword          ] 00000008
+0000002C | SpecialFunction      [        Print Int        ] 
+0000002E | SpecialFunction      [      Print NewLine      ] 
+00000030 | Return               [          Unit           ] 
+----- Function `this_is_a_function#int$double` ----- at 00000031
+00000031 | Push                 [          Dword          ] 00000069 (105 or 1.47e-43)
+00000036 | SpecialFunction      [       Print Char        ] 
+00000038 | SpecialFunction      [      Print NewLine      ] 
+0000003A | GetLocal             [          Dword          ] 00000000
+0000003F | SignExtend           [     Dword -> Qword      ] 
+00000040 | Convert              [ Signed Qword -> Double  ] 
+00000041 | Return               [          Qword          ] 
+----- Function `this_is_a_function#double$int` ----- at 00000042
+00000042 | Push                 [          Dword          ] 00000066 (102 or 1.43e-43)
+00000047 | SpecialFunction      [       Print Char        ] 
+00000049 | SpecialFunction      [      Print NewLine      ] 
+0000004B | GetLocal             [          Qword          ] 00000000
+00000050 | Convert              [ Double -> Signed Qword  ] 
+00000051 | Truncate             [     Qword -> Dword      ] 
+00000052 | Push                 [          Dword          ] 00000001 (1 or 1e-45)
+00000057 | ISub                 [          Dword          ] 
+00000058 | Return               [          Dword          ] 
