@@ -9,7 +9,7 @@ pub struct Token {
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum TokenType {
     EOF,
-    OpeAdd,
+    OpePlus,
     OpeSub,
     OpeStar,
     OpeSlash,

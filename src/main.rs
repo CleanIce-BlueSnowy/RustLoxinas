@@ -1,14 +1,16 @@
 #![cfg_attr(debug_assertions, allow(unused))]
 
-use crate::compiler::{
-    token::TokenType,
-    lexer::Lexer,
-};
-
 mod cli;
 mod compiler;
 mod error;
 mod location;
+
+use crate::compiler::{
+    lexer::Lexer,
+    token::TokenType,
+    parser::Parser,
+};
+use crate::error::ParseError;
 
 fn main() {
     let arg_list = cli::get_arg_list();
@@ -25,27 +27,20 @@ fn read_file(file_name: &str) -> String {
 }
 
 fn compile(source: &str) {
-        let mut lexer = Lexer::new(source);
+    let mut lexer = Lexer::new(source);
     if let Err(err) = lexer.init() {
-        error::print_error(&err);
+        error::print_error(&ParseError::from(err));
     }
+    let mut parser = Parser::new(&mut lexer);
 
-    loop {
-        match lexer.advance() {
-            Ok(token) => {
-                print!("GOT TOKEN");
-                #[cfg(debug_assertions)]
-                {
-                    print!(": {token:#?}");
-                }
-                println!();
-                if let TokenType::EOF = &token.token_type {
-                    break;
-                }
-            }
-            Err(err) => {
-                error::print_error(&err);
+    match parser.expression() {
+        Ok(expr) => {
+            println!("GOT EXPRESSION");
+            #[cfg(debug_assertions)]
+            {
+                println!("{expr:#?}");
             }
         }
+        Err(err) => error::print_error(&err),
     }
 }

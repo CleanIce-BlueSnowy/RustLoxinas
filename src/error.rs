@@ -1,11 +1,13 @@
 use crate::location::Location;
 
 pub use crate::compiler::lexer::LexicalError;
+pub use crate::compiler::parser::ParseError;
 
 pub trait LoxinasError {
     fn get_type() -> &'static str;
     fn get_location(&self) -> &Location;
     fn get_msg(&self) -> &str;
+    fn take_info(self) -> (Location, String);
 }
 
 pub fn print_error<ErrorType: LoxinasError>(err: &ErrorType) {

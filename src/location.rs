@@ -25,6 +25,13 @@ impl Location {
             },
         }
     }
+
+    pub fn bind(start_loc: Self, end_loc: Self) -> Self {
+        Self {
+            start: start_loc.start,
+            end: end_loc.end,
+        }
+    }
 }
 
 impl std::fmt::Display for Location {

@@ -1,10 +1,8 @@
 use crate::error::LoxinasError;
+use crate::compiler::token::{Token, TokenType};
 use crate::location::Location;
 
-use super::token::{Token, TokenType};
-
-pub struct Lexer<'a> {
-    source: &'a str,
+pub struct Lexer {
     chars: Vec<char>,
     prev: Token,
     current: Token,
@@ -12,10 +10,9 @@ pub struct Lexer<'a> {
     location: Location,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(source: &'a str) -> Self {
+impl Lexer {
+    pub fn new(source: &str) -> Self {
         Self {
-            source,
             chars: source.chars().collect(),
             prev: Token::make_eof(),
             current: Token::make_eof(),
@@ -47,7 +44,7 @@ impl<'a> Lexer<'a> {
 
         let token = match self.advance_char() {
             '\0' => self.make_token(TokenType::EOF),
-            '+' => self.make_token(TokenType::OpeAdd),
+            '+' => self.make_token(TokenType::OpePlus),
             '-' => self.make_token(TokenType::OpeSub),
             '*' => self.make_token(TokenType::OpeStar),
             '/' => self.make_token(TokenType::OpeSlash),
@@ -150,5 +147,9 @@ impl LoxinasError for LexicalError {
 
     fn get_msg(&self) -> &str {
         &self.msg
+    }
+
+    fn take_info(self) -> (Location, String) {
+        (self.location, self.msg)
     }
 }
