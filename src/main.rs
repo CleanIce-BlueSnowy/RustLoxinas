@@ -27,9 +27,12 @@ fn read_file(file_name: &str) -> String {
 }
 
 fn compile(source: &str) {
+    let lines_cnt = source.split('\n').collect::<Vec<_>>().len();
+
     let mut lexer = Lexer::new(source);
     if let Err(err) = lexer.init() {
         error::print_error(&ParseError::from(err));
+        return;
     }
     let mut parser = Parser::new(&mut lexer);
 
